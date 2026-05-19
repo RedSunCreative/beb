@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Boo Episode Builder · Little Big Voices</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=Barlow:wght@400;500;600&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --gold:#F5D03A;--orange:#E8431A;--teal:#3BB8C9;
+  --dark:#1e2330;--card:#2a3040;--panel:#353d50;--border:#404858;
+  --muted:#8a96a8;--white:#f0f2f5;
+}
+body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;color:var(--white);overflow-x:hidden;}
+
+/* HEADER */
+.header{background:var(--card);border-bottom:2px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50;}
+.header-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--gold);letter-spacing:2px;line-height:1;}
+.header-sub{font-size:11px;color:var(--muted);letter-spacing:2px;margin-top:2px;}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.save-badge{font-size:10px;color:var(--teal);letter-spacing:2px;}
+
+/* MAIN LAYOUT */
+.layout{display:grid;grid-template-columns:1fr 340px;min-height:calc(100vh - 60px);}
+@media(max-width:800px){.layout{grid-template-columns:1fr;}}
+
+/* LEFT — BOO CHAT */
+.boo-panel{border-right:2px solid var(--border);display:flex;flex-direction:column;height:calc(100vh - 60px);position:sticky;top:60px;}
+.boo-chat-area{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
+.boo-msg{display:flex;gap:12px;align-items:flex-start;}
+.boo-bubble{background:var(--card);border:1px solid var(--border);border-radius:0 12px 12px 12px;padding:14px 16px;font-size:14px;line-height:1.7;color:var(--white);max-width:100%;position:relative;}
+.boo-bubble strong{color:var(--gold);}
+.user-msg{justify-content:flex-end;}
+.user-bubble{background:#1a3a50;border:1px solid #2a5a70;border-radius:12px 0 12px 12px;padding:12px 16px;font-size:14px;line-height:1.6;color:var(--white);max-width:85%;}
+
+/* MIC AREA */
+.mic-area{border-top:2px solid var(--border);padding:16px 20px;background:var(--card);}
+.mic-status{font-size:10px;color:var(--muted);letter-spacing:2px;text-align:center;margin-bottom:10px;min-height:16px;}
+.mic-row{display:flex;gap:10px;align-items:center;}
+.mic-btn{width:64px;height:64px;border-radius:50%;border:3px solid var(--orange);background:#3a0a00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;}
+.mic-btn.listening{background:#600a00;border-color:#ff4444;box-shadow:0 0 0 8px rgba(232,67,26,0.15);}
+.mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid var(--orange);animation:pulse 1.2s ease-out infinite;}
+@keyframes pulse{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(1.6);opacity:0;}}
+.mic-icon{width:28px;height:28px;fill:var(--orange);}
+.mic-text-wrap{flex:1;position:relative;}
+.mic-text{width:100%;background:var(--dark);border:1px solid var(--border);color:var(--white);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Barlow',sans-serif;resize:none;height:64px;outline:none;transition:border-color 0.2s;}
+.mic-text:focus{border-color:var(--teal);}
+.send-btn{padding:10px 18px;background:var(--teal);color:#003a40;border:none;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;}
+
+/* RIGHT — SHOW DATA */
+.data-panel{overflow-y:auto;height:calc(100vh - 60px);padding:20px;}
+.data-section{background:var(--card);border-radius:10px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden;}
+.data-section-header{background:var(--panel);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.data-section-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:3px;}
+.data-section-count{font-size:10px;color:var(--teal);letter-spacing:2px;}
+.data-section-body{padding:14px 16px;}
+
+.ep-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ep-field{background:var(--dark);border-radius:6px;padding:8px 10px;}
+.ep-label{font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:3px;}
+.ep-val{font-size:14px;color:var(--white);font-weight:600;}
+.ep-val.empty{color:var(--border);font-style:italic;font-size:12px;}
+
+.cue-item{background:var(--dark);border-radius:6px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--border);}
+.cue-item.has-data{border-left-color:var(--teal);}
+.cue-num-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
+.cue-item-name{font-size:14px;font-weight:600;color:var(--white);margin:2px 0;}
+.cue-item-dur{font-size:11px;color:var(--teal);}
+.cue-item-boo{font-size:11px;color:var(--gold);margin-top:4px;line-height:1.5;}
+
+.guest-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.guest-item:last-child{border-bottom:none;}
+.guest-name{color:var(--white);font-weight:600;}
+.guest-type{font-size:10px;color:var(--teal);letter-spacing:2px;}
+
+.runtime-bar{background:var(--dark);border-radius:6px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+.runtime-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;}
+.runtime-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
+
+/* THINKING INDICATOR */
+.thinking{display:flex;gap:5px;align-items:center;padding:14px 16px;}
+.thinking-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:think 1.2s ease-in-out infinite;}
+.thinking-dot:nth-child(2){animation-delay:0.2s;}
+.thinking-dot:nth-child(3){animation-delay:0.4s;}
+@keyframes think{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-6px);opacity:1;}}
+
+/* SPEAKING INDICATOR */
+.speaking-wave{display:flex;gap:3px;align-items:center;height:20px;}
+.wave-bar{width:3px;border-radius:2px;background:var(--teal);animation:wave 0.8s ease-in-out infinite;}
+.wave-bar:nth-child(1){height:6px;}
+.wave-bar:nth-child(2){height:14px;animation-delay:0.1s;}
+.wave-bar:nth-child(3){height:10px;animation-delay:0.2s;}
+.wave-bar:nth-child(4){height:18px;animation-delay:0.3s;}
+.wave-bar:nth-child(5){height:8px;animation-delay:0.4s;}
+@keyframes wave{0%,100%{transform:scaleY(0.4);}50%{transform:scaleY(1);}}
+
+/* GENERATE BTN */
+.generate-btn{width:100%;padding:16px;background:#0a2a0a;border:2px solid #2d6a2d;color:#4ade80;border-radius:10px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;margin-top:6px;transition:all 0.2s;}
+.generate-btn:hover{background:#0f3a20;}
+.generate-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+.boo-avatar-sm{width:32px;height:32px;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <svg class="boo-avatar-sm" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/>
+    <rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+    <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/>
+    <ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+    <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
+    <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/>
+    <ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+    <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+    <ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+    <circle cx="56" cy="82" r="2" fill="#1a1a1a"/>
+    <circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+    <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/>
+    <ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+    <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/>
+    <ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+  </svg>
+  <div>
+    <div class="header-title">BOO EPISODE BUILDER</div>
+    <div class="header-sub">LITTLE BIG VOICES · VOICE-INTERACTIVE</div>
+  </div>
+  <div class="header-right">
+    <div class="save-badge" id="save-badge">● READY</div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT: BOO CHAT -->
+  <div class="boo-panel">
+    <div class="boo-chat-area" id="chat-area">
+      <!-- Messages render here -->
+    </div>
+    <div class="mic-area">
+      <div class="mic-status" id="mic-status">TAP MIC TO TALK TO BOO</div>
+      <div class="mic-row">
+        <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
+          <svg class="mic-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm-7 8a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.94V22h-2v-2.06A9 9 0 0 1 3 11h2z"/>
+          </svg>
+        </button>
+        <div class="mic-text-wrap">
+          <textarea class="mic-text" id="mic-text" placeholder="Or type here and press Send..." onkeydown="handleKey(event)"></textarea>
+        </div>
+        <button class="send-btn" onclick="sendText()">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: SHOW DATA -->
+  <div class="data-panel">
+
+    <!-- Episode Info -->
+    <div class="data-section">
+      <div class="data-section-header" onclick="toggleSection('ep-body')">
+        <div class="data-section-title">EPISODE INFO</div>
+        <div class="data-section-count" id="ep-complete">—</div>
+      </div>
+      <div class="data-section-body" id="ep-body">
+        <div class="ep-grid">
+          <div class="ep-field"><div class="ep-label">EPISODE</div><div class="ep-val" id="d-epnum"><span class="empty">not set</span></div></div>
+          <div class="ep-field"><div class="ep-label">DATE</div><div class="ep-val" id="d-epdate"><span class="empty">not set</span></div></div>
+          <div class="ep-field" style="grid-column:1/-1"><div class="ep-label">TITLE</div><div class="ep-val" id="d-eptitle"><span class="empty">not set</span></div></div>
+          <div class="ep-field"><div class="ep-label">LENGTH</div><div class="ep-val" id="d-eplen"><span class="empty">not set</span></div></div>
+          <div class="ep-field"><div class="ep-label">PIN</div><div class="ep-val" id="d-eppin"><span class="empty">not set</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Runtime -->
+    <div class="data-section">
+      <div class="data-section-header" onclick="toggleSection('runtime-body')">
+        <div class="data-section-title">RUNTIME</div>
+        <div class="data-section-count" id="runtime-status">0 min</div>
+      </div>
+      <div class="data-section-body" id="runtime-body">
+        <div class="runtime-bar">
+          <div><div class="ep-label">CUES</div><div class="runtime-val" id="rt-cues" style="color:var(--teal);">0</div></div>
+          <div><div class="ep-label">TOTAL</div><div class="runtime-val" id="rt-total" style="color:var(--gold);">0 min</div></div>
+          <div><div class="ep-label">TARGET</div><div class="runtime-val" id="rt-target" style="color:var(--muted);">90 min</div></div>
+          <div><div class="ep-label">DELTA</div><div class="runtime-val" id="rt-delta" style="color:#4ade80;">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guests -->
+    <div class="data-section">
+      <div class="data-section-header" onclick="toggleSection('guests-body')">
+        <div class="data-section-title">GUESTS</div>
+        <div class="data-section-count" id="guest-count">0</div>
+      </div>
+      <div class="data-section-body" id="guests-body">
+        <div id="guest-list"><div style="font-size:12px;color:var(--muted);">Tell Boo about your guests...</div></div>
+      </div>
+    </div>
+
+    <!-- Cues -->
+    <div class="data-section">
+      <div class="data-section-header" onclick="toggleSection('cues-body')">
+        <div class="data-section-title">CUE LIST</div>
+        <div class="data-section-count" id="cue-count-badge">0 cues</div>
+      </div>
+      <div class="data-section-body" id="cues-body">
+        <div id="cue-list-display"><div style="font-size:12px;color:var(--muted);">Tell Boo what's in the show...</div></div>
+      </div>
+    </div>
+
+    <!-- Generate -->
+    <button class="generate-btn" id="gen-btn" onclick="generateConfig()">⚡ GENERATE BOO SHOW MANAGER</button>
+
+    <!-- Output -->
+    <div id="output-wrap" style="display:none;margin-top:14px;">
+      <div class="data-section">
+        <div class="data-section-header">
+          <div class="data-section-title">GENERATED CONFIG</div>
+        </div>
+        <div class="data-section-body">
+          <div id="output-code" style="background:#0a0f1a;border-radius:6px;padding:12px;font-size:11px;color:var(--teal);font-family:monospace;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;"></div>
+          <button onclick="copyOutput()" style="width:100%;margin-top:10px;padding:12px;background:#0a2a0a;border:2px solid #2d6a2d;color:#4ade80;border-radius:8px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;">📋 COPY CONFIG</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───
+const XI_KEY = "sk_f4454b2497089f51ea890462cb20984b9e9b9268ab20d961";
+const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
+const SB_URL = "https://gogudwpuhmidngsbqfjg.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvZ3Vkd3B1aG1pZG5nc2JxZmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MTQ2NTMsImV4cCI6MjA5NDI5MDY1M30.O6n_tRQsMU29wFV_RArcN9n6gP8KSDWJQqM4P6cTq3s";
+const BUILDER_ROW = 99; // separate row from show state
+
+// ─── STATE ───
+let showData = {
+  epNum: "", epTitle: "", epSubtitle: "", epDate: "", epLen: 90, pin: "5000",
+  prelivePerformer: "", preliveMsg: "",
+  guests: [], cues: []
+};
+let conversationHistory = [];
+let isListening = false;
+let isSpeaking = false;
+let isThinking = false;
+let recognition = null;
+let currentAudio = null;
+
+// ─── SUPABASE ───
+const { createClient } = supabase;
+const sb = createClient(SB_URL, SB_KEY);
+
+async function saveState() {
+  try {
+    await sb.from('builder_state').upsert({ id: BUILDER_ROW, data: showData, history: conversationHistory, updated_at: new Date().toISOString() });
+    setSaveBadge("● SAVED", "#4ade80");
+  } catch(e) { setSaveBadge("● SAVE ERR", "#E8431A"); }
+}
+
+async function loadState() {
+  try {
+    const { data } = await sb.from('builder_state').select('*').eq('id', BUILDER_ROW).single();
+    if (data && data.data) {
+      showData = { ...showData, ...data.data };
+      conversationHistory = data.history || [];
+      updateAllDisplays();
+      setSaveBadge("● LOADED", "#4ade80");
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function setSaveBadge(t, c) {
+  const el = document.getElementById('save-badge');
+  if (el) { el.textContent = t; el.style.color = c; }
+}
+
+// ─── SPEECH RECOGNITION ───
+function initRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { document.getElementById('mic-status').textContent = "MIC NOT SUPPORTED — USE TEXT"; return; }
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+    document.getElementById('mic-status').textContent = "LISTENING...";
+  };
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('mic-text').value = transcript;
+    if (e.results[e.results.length - 1].isFinal) {
+      isListening = false;
+      document.getElementById('mic-btn').classList.remove('listening');
+      document.getElementById('mic-status').textContent = "PROCESSING...";
+      processUserInput(transcript);
+    }
+  };
+  recognition.onerror = (e) => {
+    isListening = false;
+    document.getElementById('mic-btn').classList.remove('listening');
+    document.getElementById('mic-status').textContent = "MIC ERROR — TRY AGAIN";
+  };
+  recognition.onend = () => {
+    if (isListening) { isListening = false; document.getElementById('mic-btn').classList.remove('listening'); }
+  };
+}
+
+function toggleMic() {
+  if (isSpeaking || isThinking) return;
+  if (isListening) { recognition?.stop(); return; }
+  if (!recognition) initRecognition();
+  if (!recognition) return;
+  document.getElementById('mic-text').value = '';
+  try { recognition.start(); } catch(e) { initRecognition(); recognition?.start(); }
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
+}
+
+function sendText() {
+  const val = document.getElementById('mic-text').value.trim();
+  if (!val || isThinking) return;
+  document.getElementById('mic-text').value = '';
+  processUserInput(val);
+}
+
+// ─── CHAT UI ───
+function addBooMessage(text, withAvatar = true) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'boo-msg';
+  div.innerHTML = withAvatar ? `
+    <svg class="boo-avatar-sm" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/>
+      <rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+      <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/>
+      <ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+      <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
+      <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+      <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+      <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+      <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+      <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+    </svg>
+    <div class="boo-bubble">${text}</div>` :
+    `<div style="width:32px;flex-shrink:0;"></div><div class="boo-bubble">${text}</div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function addUserMessage(text) {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'boo-msg user-msg';
+  div.innerHTML = `<div class="user-bubble">${text}</div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showThinking() {
+  const area = document.getElementById('chat-area');
+  const div = document.createElement('div');
+  div.className = 'boo-msg';
+  div.id = 'thinking-indicator';
+  div.innerHTML = `
+    <svg class="boo-avatar-sm" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/>
+      <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/>
+      <ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+    </svg>
+    <div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div></div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function hideThinking() {
+  const el = document.getElementById('thinking-indicator');
+  if (el) el.remove();
+}
+
+// ─── ELEVENLABS TTS ───
+async function speakBoo(text) {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  isSpeaking = true;
+  document.getElementById('mic-status').textContent = "BOO IS SPEAKING...";
+  try {
+    const clean = text.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, '');
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${XI_VOICE}`, {
+      method: 'POST',
+      headers: { 'xi-api-key': XI_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: clean,
+        model_id: 'eleven_turbo_v2',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true }
+      })
+    });
+    if (!res.ok) throw new Error('TTS failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    currentAudio = new Audio(url);
+    currentAudio.onended = () => {
+      isSpeaking = false;
+      document.getElementById('mic-status').textContent = "TAP MIC TO TALK TO BOO";
+      URL.revokeObjectURL(url);
+    };
+    currentAudio.play();
+  } catch(e) {
+    isSpeaking = false;
+    document.getElementById('mic-status').textContent = "TAP MIC TO TALK TO BOO";
+    console.error('TTS error:', e);
+  }
+}
+
+// ─── CLAUDE API (via Anthropic) ───
+async function callClaude(userMessage) {
+  const systemPrompt = `You are Boo, the warm and playful AI Show Manager for Little Big Voices — a community live-streaming show produced by Mark in Austin, Texas.
+
+Your job RIGHT NOW is to help Mark build the episode data for a new Boo Show Manager. You collect information conversationally — never all at once. You ask one or two things at a time, confirm what you heard, and update the show data.
+
+CURRENT SHOW DATA:
+${JSON.stringify(showData, null, 2)}
+
+WHAT YOU COLLECT:
+- Episode number, title, subtitle, date, show length, host PIN
+- Guests: name, segment name, stage type (Pod Stage / Music Stage / Kitchen Disco), song names, song lengths
+- Cues: scene name, duration, Boo message (who to address + what to say), 5-min and 2-min warnings, standby instructions, up-next hints
+- Tech notes: audio, video, camera, lighting cues per segment per department
+- Pre-live message content
+
+HOW YOU BEHAVE:
+- Warm, encouraging, a little playful. You love this show.
+- Keep responses SHORT — 2-4 sentences max. You're a collaborator, not a lecturer.
+- When Mark tells you something, confirm it back naturally ("Got it — Shannon Cohen on the Pod Stage for 10 minutes")
+- Ask one smart follow-up question to keep building
+- If Mark says "add a guest who confirmed" — get their name, what they're doing, and where
+- If Mark says song names or lengths, remember them
+- Always be thinking about show flow — flag if total runtime is way off
+- Use the guest's name when writing Boo messages for them
+- NEVER ask for all the info at once
+
+RESPOND WITH JSON in this exact format (no markdown, no code fences):
+{
+  "speech": "What you say out loud to Mark (2-4 sentences max, conversational)",
+  "display": "Same text formatted for chat display (can include <strong> tags)",
+  "updates": {
+    "epNum": "optional - only if changed",
+    "epTitle": "optional",
+    "epSubtitle": "optional", 
+    "epDate": "optional",
+    "epLen": 90,
+    "pin": "optional",
+    "prelivePerformer": "optional",
+    "guests": [],
+    "cues": []
+  }
+}
+
+Only include fields in "updates" that actually changed. For guests and cues, send the COMPLETE updated array.
+
+Guest object shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
+Cue object shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext }`;
+
+  const messages = [
+    ...conversationHistory,
+    { role: "user", content: userMessage }
+  ];
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages
+    })
+  });
+
+  const data = await res.json();
+  const text = data.content?.[0]?.text || '{"speech":"Sorry, I had a hiccup. Try again?","display":"Sorry, I had a hiccup. Try again?","updates":{}}';
+  
+  let parsed;
+  try { parsed = JSON.parse(text); }
+  catch(e) {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) { try { parsed = JSON.parse(match[0]); } catch(e2) { parsed = { speech: text, display: text, updates: {} }; } }
+    else { parsed = { speech: text, display: text, updates: {} }; }
+  }
+  return parsed;
+}
+
+// ─── PROCESS INPUT ───
+async function processUserInput(text) {
+  if (!text.trim()) return;
+  isThinking = true;
+  addUserMessage(text);
+  document.getElementById('mic-status').textContent = "BOO IS THINKING...";
+  showThinking();
+
+  conversationHistory.push({ role: "user", content: text });
+
+  try {
+    const response = await callClaude(text);
+    hideThinking();
+
+    // Apply updates to showData
+    if (response.updates) {
+      const u = response.updates;
+      if (u.epNum !== undefined) showData.epNum = u.epNum;
+      if (u.epTitle !== undefined) showData.epTitle = u.epTitle;
+      if (u.epSubtitle !== undefined) showData.epSubtitle = u.epSubtitle;
+      if (u.epDate !== undefined) showData.epDate = u.epDate;
+      if (u.epLen !== undefined) showData.epLen = u.epLen;
+      if (u.pin !== undefined) showData.pin = u.pin;
+      if (u.prelivePerformer !== undefined) showData.prelivePerformer = u.prelivePerformer;
+      if (u.preliveMsg !== undefined) showData.preliveMsg = u.preliveMsg;
+      if (u.guests && u.guests.length >= 0) showData.guests = u.guests;
+      if (u.cues && u.cues.length >= 0) showData.cues = u.cues;
+    }
+
+    conversationHistory.push({ role: "assistant", content: JSON.stringify(response) });
+    // Keep history manageable
+    if (conversationHistory.length > 40) conversationHistory = conversationHistory.slice(-40);
+
+    addBooMessage(response.display || response.speech);
+    updateAllDisplays();
+    saveState();
+
+    if (response.speech) await speakBoo(response.speech);
+    else { isThinking = false; document.getElementById('mic-status').textContent = "TAP MIC TO TALK TO BOO"; }
+
+  } catch(e) {
+    hideThinking();
+    console.error(e);
+    const errMsg = "Sorry, I had a little hiccup there. Try saying that again?";
+    addBooMessage(errMsg);
+    await speakBoo(errMsg);
+  }
+  isThinking = false;
+}
+
+// ─── DISPLAY UPDATES ───
+function setVal(id, val, fallback = '') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (val) { el.innerHTML = val; }
+  else { el.innerHTML = `<span class="empty">${fallback || 'not set'}</span>`; }
+}
+
+function updateAllDisplays() {
+  setVal('d-epnum', showData.epNum);
+  setVal('d-eptitle', showData.epTitle);
+  setVal('d-epdate', showData.epDate);
+  setVal('d-eplen', showData.epLen ? showData.epLen + ' min' : '');
+  setVal('d-eppin', showData.pin);
+
+  const totalMins = showData.cues.reduce((a, c) => a + (parseInt(c.dur) || 0), 0);
+  const target = parseInt(showData.epLen) || 90;
+  const delta = totalMins - target;
+  document.getElementById('rt-cues').textContent = showData.cues.length;
+  document.getElementById('rt-total').textContent = totalMins + ' min';
+  document.getElementById('rt-target').textContent = target + ' min';
+  const deltaEl = document.getElementById('rt-delta');
+  if (totalMins === 0) { deltaEl.textContent = '—'; deltaEl.style.color = 'var(--muted)'; }
+  else if (Math.abs(delta) < 3) { deltaEl.textContent = 'ON'; deltaEl.style.color = '#4ade80'; }
+  else if (delta > 0) { deltaEl.textContent = '+' + delta + 'm'; deltaEl.style.color = '#E8431A'; }
+  else { deltaEl.textContent = delta + 'm'; deltaEl.style.color = '#F5D03A'; }
+  document.getElementById('runtime-status').textContent = totalMins + ' min';
+  document.getElementById('cue-count-badge').textContent = showData.cues.length + ' cues';
+  document.getElementById('guest-count').textContent = showData.guests.length;
+
+  // Guests
+  const gl = document.getElementById('guest-list');
+  if (showData.guests.length === 0) {
+    gl.innerHTML = '<div style="font-size:12px;color:var(--muted);">Tell Boo about your guests...</div>';
+  } else {
+    gl.innerHTML = showData.guests.map(g => `
+      <div class="guest-item">
+        <div><div class="guest-name">${g.name}</div><div style="font-size:11px;color:var(--muted);">${g.segment||''}</div></div>
+        <div class="guest-type">${(g.stageType||'').toUpperCase()}</div>
+      </div>`).join('');
+  }
+
+  // Cues
+  const cl = document.getElementById('cue-list-display');
+  if (showData.cues.length === 0) {
+    cl.innerHTML = '<div style="font-size:12px;color:var(--muted);">Tell Boo what\'s in the show...</div>';
+  } else {
+    cl.innerHTML = showData.cues.map((c, i) => `
+      <div class="cue-item ${c.scene ? 'has-data' : ''}">
+        <div class="cue-num-label">CUE ${i + 1}</div>
+        <div class="cue-item-name">${c.scene || '(untitled)'}</div>
+        <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
+        ${c.booName ? `<div class="cue-item-boo">→ ${c.booName}</div>` : ''}
+      </div>`).join('');
+  }
+}
+
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'block';
+}
+
+// ─── GENERATE ───
+function generateConfig() {
+  const lines = showData.cues.map(c => {
+    const split = s => s ? s.split('\n').map(l=>l.trim()).filter(Boolean) : [];
+    return `  {dur:${c.dur||10},scene:"${c.scene||''}",liveLabel:"${c.liveLabel||'NOW LIVE: '+(c.scene||'')}",
+   booName:${c.booName?`"${c.booName}"`:null},booTpl:${c.booMsg?`"${c.booMsg.replace(/"/g,'\\"')}"`:null},
+   w5:${c.w5?`"${c.w5.replace(/"/g,'\\"')}"`:null},w2:${c.w2?`"${c.w2.replace(/"/g,'\\"')}"`:null},
+   next:"${c.nextHint||''}",nextScene:"${c.nextScene||''}",
+   audio:[${split(c.audioNow).map(l=>`"${l}"`).join(',')}],video:[${split(c.videoNow).map(l=>`"${l}"`).join(',')}],
+   cameras:[${split(c.camerasNow).map(l=>`"${l}"`).join(',')}],lighting:[${split(c.lightingNow).map(l=>`"${l}"`).join(',')}],
+   audioNext:[${split(c.audioNext).map(l=>`"${l}"`).join(',')}],videoNext:[${split(c.videoNext).map(l=>`"${l}"`).join(',')}],
+   camerasNext:[${split(c.camerasNext).map(l=>`"${l}"`).join(',')}],lightingNext:[${split(c.lightingNext).map(l=>`"${l}"`).join(',')}]}`;
+  }).join(',\n');
+
+  const standbyLines = showData.cues.map(c => {
+    if (!c.standbyWho) return 'null';
+    const isPod = c.standbyStage === 'pod';
+    return `{who:"${c.standbyWho}",stage:"${isPod?'Pod Stage':c.standbyStage==='music'?'Music Stage':'Kitchen Disco'}",isPod:${isPod}}`;
+  }).join(',');
+
+  const config = `// BOO SHOW MANAGER CONFIG — LBV ${showData.epNum} · ${showData.epTitle}
+// Generated by Boo Episode Builder
+
+const EPISODE = {
+  num: "${showData.epNum}",
+  title: "${showData.epTitle}",
+  subtitle: "${showData.epSubtitle}",
+  showMins: ${showData.epLen},
+  pin: "${showData.pin}",
+  prelivePerformer: "${showData.prelivePerformer}"
+};
+
+const BASE_CUES = [
+${lines}
+];
+
+const STANDBY_DEFS = [${standbyLines}];`;
+
+  document.getElementById('output-code').textContent = config;
+  document.getElementById('output-wrap').style.display = 'block';
+  document.getElementById('output-wrap').scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyOutput() {
+  const code = document.getElementById('output-code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('#output-wrap button');
+    btn.textContent = '✓ COPIED!';
+    setTimeout(() => btn.textContent = '📋 COPY CONFIG', 2000);
+  });
+}
+
+// ─── INIT ───
+window.addEventListener('load', async () => {
+  initRecognition();
+  const loaded = await loadState();
+
+  if (loaded && conversationHistory.length > 0) {
+    // Restore last few messages visually
+    const recent = conversationHistory.slice(-6);
+    recent.forEach(m => {
+      if (m.role === 'user') addUserMessage(m.content);
+      else {
+        try {
+          const p = JSON.parse(m.content);
+          addBooMessage(p.display || p.speech, true);
+        } catch(e) { addBooMessage(m.content, true); }
+      }
+    });
+    updateAllDisplays();
+    const welcomeBack = "Hey Mark! Welcome back. I've got everything we worked on — just pick up wherever you left off. What do you want to add or change?";
+    addBooMessage(welcomeBack);
+    speakBoo(welcomeBack);
+  } else {
+    const welcome = "Hey Mark! I'm Boo, your Little Big Voices show builder. Let's put together the next episode together. What's the episode number, and what are we calling this one?";
+    addBooMessage(welcome);
+    speakBoo(welcome);
+  }
+});
+</script>
+</body>
+</html>
