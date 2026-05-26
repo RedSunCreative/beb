@@ -243,6 +243,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
 <script>
 // ─── CONFIG ───
+const CLAUDE_KEY = "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";
 const XI_KEY = "sk_f4454b2497089f51ea890462cb20984b9e9b9268ab20d961";
 const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
 const SB_URL = "https://gogudwpuhmidngsbqfjg.supabase.co";
@@ -492,7 +493,7 @@ Cue object shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"v
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1000,
