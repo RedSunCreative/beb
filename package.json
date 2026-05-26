@@ -1,0 +1,16 @@
+{
+  "name": "boo-episode-builder",
+  "version": "1.0.0",
+  "description": "Boo Episode Builder — voice-interactive episode data collector for Boo Show Manager",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

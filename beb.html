@@ -12,18 +12,16 @@
 :root{
   --gold:#F5D03A;--orange:#E8431A;--teal:#3BB8C9;
   --dark:#1e2330;--card:#2a3040;--panel:#353d50;--border:#404858;
-  --muted:#8a96a8;--white:#f0f2f5;
+  --muted:#8a96a8;--white:#f0f2f5;--green:#4ade80;
 }
 body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;color:var(--white);overflow-x:hidden;}
 
-/* HEADER */
 .header{background:var(--card);border-bottom:2px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50;}
 .header-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--gold);letter-spacing:2px;line-height:1;}
 .header-sub{font-size:11px;color:var(--muted);letter-spacing:2px;margin-top:2px;}
 .header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
 .save-badge{font-size:10px;color:var(--teal);letter-spacing:2px;}
 
-/* MAIN LAYOUT */
 .layout{display:grid;grid-template-columns:1fr 340px;min-height:calc(100vh - 60px);}
 @media(max-width:800px){.layout{grid-template-columns:1fr;}}
 
@@ -31,29 +29,39 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .boo-panel{border-right:2px solid var(--border);display:flex;flex-direction:column;height:calc(100vh - 60px);position:sticky;top:60px;}
 .boo-chat-area{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
 .boo-msg{display:flex;gap:12px;align-items:flex-start;}
-.boo-bubble{background:var(--card);border:1px solid var(--border);border-radius:0 12px 12px 12px;padding:14px 16px;font-size:14px;line-height:1.7;color:var(--white);max-width:100%;position:relative;}
+.boo-bubble{background:var(--card);border:1px solid var(--border);border-radius:0 12px 12px 12px;padding:14px 16px;font-size:14px;line-height:1.7;color:var(--white);max-width:100%;}
 .boo-bubble strong{color:var(--gold);}
 .user-msg{justify-content:flex-end;}
 .user-bubble{background:#1a3a50;border:1px solid #2a5a70;border-radius:12px 0 12px 12px;padding:12px 16px;font-size:14px;line-height:1.6;color:var(--white);max-width:85%;}
 
 /* MIC AREA */
 .mic-area{border-top:2px solid var(--border);padding:16px 20px;background:var(--card);}
-.mic-status{font-size:10px;color:var(--muted);letter-spacing:2px;text-align:center;margin-bottom:10px;min-height:16px;}
+.mic-status{font-size:10px;color:var(--muted);letter-spacing:2px;text-align:center;margin-bottom:10px;min-height:16px;transition:color 0.2s;}
+.mic-status.listening{color:var(--teal);}
+.mic-status.speaking{color:var(--gold);}
+.mic-status.thinking{color:var(--orange);}
 .mic-row{display:flex;gap:10px;align-items:center;}
+
 .mic-btn{width:64px;height:64px;border-radius:50%;border:3px solid var(--orange);background:#3a0a00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;}
-.mic-btn.listening{background:#600a00;border-color:#ff4444;box-shadow:0 0 0 8px rgba(232,67,26,0.15);}
-.mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid var(--orange);animation:pulse 1.2s ease-out infinite;}
+.mic-btn.listening{background:#003a2a;border-color:var(--teal);box-shadow:0 0 0 8px rgba(59,184,201,0.15);}
+.mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid var(--teal);animation:pulse 1.2s ease-out infinite;}
+.mic-btn.speaking{background:#2a2a00;border-color:var(--gold);}
+.mic-btn.thinking{background:#3a1a00;border-color:var(--orange);}
 @keyframes pulse{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(1.6);opacity:0;}}
 .mic-icon{width:28px;height:28px;fill:var(--orange);}
-.mic-text-wrap{flex:1;position:relative;}
+.mic-btn.listening .mic-icon{fill:var(--teal);}
+.mic-btn.speaking .mic-icon{fill:var(--gold);}
+
+.mic-text-wrap{flex:1;}
 .mic-text{width:100%;background:var(--dark);border:1px solid var(--border);color:var(--white);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Barlow',sans-serif;resize:none;height:64px;outline:none;transition:border-color 0.2s;}
 .mic-text:focus{border-color:var(--teal);}
 .send-btn{padding:10px 18px;background:var(--teal);color:#003a40;border:none;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;}
+.send-btn:disabled{opacity:0.4;cursor:not-allowed;}
 
 /* RIGHT — SHOW DATA */
 .data-panel{overflow-y:auto;height:calc(100vh - 60px);padding:20px;}
 .data-section{background:var(--card);border-radius:10px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden;}
-.data-section-header{background:var(--panel);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.data-section-header{background:var(--panel);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;}
 .data-section-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:3px;}
 .data-section-count{font-size:10px;color:var(--teal);letter-spacing:2px;}
 .data-section-body{padding:14px 16px;}
@@ -66,6 +74,8 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
 .cue-item{background:var(--dark);border-radius:6px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--border);}
 .cue-item.has-data{border-left-color:var(--teal);}
+.cue-item.music{border-left-color:var(--gold);}
+.cue-item.kitchen{border-left-color:var(--orange);}
 .cue-num-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
 .cue-item-name{font-size:14px;font-weight:600;color:var(--white);margin:2px 0;}
 .cue-item-dur{font-size:11px;color:var(--teal);}
@@ -80,33 +90,18 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .runtime-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;}
 .runtime-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
 
-/* THINKING INDICATOR */
 .thinking{display:flex;gap:5px;align-items:center;padding:14px 16px;}
 .thinking-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:think 1.2s ease-in-out infinite;}
 .thinking-dot:nth-child(2){animation-delay:0.2s;}
 .thinking-dot:nth-child(3){animation-delay:0.4s;}
 @keyframes think{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-6px);opacity:1;}}
 
-/* SPEAKING INDICATOR */
-.speaking-wave{display:flex;gap:3px;align-items:center;height:20px;}
-.wave-bar{width:3px;border-radius:2px;background:var(--teal);animation:wave 0.8s ease-in-out infinite;}
-.wave-bar:nth-child(1){height:6px;}
-.wave-bar:nth-child(2){height:14px;animation-delay:0.1s;}
-.wave-bar:nth-child(3){height:10px;animation-delay:0.2s;}
-.wave-bar:nth-child(4){height:18px;animation-delay:0.3s;}
-.wave-bar:nth-child(5){height:8px;animation-delay:0.4s;}
-@keyframes wave{0%,100%{transform:scaleY(0.4);}50%{transform:scaleY(1);}}
-
-/* GENERATE BTN */
-.generate-btn{width:100%;padding:16px;background:#0a2a0a;border:2px solid #2d6a2d;color:#4ade80;border-radius:10px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;margin-top:6px;transition:all 0.2s;}
+.generate-btn{width:100%;padding:16px;background:#0a2a0a;border:2px solid #2d6a2d;color:var(--green);border-radius:10px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;margin-top:6px;transition:all 0.2s;}
 .generate-btn:hover{background:#0f3a20;}
-.generate-btn:disabled{opacity:0.4;cursor:not-allowed;}
 
-/* SCROLLBAR */
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-
 .boo-avatar-sm{width:32px;height:32px;flex-shrink:0;}
 </style>
 </head>
@@ -143,31 +138,24 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
 <div class="layout">
 
-  <!-- LEFT: BOO CHAT -->
   <div class="boo-panel">
-    <div class="boo-chat-area" id="chat-area">
-      <!-- Messages render here -->
-    </div>
+    <div class="boo-chat-area" id="chat-area"></div>
     <div class="mic-area">
-      <div class="mic-status" id="mic-status">TAP MIC TO TALK TO BOO</div>
+      <div class="mic-status" id="mic-status">INITIALIZING MIC...</div>
       <div class="mic-row">
-        <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
-          <svg class="mic-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm-7 8a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.94V22h-2v-2.06A9 9 0 0 1 3 11h2z"/>
-          </svg>
+        <button class="mic-btn" id="mic-btn" onclick="toggleMicPause()">
+          <svg class="mic-icon" viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm-7 8a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.94V22h-2v-2.06A9 9 0 0 1 3 11h2z"/></svg>
         </button>
         <div class="mic-text-wrap">
-          <textarea class="mic-text" id="mic-text" placeholder="Or type here and press Send..." onkeydown="handleKey(event)"></textarea>
+          <textarea class="mic-text" id="mic-text" placeholder="Listening... or type here" onkeydown="handleKey(event)"></textarea>
         </div>
-        <button class="send-btn" onclick="sendText()">SEND</button>
+        <button class="send-btn" id="send-btn" onclick="sendText()">SEND</button>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT: SHOW DATA -->
   <div class="data-panel">
 
-    <!-- Episode Info -->
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('ep-body')">
         <div class="data-section-title">EPISODE INFO</div>
@@ -184,7 +172,6 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
 
-    <!-- Runtime -->
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('runtime-body')">
         <div class="data-section-title">RUNTIME</div>
@@ -192,48 +179,42 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
       <div class="data-section-body" id="runtime-body">
         <div class="runtime-bar">
-          <div><div class="ep-label">CUES</div><div class="runtime-val" id="rt-cues" style="color:var(--teal);">0</div></div>
-          <div><div class="ep-label">TOTAL</div><div class="runtime-val" id="rt-total" style="color:var(--gold);">0 min</div></div>
-          <div><div class="ep-label">TARGET</div><div class="runtime-val" id="rt-target" style="color:var(--muted);">90 min</div></div>
-          <div><div class="ep-label">DELTA</div><div class="runtime-val" id="rt-delta" style="color:#4ade80;">—</div></div>
+          <div><div class="ep-label">CUES</div><div class="runtime-val" id="rt-cues" style="color:var(--teal)">0</div></div>
+          <div><div class="ep-label">TOTAL</div><div class="runtime-val" id="rt-total" style="color:var(--gold)">0m</div></div>
+          <div><div class="ep-label">TARGET</div><div class="runtime-val" id="rt-target" style="color:var(--muted)">90m</div></div>
+          <div><div class="ep-label">DELTA</div><div class="runtime-val" id="rt-delta" style="color:var(--green)">—</div></div>
         </div>
       </div>
     </div>
 
-    <!-- Guests -->
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('guests-body')">
         <div class="data-section-title">GUESTS</div>
         <div class="data-section-count" id="guest-count">0</div>
       </div>
       <div class="data-section-body" id="guests-body">
-        <div id="guest-list"><div style="font-size:12px;color:var(--muted);">Tell Boo about your guests...</div></div>
+        <div id="guest-list"><div style="font-size:12px;color:var(--muted)">Tell Boo about your guests...</div></div>
       </div>
     </div>
 
-    <!-- Cues -->
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('cues-body')">
         <div class="data-section-title">CUE LIST</div>
         <div class="data-section-count" id="cue-count-badge">0 cues</div>
       </div>
       <div class="data-section-body" id="cues-body">
-        <div id="cue-list-display"><div style="font-size:12px;color:var(--muted);">Tell Boo what's in the show...</div></div>
+        <div id="cue-list-display"><div style="font-size:12px;color:var(--muted)">Tell Boo what's in the show...</div></div>
       </div>
     </div>
 
-    <!-- Generate -->
-    <button class="generate-btn" id="gen-btn" onclick="generateConfig()">⚡ GENERATE BOO SHOW MANAGER</button>
+    <button class="generate-btn" onclick="generateConfig()">⚡ GENERATE BOO SHOW MANAGER CONFIG</button>
 
-    <!-- Output -->
     <div id="output-wrap" style="display:none;margin-top:14px;">
       <div class="data-section">
-        <div class="data-section-header">
-          <div class="data-section-title">GENERATED CONFIG</div>
-        </div>
+        <div class="data-section-header"><div class="data-section-title">GENERATED CONFIG</div></div>
         <div class="data-section-body">
           <div id="output-code" style="background:#0a0f1a;border-radius:6px;padding:12px;font-size:11px;color:var(--teal);font-family:monospace;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;"></div>
-          <button onclick="copyOutput()" style="width:100%;margin-top:10px;padding:12px;background:#0a2a0a;border:2px solid #2d6a2d;color:#4ade80;border-radius:8px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;">📋 COPY CONFIG</button>
+          <button onclick="copyOutput()" style="width:100%;margin-top:10px;padding:12px;background:#0a2a0a;border:2px solid #2d6a2d;color:var(--green);border-radius:8px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:1px;">📋 COPY CONFIG</button>
         </div>
       </div>
     </div>
@@ -243,23 +224,20 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
 <script>
 // ─── CONFIG ───
-const XI_KEY = "sk_f4454b2497089f51ea890462cb20984b9e9b9268ab20d961";
-const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
 const SB_URL = "https://gogudwpuhmidngsbqfjg.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvZ3Vkd3B1aG1pZG5nc2JxZmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MTQ2NTMsImV4cCI6MjA5NDI5MDY1M30.O6n_tRQsMU29wFV_RArcN9n6gP8KSDWJQqM4P6cTq3s";
-const BUILDER_ROW = 99; // separate row from show state
+const BUILDER_ROW = 99;
 
 // ─── STATE ───
 let showData = {
-  epNum: "", epTitle: "", epSubtitle: "", epDate: "", epLen: 90, pin: "5000",
-  prelivePerformer: "", preliveMsg: "",
-  guests: [], cues: []
+  epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:90, pin:"5000",
+  prelivePerformer:"", preliveMsg:"",
+  guests:[], cues:[]
 };
 let conversationHistory = [];
-let isListening = false;
-let isSpeaking = false;
 let isThinking = false;
-let recognition = null;
+let isSpeaking = false;
+let micPaused = false;
 let currentAudio = null;
 
 // ─── SUPABASE ───
@@ -269,18 +247,18 @@ const sb = createClient(SB_URL, SB_KEY);
 async function saveState() {
   try {
     await sb.from('builder_state').upsert({ id: BUILDER_ROW, data: showData, history: conversationHistory, updated_at: new Date().toISOString() });
-    setSaveBadge("● SAVED", "#4ade80");
-  } catch(e) { setSaveBadge("● SAVE ERR", "#E8431A"); }
+    setSaveBadge("● SAVED", "var(--green)");
+  } catch(e) { setSaveBadge("● SAVE ERR", "var(--orange)"); }
 }
 
 async function loadState() {
   try {
     const { data } = await sb.from('builder_state').select('*').eq('id', BUILDER_ROW).single();
-    if (data && data.data) {
+    if (data?.data) {
       showData = { ...showData, ...data.data };
       conversationHistory = data.history || [];
       updateAllDisplays();
-      setSaveBadge("● LOADED", "#4ade80");
+      setSaveBadge("● LOADED", "var(--green)");
       return true;
     }
   } catch(e) {}
@@ -292,47 +270,92 @@ function setSaveBadge(t, c) {
   if (el) { el.textContent = t; el.style.color = c; }
 }
 
-// ─── SPEECH RECOGNITION ───
-function initRecognition() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) { document.getElementById('mic-status').textContent = "MIC NOT SUPPORTED — USE TEXT"; return; }
-  recognition = new SpeechRecognition();
-  recognition.continuous = false;
+// ─── ALWAYS-ON MIC ───
+let recognition = null;
+let silenceTimer = null;
+let pendingTranscript = '';
+
+function initMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    setMicStatus("MIC NOT SUPPORTED — USE TEXT", "");
+    return;
+  }
+  recognition = new SR();
+  recognition.continuous = true;
   recognition.interimResults = true;
   recognition.lang = 'en-US';
 
-  recognition.onstart = () => {
-    isListening = true;
-    document.getElementById('mic-btn').classList.add('listening');
-    document.getElementById('mic-status').textContent = "LISTENING...";
-  };
+  recognition.onstart = () => setMicStatus("LISTENING...", "listening");
+
   recognition.onresult = (e) => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-    document.getElementById('mic-text').value = transcript;
-    if (e.results[e.results.length - 1].isFinal) {
-      isListening = false;
-      document.getElementById('mic-btn').classList.remove('listening');
-      document.getElementById('mic-status').textContent = "PROCESSING...";
-      processUserInput(transcript);
+    if (isSpeaking || isThinking || micPaused) return;
+    let finalChunk = '';
+    let interimChunk = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalChunk += e.results[i][0].transcript + ' ';
+      else interimChunk += e.results[i][0].transcript;
+    }
+    if (finalChunk) {
+      pendingTranscript += finalChunk;
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        const text = pendingTranscript.trim();
+        pendingTranscript = '';
+        document.getElementById('mic-text').value = '';
+        if (text) processUserInput(text);
+      }, 1500);
+    }
+    document.getElementById('mic-text').value = pendingTranscript + interimChunk;
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech') return;
+    setMicStatus("MIC ERROR — TAP TO RETRY", "");
+  };
+
+  recognition.onend = () => {
+    if (!isSpeaking && !micPaused) {
+      setTimeout(() => { try { recognition.start(); } catch(e){} }, 200);
     }
   };
-  recognition.onerror = (e) => {
-    isListening = false;
-    document.getElementById('mic-btn').classList.remove('listening');
-    document.getElementById('mic-status').textContent = "MIC ERROR — TRY AGAIN";
-  };
-  recognition.onend = () => {
-    if (isListening) { isListening = false; document.getElementById('mic-btn').classList.remove('listening'); }
-  };
+
+  try { recognition.start(); } catch(e) {}
 }
 
-function toggleMic() {
-  if (isSpeaking || isThinking) return;
-  if (isListening) { recognition?.stop(); return; }
-  if (!recognition) initRecognition();
-  if (!recognition) return;
-  document.getElementById('mic-text').value = '';
-  try { recognition.start(); } catch(e) { initRecognition(); recognition?.start(); }
+function toggleMicPause() {
+  micPaused = !micPaused;
+  const btn = document.getElementById('mic-btn');
+  if (micPaused) {
+    try { recognition?.stop(); } catch(e) {}
+    btn.style.borderColor = 'var(--muted)';
+    setMicStatus("MIC PAUSED — TAP TO RESUME", "");
+  } else {
+    btn.style.borderColor = '';
+    try { recognition?.start(); } catch(e) {}
+  }
+}
+
+function muteMicWhileSpeaking() {
+  isSpeaking = true;
+  try { recognition?.stop(); } catch(e) {}
+  setMicStatus("BOO IS SPEAKING...", "speaking");
+  document.getElementById('mic-btn').classList.add('speaking');
+  document.getElementById('mic-btn').classList.remove('listening');
+}
+
+function unmuteMicAfterSpeaking() {
+  isSpeaking = false;
+  document.getElementById('mic-btn').classList.remove('speaking');
+  if (!micPaused) {
+    setTimeout(() => { try { recognition?.start(); } catch(e) {} }, 300);
+  }
+}
+
+function setMicStatus(text, cls) {
+  const el = document.getElementById('mic-status');
+  el.textContent = text;
+  el.className = 'mic-status' + (cls ? ' ' + cls : '');
 }
 
 function handleKey(e) {
@@ -343,31 +366,34 @@ function sendText() {
   const val = document.getElementById('mic-text').value.trim();
   if (!val || isThinking) return;
   document.getElementById('mic-text').value = '';
+  pendingTranscript = '';
+  clearTimeout(silenceTimer);
   processUserInput(val);
 }
 
 // ─── CHAT UI ───
+const BOO_SVG = `<svg class="boo-avatar-sm" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/>
+  <rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+  <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/>
+  <ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+  <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
+  <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+  <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+  <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+  <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+  <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+</svg>`;
+
 function addBooMessage(text, withAvatar = true) {
   const area = document.getElementById('chat-area');
   const div = document.createElement('div');
   div.className = 'boo-msg';
-  div.innerHTML = withAvatar ? `
-    <svg class="boo-avatar-sm" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/>
-      <rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
-      <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/>
-      <ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
-      <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
-      <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
-      <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
-      <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
-      <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
-      <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
-    </svg>
-    <div class="boo-bubble">${text}</div>` :
-    `<div style="width:32px;flex-shrink:0;"></div><div class="boo-bubble">${text}</div>`;
+  div.innerHTML = withAvatar
+    ? `${BOO_SVG}<div class="boo-bubble">${text}</div>`
+    : `<div style="width:32px;flex-shrink:0"></div><div class="boo-bubble">${text}</div>`;
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
   return div;
@@ -387,148 +413,151 @@ function showThinking() {
   const div = document.createElement('div');
   div.className = 'boo-msg';
   div.id = 'thinking-indicator';
-  div.innerHTML = `
-    <svg class="boo-avatar-sm" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/>
-      <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/>
-      <ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
-    </svg>
-    <div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div></div>`;
+  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div></div>`;
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
 }
 
 function hideThinking() {
-  const el = document.getElementById('thinking-indicator');
-  if (el) el.remove();
+  document.getElementById('thinking-indicator')?.remove();
 }
 
-// ─── ELEVENLABS TTS ───
+// ─── TTS ───
 async function speakBoo(text) {
-  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-  isSpeaking = true;
-  document.getElementById('mic-status').textContent = "BOO IS SPEAKING...";
+  muteMicWhileSpeaking();
   try {
     const clean = text.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, '');
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${XI_VOICE}`, {
+    const res = await fetch('/api/speak', {
       method: 'POST',
-      headers: { 'xi-api-key': XI_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: clean,
-        model_id: 'eleven_turbo_v2',
-        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true }
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: clean })
     });
     if (!res.ok) throw new Error('TTS failed');
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
+    if (currentAudio) { currentAudio.pause(); URL.revokeObjectURL(currentAudio._url); }
     currentAudio = new Audio(url);
+    currentAudio._url = url;
     currentAudio.onended = () => {
-      isSpeaking = false;
-      document.getElementById('mic-status').textContent = "TAP MIC TO TALK TO BOO";
       URL.revokeObjectURL(url);
+      unmuteMicAfterSpeaking();
+      setMicStatus("LISTENING...", "listening");
     };
-    currentAudio.play();
+    await currentAudio.play();
   } catch(e) {
-    isSpeaking = false;
-    document.getElementById('mic-status').textContent = "TAP MIC TO TALK TO BOO";
     console.error('TTS error:', e);
+    unmuteMicAfterSpeaking();
+    setMicStatus("LISTENING...", "listening");
   }
 }
 
-// ─── CLAUDE API (via Anthropic) ───
+// ─── CLAUDE ───
 async function callClaude(userMessage) {
-  const systemPrompt = `You are Boo, the warm and playful AI Show Manager for Little Big Voices — a community live-streaming show produced by Mark in Austin, Texas.
-
-Your job RIGHT NOW is to help Mark build the episode data for a new Boo Show Manager. You collect information conversationally — never all at once. You ask one or two things at a time, confirm what you heard, and update the show data.
+  const systemPrompt = `You are Boo, the warm and playful AI Show Coach for Little Big Voices — a community live-streaming show produced by Mark in Austin, Texas. Mark talks to you hands-free while building episode plans.
 
 CURRENT SHOW DATA:
 ${JSON.stringify(showData, null, 2)}
 
-WHAT YOU COLLECT:
-- Episode number, title, subtitle, date, show length, host PIN
-- Guests: name, segment name, stage type (Pod Stage / Music Stage / Kitchen Disco), song names, song lengths
-- Cues: scene name, duration, Boo message (who to address + what to say), 5-min and 2-min warnings, standby instructions, up-next hints
-- Tech notes: audio, video, camera, lighting cues per segment per department
-- Pre-live message content
+=== SHOW STRUCTURE — KNOW THIS COLD ===
 
-HOW YOU BEHAVE:
+Every LBV episode follows this format. Use it to guide your questions and suggestions:
+
+1. COLD OPEN — Musical guest performs. No talking. Fade up to song. When song ends, musician says the branded line: "Welcome to Little Big Voices... LIVE!" and everyone in the studio yells "LIVE!"
+2. PRE-RECORDED INTRO — Plays immediately after cold open. Introduces guests for the episode.
+3. SHOW OPEN — Camera opens on Mark + co-host. They chat briefly to set the vibe.
+4. KITCHEN DISCO #1 — 3–5 min segment. While this plays, the co-host exits and Guest 1 sits down and puts on headphones. This is the ONLY time guest swaps can happen — NEVER change guests live on camera.
+5. INTERVIEW 1 — 12–15 min. Main guest. Deep conversation.
+6. MUSICAL BREAK — Next musical act performs. Guest swap happens: Guest 1 exits, Guest 2 gets ready.
+7. INTERVIEW 2 — 12–15 min. Next main guest.
+8. BUFFER SEGMENT — This is flexible. Options: Kitchen Disco #2 (great choice), crew chat, pre-recorded segment (e.g. a pre-taped intro/story for upcoming guests like Elaine and Michael). Use this for guest swaps.
+9. SPECIAL GUEST SEGMENTS — 5–7 min each. Shorter, punchy.
+10. FINAL MUSICAL NUMBER — Last song of the show. ALL guests and crew come to the floor and dance during the credits. This is the show closer.
+
+=== MUSIC-FIRST RULE ===
+Always collect ALL music first — every song name and its duration. Then do the math. The music runtime determines how much interview time is available. Flag immediately if there aren't enough songs to cover all guest transitions.
+
+=== GUEST SWAP RULE ===
+Guests NEVER change on camera. Every transition happens during a non-interview segment: music, Kitchen Disco, or a pre-recorded segment. When building the cue list, always put a buffer segment before each new guest appears on camera.
+
+=== INTERVIEW TIME TARGETS ===
+- Main guests: 12–15 min each
+- Special guests: 5–7 min each
+
+=== RUNTIME MATH ===
+Total show = sum of all cue durations. Target = showData.epLen (default 90 min). If the math doesn't work out, suggest what to add or cut — don't just flag it, give a specific recommendation.
+
+=== HOW YOU BEHAVE ===
 - Warm, encouraging, a little playful. You love this show.
-- Keep responses SHORT — 2-4 sentences max. You're a collaborator, not a lecturer.
-- When Mark tells you something, confirm it back naturally ("Got it — Shannon Cohen on the Pod Stage for 10 minutes")
-- Ask one smart follow-up question to keep building
-- If Mark says "add a guest who confirmed" — get their name, what they're doing, and where
-- If Mark says song names or lengths, remember them
-- Always be thinking about show flow — flag if total runtime is way off
-- Use the guest's name when writing Boo messages for them
-- NEVER ask for all the info at once
+- Responses: 2–4 sentences MAX. You are a voice assistant — be concise.
+- Confirm what you heard, ask ONE follow-up question.
+- Collect music first, then guests, then build the cue list together.
+- Never ask for everything at once.
+- Use guest names when writing Boo messages.
+- If the runtime is off by more than 10 min, flag it and suggest a fix.
 
-RESPOND WITH JSON in this exact format (no markdown, no code fences):
+RESPOND WITH JSON — no markdown, no code fences:
 {
-  "speech": "What you say out loud to Mark (2-4 sentences max, conversational)",
-  "display": "Same text formatted for chat display (can include <strong> tags)",
+  "speech": "What Boo says out loud (2-4 sentences, conversational)",
+  "display": "Same text for chat (can use <strong> tags)",
   "updates": {
-    "epNum": "optional - only if changed",
-    "epTitle": "optional",
-    "epSubtitle": "optional", 
-    "epDate": "optional",
+    "epNum": "only if changed",
+    "epTitle": "only if changed",
+    "epSubtitle": "only if changed",
+    "epDate": "only if changed",
     "epLen": 90,
-    "pin": "optional",
-    "prelivePerformer": "optional",
+    "pin": "only if changed",
+    "prelivePerformer": "only if changed",
     "guests": [],
     "cues": []
   }
 }
 
-Only include fields in "updates" that actually changed. For guests and cues, send the COMPLETE updated array.
+Only include fields in "updates" that changed. For guests/cues send the COMPLETE updated array.
 
-Guest object shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
-Cue object shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext }`;
+Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
+Cue shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext }`;
 
-  const messages = [
-    ...conversationHistory,
-    { role: "user", content: userMessage }
-  ];
-
-  const res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SB_KEY}` },
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1000,
+      model: 'claude-sonnet-4-5',
+      max_tokens: 1024,
       system: systemPrompt,
-      messages
+      messages: [...conversationHistory, { role: 'user', content: userMessage }]
     })
   });
 
   const data = await res.json();
-  const text = data.content?.[0]?.text || '{"speech":"Sorry, I had a hiccup. Try again?","display":"Sorry, I had a hiccup. Try again?","updates":{}}';
-  
+  const text = data.content?.[0]?.text || '{"speech":"Sorry, I had a little hiccup. Try again?","display":"Sorry, I had a little hiccup. Try again?","updates":{}}';
+
   let parsed;
   try { parsed = JSON.parse(text); }
   catch(e) {
     const match = text.match(/\{[\s\S]*\}/);
-    if (match) { try { parsed = JSON.parse(match[0]); } catch(e2) { parsed = { speech: text, display: text, updates: {} }; } }
-    else { parsed = { speech: text, display: text, updates: {} }; }
+    try { parsed = match ? JSON.parse(match[0]) : null; } catch(e2) { parsed = null; }
+    if (!parsed) parsed = { speech: text, display: text, updates: {} };
   }
   return parsed;
 }
 
 // ─── PROCESS INPUT ───
 async function processUserInput(text) {
-  if (!text.trim()) return;
+  if (!text.trim() || isThinking) return;
   isThinking = true;
+  document.getElementById('send-btn').disabled = true;
   addUserMessage(text);
-  document.getElementById('mic-status').textContent = "BOO IS THINKING...";
+  setMicStatus("BOO IS THINKING...", "thinking");
+  document.getElementById('mic-btn').classList.add('thinking');
   showThinking();
 
-  conversationHistory.push({ role: "user", content: text });
+  conversationHistory.push({ role: 'user', content: text });
 
   try {
     const response = await callClaude(text);
     hideThinking();
+    document.getElementById('mic-btn').classList.remove('thinking');
 
-    // Apply updates to showData
     if (response.updates) {
       const u = response.updates;
       if (u.epNum !== undefined) showData.epNum = u.epNum;
@@ -539,37 +568,35 @@ async function processUserInput(text) {
       if (u.pin !== undefined) showData.pin = u.pin;
       if (u.prelivePerformer !== undefined) showData.prelivePerformer = u.prelivePerformer;
       if (u.preliveMsg !== undefined) showData.preliveMsg = u.preliveMsg;
-      if (u.guests && u.guests.length >= 0) showData.guests = u.guests;
-      if (u.cues && u.cues.length >= 0) showData.cues = u.cues;
+      if (u.guests?.length >= 0) showData.guests = u.guests;
+      if (u.cues?.length >= 0) showData.cues = u.cues;
     }
 
-    conversationHistory.push({ role: "assistant", content: JSON.stringify(response) });
-    // Keep history manageable
+    conversationHistory.push({ role: 'assistant', content: JSON.stringify(response) });
     if (conversationHistory.length > 40) conversationHistory = conversationHistory.slice(-40);
 
     addBooMessage(response.display || response.speech);
     updateAllDisplays();
     saveState();
-
-    if (response.speech) await speakBoo(response.speech);
-    else { isThinking = false; document.getElementById('mic-status').textContent = "TAP MIC TO TALK TO BOO"; }
-
+    await speakBoo(response.speech || response.display);
   } catch(e) {
     hideThinking();
+    document.getElementById('mic-btn').classList.remove('thinking');
     console.error(e);
-    const errMsg = "Sorry, I had a little hiccup there. Try saying that again?";
-    addBooMessage(errMsg);
-    await speakBoo(errMsg);
+    const msg = "Sorry, I had a little hiccup there. Try saying that again?";
+    addBooMessage(msg);
+    await speakBoo(msg);
   }
+
   isThinking = false;
+  document.getElementById('send-btn').disabled = false;
 }
 
-// ─── DISPLAY UPDATES ───
-function setVal(id, val, fallback = '') {
+// ─── DISPLAY ───
+function setVal(id, val, fallback) {
   const el = document.getElementById(id);
   if (!el) return;
-  if (val) { el.innerHTML = val; }
-  else { el.innerHTML = `<span class="empty">${fallback || 'not set'}</span>`; }
+  el.innerHTML = val ? val : `<span class="empty">${fallback || 'not set'}</span>`;
 }
 
 function updateAllDisplays() {
@@ -583,42 +610,36 @@ function updateAllDisplays() {
   const target = parseInt(showData.epLen) || 90;
   const delta = totalMins - target;
   document.getElementById('rt-cues').textContent = showData.cues.length;
-  document.getElementById('rt-total').textContent = totalMins + ' min';
-  document.getElementById('rt-target').textContent = target + ' min';
+  document.getElementById('rt-total').textContent = totalMins + 'm';
+  document.getElementById('rt-target').textContent = target + 'm';
   const deltaEl = document.getElementById('rt-delta');
-  if (totalMins === 0) { deltaEl.textContent = '—'; deltaEl.style.color = 'var(--muted)'; }
-  else if (Math.abs(delta) < 3) { deltaEl.textContent = 'ON'; deltaEl.style.color = '#4ade80'; }
-  else if (delta > 0) { deltaEl.textContent = '+' + delta + 'm'; deltaEl.style.color = '#E8431A'; }
-  else { deltaEl.textContent = delta + 'm'; deltaEl.style.color = '#F5D03A'; }
+  if (!totalMins) { deltaEl.textContent = '—'; deltaEl.style.color = 'var(--muted)'; }
+  else if (Math.abs(delta) < 3) { deltaEl.textContent = 'ON'; deltaEl.style.color = 'var(--green)'; }
+  else if (delta > 0) { deltaEl.textContent = '+' + delta + 'm'; deltaEl.style.color = 'var(--orange)'; }
+  else { deltaEl.textContent = delta + 'm'; deltaEl.style.color = 'var(--gold)'; }
   document.getElementById('runtime-status').textContent = totalMins + ' min';
   document.getElementById('cue-count-badge').textContent = showData.cues.length + ' cues';
   document.getElementById('guest-count').textContent = showData.guests.length;
 
-  // Guests
   const gl = document.getElementById('guest-list');
-  if (showData.guests.length === 0) {
-    gl.innerHTML = '<div style="font-size:12px;color:var(--muted);">Tell Boo about your guests...</div>';
-  } else {
-    gl.innerHTML = showData.guests.map(g => `
+  gl.innerHTML = showData.guests.length === 0
+    ? '<div style="font-size:12px;color:var(--muted)">Tell Boo about your guests...</div>'
+    : showData.guests.map(g => `
       <div class="guest-item">
-        <div><div class="guest-name">${g.name}</div><div style="font-size:11px;color:var(--muted);">${g.segment||''}</div></div>
+        <div><div class="guest-name">${g.name}</div><div style="font-size:11px;color:var(--muted)">${g.segment||''}</div></div>
         <div class="guest-type">${(g.stageType||'').toUpperCase()}</div>
       </div>`).join('');
-  }
 
-  // Cues
   const cl = document.getElementById('cue-list-display');
-  if (showData.cues.length === 0) {
-    cl.innerHTML = '<div style="font-size:12px;color:var(--muted);">Tell Boo what\'s in the show...</div>';
-  } else {
-    cl.innerHTML = showData.cues.map((c, i) => `
-      <div class="cue-item ${c.scene ? 'has-data' : ''}">
+  cl.innerHTML = showData.cues.length === 0
+    ? '<div style="font-size:12px;color:var(--muted)">Tell Boo what\'s in the show...</div>'
+    : showData.cues.map((c, i) => `
+      <div class="cue-item ${c.stageType === 'music' ? 'music' : c.stageType === 'kitchen' ? 'kitchen' : c.scene ? 'has-data' : ''}">
         <div class="cue-num-label">CUE ${i + 1}</div>
         <div class="cue-item-name">${c.scene || '(untitled)'}</div>
         <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
         ${c.booName ? `<div class="cue-item-boo">→ ${c.booName}</div>` : ''}
       </div>`).join('');
-  }
 }
 
 function toggleSection(id) {
@@ -626,24 +647,30 @@ function toggleSection(id) {
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'block';
 }
 
-// ─── GENERATE ───
+// ─── GENERATE CONFIG ───
 function generateConfig() {
-  const lines = showData.cues.map(c => {
-    const split = s => s ? s.split('\n').map(l=>l.trim()).filter(Boolean) : [];
-    return `  {dur:${c.dur||10},scene:"${c.scene||''}",liveLabel:"${c.liveLabel||'NOW LIVE: '+(c.scene||'')}",
-   booName:${c.booName?`"${c.booName}"`:null},booTpl:${c.booMsg?`"${c.booMsg.replace(/"/g,'\\"')}"`:null},
-   w5:${c.w5?`"${c.w5.replace(/"/g,'\\"')}"`:null},w2:${c.w2?`"${c.w2.replace(/"/g,'\\"')}"`:null},
-   next:"${c.nextHint||''}",nextScene:"${c.nextScene||''}",
-   audio:[${split(c.audioNow).map(l=>`"${l}"`).join(',')}],video:[${split(c.videoNow).map(l=>`"${l}"`).join(',')}],
-   cameras:[${split(c.camerasNow).map(l=>`"${l}"`).join(',')}],lighting:[${split(c.lightingNow).map(l=>`"${l}"`).join(',')}],
-   audioNext:[${split(c.audioNext).map(l=>`"${l}"`).join(',')}],videoNext:[${split(c.videoNext).map(l=>`"${l}"`).join(',')}],
-   camerasNext:[${split(c.camerasNext).map(l=>`"${l}"`).join(',')}],lightingNext:[${split(c.lightingNext).map(l=>`"${l}"`).join(',')}]}`;
-  }).join(',\n');
+  const split = s => s ? s.split('\n').map(l => l.trim()).filter(Boolean) : [];
+  const q = s => s ? `"${s.replace(/"/g, '\\"')}"` : 'null';
+
+  const lines = showData.cues.map(c => `  {
+    dur:${c.dur||10}, scene:${q(c.scene)}, liveLabel:${q(c.liveLabel || 'NOW LIVE: ' + (c.scene||''))},
+    booName:${q(c.booName)}, booTpl:${q(c.booMsg)},
+    w5:${q(c.w5)}, w2:${q(c.w2)},
+    next:${q(c.nextHint)}, nextScene:${q(c.nextScene)},
+    audio:[${split(c.audioNow).map(q).join(',')}],
+    video:[${split(c.videoNow).map(q).join(',')}],
+    cameras:[${split(c.camerasNow).map(q).join(',')}],
+    lighting:[${split(c.lightingNow).map(q).join(',')}],
+    audioNext:[${split(c.audioNext).map(q).join(',')}],
+    videoNext:[${split(c.videoNext).map(q).join(',')}],
+    camerasNext:[${split(c.camerasNext).map(q).join(',')}],
+    lightingNext:[${split(c.lightingNext).map(q).join(',')}]
+  }`).join(',\n');
 
   const standbyLines = showData.cues.map(c => {
     if (!c.standbyWho) return 'null';
     const isPod = c.standbyStage === 'pod';
-    return `{who:"${c.standbyWho}",stage:"${isPod?'Pod Stage':c.standbyStage==='music'?'Music Stage':'Kitchen Disco'}",isPod:${isPod}}`;
+    return `{who:${q(c.standbyWho)},stage:"${isPod?'Pod Stage':c.standbyStage==='music'?'Music Stage':'Kitchen Disco'}",isPod:${isPod}}`;
   }).join(',');
 
   const config = `// BOO SHOW MANAGER CONFIG — LBV ${showData.epNum} · ${showData.epTitle}
@@ -670,8 +697,7 @@ const STANDBY_DEFS = [${standbyLines}];`;
 }
 
 function copyOutput() {
-  const code = document.getElementById('output-code').textContent;
-  navigator.clipboard.writeText(code).then(() => {
+  navigator.clipboard.writeText(document.getElementById('output-code').textContent).then(() => {
     const btn = document.querySelector('#output-wrap button');
     btn.textContent = '✓ COPIED!';
     setTimeout(() => btn.textContent = '📋 COPY CONFIG', 2000);
@@ -680,29 +706,25 @@ function copyOutput() {
 
 // ─── INIT ───
 window.addEventListener('load', async () => {
-  initRecognition();
+  initMic();
   const loaded = await loadState();
 
   if (loaded && conversationHistory.length > 0) {
-    // Restore last few messages visually
-    const recent = conversationHistory.slice(-6);
-    recent.forEach(m => {
+    conversationHistory.slice(-6).forEach(m => {
       if (m.role === 'user') addUserMessage(m.content);
       else {
-        try {
-          const p = JSON.parse(m.content);
-          addBooMessage(p.display || p.speech, true);
-        } catch(e) { addBooMessage(m.content, true); }
+        try { const p = JSON.parse(m.content); addBooMessage(p.display || p.speech, true); }
+        catch(e) { addBooMessage(m.content, true); }
       }
     });
     updateAllDisplays();
-    const welcomeBack = "Hey Mark! Welcome back. I've got everything we worked on — just pick up wherever you left off. What do you want to add or change?";
-    addBooMessage(welcomeBack);
-    speakBoo(welcomeBack);
+    const msg = "Hey Mark! Welcome back — I've got everything we worked on. Just pick up wherever you left off. What do you want to add or change?";
+    addBooMessage(msg);
+    await speakBoo(msg);
   } else {
-    const welcome = "Hey Mark! I'm Boo, your Little Big Voices show builder. Let's put together the next episode together. What's the episode number, and what are we calling this one?";
-    addBooMessage(welcome);
-    speakBoo(welcome);
+    const msg = "Hey Mark! I'm Boo, your Little Big Voices show builder. Let's start with the music — what songs do you have lined up, and how long is each one?";
+    addBooMessage(msg);
+    await speakBoo(msg);
   }
 });
 </script>
