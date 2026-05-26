@@ -141,6 +141,12 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
   </div>
 </div>
 
+<div id="key-banner" style="display:none;background:#3a0a00;border-bottom:2px solid var(--orange);padding:10px 20px;display:flex;align-items:center;gap:10px;">
+  <span style="font-size:12px;color:var(--orange);letter-spacing:1px;flex-shrink:0;">CLAUDE API KEY</span>
+  <input id="key-input" type="password" placeholder="sk-ant-api03-..." style="flex:1;background:var(--dark);border:1px solid var(--orange);color:var(--white);border-radius:6px;padding:6px 10px;font-size:13px;font-family:monospace;outline:none;"/>
+  <button onclick="saveKey()" style="padding:6px 16px;background:var(--orange);color:#fff;border:none;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer;">SAVE</button>
+</div>
+
 <div class="layout">
 
   <!-- LEFT: BOO CHAT -->
@@ -243,7 +249,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
 <script>
 // ─── CONFIG ───
-const CLAUDE_KEY = "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";
+let CLAUDE_KEY = localStorage.getItem('boo_claude_key') || '';
 const XI_KEY = "sk_f4454b2497089f51ea890462cb20984b9e9b9268ab20d961";
 const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
 const SB_URL = "https://gogudwpuhmidngsbqfjg.supabase.co";
@@ -262,6 +268,20 @@ let isSpeaking = false;
 let isThinking = false;
 let recognition = null;
 let currentAudio = null;
+
+// ─── KEY SETUP ───
+function saveKey() {
+  const val = document.getElementById('key-input').value.trim();
+  if (!val) return;
+  CLAUDE_KEY = val;
+  localStorage.setItem('boo_claude_key', val);
+  document.getElementById('key-banner').style.display = 'none';
+  setSaveBadge('● KEY SAVED', '#4ade80');
+}
+
+function checkKey() {
+  if (!CLAUDE_KEY) document.getElementById('key-banner').style.display = 'flex';
+}
 
 // ─── SUPABASE ───
 const { createClient } = supabase;
@@ -681,6 +701,7 @@ function copyOutput() {
 
 // ─── INIT ───
 window.addEventListener('load', async () => {
+  checkKey();
   initRecognition();
   const loaded = await loadState();
 
