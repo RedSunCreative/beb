@@ -226,6 +226,8 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 // ─── CONFIG ───
 const SB_URL = "https://gogudwpuhmidngsbqfjg.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvZ3Vkd3B1aG1pZG5nc2JxZmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MTQ2NTMsImV4cCI6MjA5NDI5MDY1M30.O6n_tRQsMU29wFV_RArcN9n6gP8KSDWJQqM4P6cTq3s";
+const XI_KEY = "sk_f4454b2497089f51ea890462cb20984b9e9b9268ab20d961";
+const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
 const BUILDER_ROW = 99;
 
 // ─── STATE ───
@@ -427,10 +429,10 @@ async function speakBoo(text) {
   muteMicWhileSpeaking();
   try {
     const clean = text.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, '');
-    const res = await fetch('/api/speak', {
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${XI_VOICE}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: clean })
+      headers: { 'xi-api-key': XI_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: clean, model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.3, use_speaker_boost: true } })
     });
     if (!res.ok) throw new Error('TTS failed');
     const blob = await res.blob();
@@ -517,9 +519,9 @@ Only include fields in "updates" that changed. For guests/cues send the COMPLETE
 Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
 Cue shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext }`;
 
-  const res = await fetch('/api/chat', {
+  const res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SB_KEY}` },
     body: JSON.stringify({
       model: 'claude-sonnet-4-5',
       max_tokens: 1024,
