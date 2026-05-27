@@ -249,9 +249,10 @@ const CLIENT_CONFIG = {
   hostName:          "Mark",                      // Name Boo uses when addressing the host
   showName:          "Little Big Voices",          // Full show name
   showShortName:     "LBV",                        // Abbreviation shown in ROS circle center
-  brandColor:        "#00b4cc",                    // Primary brand color
-  accentColor:       "#e6a817",                    // Accent / secondary color
-  logoUrl:           null,                         // Set to a URL to show an <img> logo in ROS center
+  brandColor:        "#3BB8C9",                    // Teal — logo "v."
+  accentColor:       "#F5D03A",                    // Gold — logo "b."
+  logoOrange:        "#E8431A",                    // Orange — logo "l."
+  logoUrl:           "https://raw.githubusercontent.com/RedSunCreative/beb/main/lbv-logo.png",
   elevenlabsVoiceId: "FPpdnlvxEUXCNHKHbJwP",      // ElevenLabs voice ID for Boo
   defaultEpLen:      90,                           // Default episode length (minutes)
   defaultPin:        "5000",                       // Default BSM PIN
@@ -1021,7 +1022,7 @@ function generateROS() {
   const totalDur = cues.reduce((a, c) => a + Math.max(1, parseInt(c.dur) || 0), 0);
   const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseInt(c.dur) || 0)), 0);
 
-  const typeColors = { pod:'#0097ae', music:'#c49a0a', kitchen:'#c96820', video:'#7744bb', '':'#445566' };
+  const typeColors = { pod:'#3BB8C9', music:'#F5D03A', kitchen:'#E8431A', video:'#7744bb', '':'#445566' };
   const preliveColor = '#1d6b35';
   const typeIcons = { pod:'🎙', music:'🎵', kitchen:'🪩', video:'📹', '':'◆' };
   function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
@@ -1054,10 +1055,13 @@ function generateROS() {
     curAngle += sweep;
   });
 
+  const logoR = innerR - 6;
   const centerEl = cfg.logoUrl
-    ? `<image href="${cfg.logoUrl}" x="${cx-48}" y="${cy-48}" width="96" height="96" style="clip-path:circle(48px at 48px 48px)"/>
-       <text x="${cx}" y="${cy+63}" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="Barlow Condensed,sans-serif" font-size="11" letter-spacing="3">E${epNum}</text>`
-    : `<circle cx="${cx}" cy="${cy}" r="${innerR - 7}" fill="#080c14" stroke="${cfg.brandColor}" stroke-width="2.5"/>
+    ? `<defs><clipPath id="logo-clip"><circle cx="${cx}" cy="${cy}" r="${logoR}"/></clipPath></defs>
+       <circle cx="${cx}" cy="${cy}" r="${logoR}" fill="white"/>
+       <image href="${cfg.logoUrl}" x="${cx - logoR}" y="${cy - logoR}" width="${logoR * 2}" height="${logoR * 2}" clip-path="url(#logo-clip)" preserveAspectRatio="xMidYMid meet"/>
+       <text x="${cx}" y="${cy + logoR + 16}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="13" letter-spacing="3">E${epNum}</text>`
+    : `<circle cx="${cx}" cy="${cy}" r="${logoR}" fill="#080c14" stroke="${cfg.brandColor}" stroke-width="2.5"/>
        <text x="${cx}" y="${cy - 18}" text-anchor="middle" fill="${cfg.brandColor}" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="16" letter-spacing="4">${cfg.showShortName}</text>
        <text x="${cx}" y="${cy + 22}" text-anchor="middle" fill="${cfg.accentColor}" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="42">E${epNum}</text>
        <text x="${cx}" y="${cy + 38}" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-family="Barlow Condensed,sans-serif" font-size="9" letter-spacing="1">${showRuntime} MIN</text>`;
