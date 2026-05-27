@@ -98,6 +98,23 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
 .generate-btn{width:100%;padding:16px;background:#0a2a0a;border:2px solid #2d6a2d;color:var(--green);border-radius:10px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;margin-top:6px;transition:all 0.2s;}
 .generate-btn:hover{background:#0f3a20;}
+.generate-btn.ros{background:#0a1a2a;border-color:#1a4a6a;color:var(--teal);}
+.generate-btn.ros:hover{background:#0f2a3a;}
+.cue-edit-btn{font-size:9px;color:var(--muted);letter-spacing:1px;background:none;border:1px solid var(--border);border-radius:3px;padding:2px 6px;cursor:pointer;float:right;margin-top:2px;font-family:'Barlow Condensed',sans-serif;}
+.cue-edit-btn:hover{color:var(--teal);border-color:var(--teal);}
+.scene-edit-panel{background:var(--panel);border-radius:8px;padding:14px;margin-top:10px;border:1px solid var(--teal);}
+.scene-edit-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--teal);letter-spacing:3px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.edit-field{display:flex;flex-direction:column;}
+.edit-field.full{grid-column:1/-1;}
+.edit-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:3px;}
+.edit-inp{background:var(--dark);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--white);font-size:12px;font-family:'Barlow',sans-serif;width:100%;}
+.edit-inp:focus{outline:none;border-color:var(--teal);}
+.edit-ta{background:var(--dark);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--white);font-size:11px;font-family:'Barlow',sans-serif;width:100%;resize:vertical;min-height:44px;line-height:1.5;}
+.edit-ta:focus{outline:none;border-color:var(--teal);}
+.edit-section-head{font-size:9px;color:var(--gold);letter-spacing:3px;margin:10px 0 6px;grid-column:1/-1;border-top:1px solid var(--border);padding-top:8px;}
+.edit-save-btn{background:var(--teal);color:#003a40;border:none;border-radius:4px;padding:7px 16px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;cursor:pointer;margin-top:4px;}
+.edit-close-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:7px 12px;font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;margin-top:4px;margin-left:6px;}
 
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -169,7 +186,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
           <div class="ep-field"><div class="ep-label">LENGTH</div><div class="ep-val" id="d-eplen"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">PIN</div><div class="ep-val" id="d-eppin"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">SAVED</div><div class="ep-val" id="d-saved" style="font-size:11px;color:var(--muted)">—</div></div>
-          <div class="ep-field"><div class="ep-label">BUILD</div><div class="ep-val" id="d-build" style="font-size:11px;color:var(--muted)">—</div></div>
+          <div class="ep-field"><div class="ep-label">BUILD</div><div class="ep-val" style="display:flex;align-items:center;gap:8px;"><span id="d-build" style="font-size:11px;color:var(--muted)">—</span><span onclick="playSosumi()" title="test alert sound" style="font-size:9px;color:var(--muted);cursor:pointer;letter-spacing:1px;opacity:0.5;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.5'">♪</span></div></div>
         </div>
       </div>
     </div>
@@ -206,9 +223,11 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
       <div class="data-section-body" id="cues-body">
         <div id="cue-list-display"><div style="font-size:12px;color:var(--muted)">Tell Boo what's in the show...</div></div>
+        <div id="scene-edit-container"></div>
       </div>
     </div>
 
+    <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">🗺 GENERATE RUN OF SHOW</button>
     <button class="generate-btn" id="generate-btn" onclick="generateBSM()">⚡ GENERATE BOO SHOW MANAGER</button>
 
   </div>
@@ -222,6 +241,21 @@ const XI_KEY = "sk_f4454b2497089f51ea890462cb20984b9e9b9268ab20d961";
 const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
 const BUILDER_ROW = 99;
 
+// ─── CLIENT CONFIG ───────────────────────────────────────────────────────────
+// To adapt for a different show or client, edit this block only.
+const CLIENT_CONFIG = {
+  hostName:          "Mark",                      // Name Boo uses when addressing the host
+  showName:          "Little Big Voices",          // Full show name
+  showShortName:     "LBV",                        // Abbreviation shown in ROS circle center
+  brandColor:        "#00b4cc",                    // Primary brand color
+  accentColor:       "#e6a817",                    // Accent / secondary color
+  logoUrl:           null,                         // Set to a URL to show an <img> logo in ROS center
+  elevenlabsVoiceId: "FPpdnlvxEUXCNHKHbJwP",      // ElevenLabs voice ID for Boo
+  defaultEpLen:      90,                           // Default episode length (minutes)
+  defaultPin:        "5000",                       // Default BSM PIN
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ─── STATE ───
 let showData = {
   epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:90, pin:"5000",
@@ -232,6 +266,7 @@ let conversationHistory = [];
 let isThinking = false;
 let isSpeaking = false;
 let micPaused = false;
+let booChillMode = false;
 let currentAudio = null;
 
 // ─── SUPABASE ───
@@ -317,6 +352,30 @@ function initMic() {
       else interimChunk += e.results[i][0].transcript;
     }
     if (finalChunk) {
+      const norm = finalChunk.toLowerCase();
+      if (!booChillMode && (norm.includes('boo chill') || norm.includes('boo take five') || norm.includes('boo be quiet'))) {
+        booChillMode = true;
+        pendingTranscript = '';
+        clearTimeout(silenceTimer);
+        document.getElementById('mic-text').value = '';
+        const chillMsg = "Chilling! Just say \"I'm ready\" whenever you need me back.";
+        addBooMessage(chillMsg);
+        speakBoo(chillMsg);
+        setMicStatus("BOO IS CHILLING... (say \"I'm ready\")", "");
+        return;
+      }
+      if (booChillMode) {
+        if (norm.includes("i'm ready") || norm.includes("im ready") || norm.includes("i am ready") || norm.includes("boo wake up") || norm.includes("boo come back")) {
+          booChillMode = false;
+          pendingTranscript = '';
+          clearTimeout(silenceTimer);
+          document.getElementById('mic-text').value = '';
+          const wakeMsg = "I'm back! What are we working on?";
+          addBooMessage(wakeMsg);
+          speakBoo(wakeMsg);
+        }
+        return;
+      }
       pendingTranscript += finalChunk;
       clearTimeout(silenceTimer);
       silenceTimer = setTimeout(() => {
@@ -327,7 +386,7 @@ function initMic() {
         if (text) processUserInput(text);
       }, 4000);
     }
-    document.getElementById('mic-text').value = pendingTranscript + interimChunk;
+    if (!booChillMode) document.getElementById('mic-text').value = pendingTranscript + interimChunk;
   };
 
   recognition.onerror = (e) => {
@@ -480,6 +539,8 @@ async function callClaude(userMessage) {
   const systemPrompt = `You are Boo — warm, sharp, and genuinely excited about Little Big Voices. You are Mark's creative partner and show coach, not just a data entry tool. You brainstorm, problem-solve, suggest ideas, and think out loud with Mark — while also building the structured episode data he needs. Be conversational, be smart, be fun.
 
 Mark talks to you hands-free. Keep responses SHORT — 2 to 4 sentences max. You are a voice assistant. Confirm what you heard, ask ONE follow-up, and keep moving.
+
+When you want to express laughter, write "Ha ha ha!" or "Hahaha!" — never just "Ha" (it sounds robotic when spoken by TTS).
 
 CURRENT SHOW DATA:
 ${JSON.stringify(showData, null, 2)}
@@ -682,7 +743,7 @@ async function processUserInput(text) {
   try {
     const response = await callClaude(text);
     hideThinking();
-    if (Date.now() - thinkingStartTime > 10000) playSosumi();
+    if (Date.now() - thinkingStartTime > 8000) playSosumi();
     document.getElementById('mic-btn').classList.remove('thinking');
 
     if (response.updates) {
@@ -768,7 +829,10 @@ function updateAllDisplays() {
     ? '<div style="font-size:12px;color:var(--muted)">Tell Boo what\'s in the show...</div>'
     : showData.cues.map((c, i) => `
       <div class="cue-item ${c.stageType === 'music' ? 'music' : c.stageType === 'kitchen' ? 'kitchen' : c.scene ? 'has-data' : ''}">
-        <div class="cue-num-label">SCENE ${i + 1}${c.prelive ? ' · PRE-SHOW' : ''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div class="cue-num-label">SCENE ${i + 1}${c.prelive ? ' · PRE-SHOW' : ''}</div>
+          <button class="cue-edit-btn" onclick="editScene(${i})">EDIT</button>
+        </div>
         <div class="cue-item-name">${c.scene || '(untitled)'}</div>
         <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
         ${c.booName ? `<div class="cue-item-boo">→ ${c.booName}</div>` : ''}
@@ -848,6 +912,195 @@ async function generateBSM() {
     btn.textContent = '✕ GENERATE FAILED — CHECK CONSOLE';
     setTimeout(() => { btn.textContent = '⚡ GENERATE BOO SHOW MANAGER'; btn.disabled = false; }, 3000);
   }
+}
+
+// ─── SCENE EDIT ───
+let editingSceneIdx = null;
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function editScene(i) {
+  editingSceneIdx = i;
+  const c = showData.cues[i];
+  const typeOpts = ['pod','music','kitchen','video'].map(t =>
+    `<option value="${t}"${c.stageType===t?' selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`
+  ).join('');
+  document.getElementById('scene-edit-container').innerHTML = `
+    <div class="scene-edit-panel">
+      <div class="scene-edit-title">SCENE ${i+1} — EDIT
+        <button class="edit-close-btn" onclick="closeSceneEdit()">✕ CLOSE</button>
+      </div>
+      <div class="edit-grid">
+        <div class="edit-field full"><div class="edit-lbl">SCENE NAME</div><input class="edit-inp" id="ef-scene" value="${esc(c.scene)}"></div>
+        <div class="edit-field"><div class="edit-lbl">DURATION (MIN)</div><input class="edit-inp" id="ef-dur" value="${esc(c.dur)}"></div>
+        <div class="edit-field"><div class="edit-lbl">STAGE TYPE</div><select class="edit-inp" id="ef-stageType">${typeOpts}</select></div>
+        <div class="edit-section-head">LIVE DISPLAY</div>
+        <div class="edit-field"><div class="edit-lbl">BOO CALLED NAME</div><input class="edit-inp" id="ef-booName" value="${esc(c.booName)}"></div>
+        <div class="edit-field full"><div class="edit-lbl">BOO MESSAGE</div><textarea class="edit-ta" id="ef-booMsg">${esc(c.booMsg)}</textarea></div>
+        <div class="edit-field"><div class="edit-lbl">5-MIN WARNING</div><textarea class="edit-ta" id="ef-w5">${esc(c.w5)}</textarea></div>
+        <div class="edit-field"><div class="edit-lbl">2-MIN WARNING</div><textarea class="edit-ta" id="ef-w2">${esc(c.w2)}</textarea></div>
+        <div class="edit-section-head">CREW — NOW</div>
+        <div class="edit-field full"><div class="edit-lbl">AUDIO NOW</div><textarea class="edit-ta" id="ef-audioNow">${esc(c.audioNow)}</textarea></div>
+        <div class="edit-field full"><div class="edit-lbl">VIDEO NOW</div><textarea class="edit-ta" id="ef-videoNow">${esc(c.videoNow)}</textarea></div>
+        <div class="edit-field full"><div class="edit-lbl">CAMERAS NOW</div><textarea class="edit-ta" id="ef-camerasNow">${esc(c.camerasNow)}</textarea></div>
+        <div class="edit-field full"><div class="edit-lbl">LIGHTING NOW</div><textarea class="edit-ta" id="ef-lightingNow">${esc(c.lightingNow)}</textarea></div>
+        <div class="edit-section-head">CREW — NEXT SCENE PREP</div>
+        <div class="edit-field full"><div class="edit-lbl">AUDIO NEXT</div><textarea class="edit-ta" id="ef-audioNext">${esc(c.audioNext)}</textarea></div>
+        <div class="edit-field full"><div class="edit-lbl">VIDEO NEXT</div><textarea class="edit-ta" id="ef-videoNext">${esc(c.videoNext)}</textarea></div>
+        <div class="edit-field full"><div class="edit-lbl">CAMERAS NEXT</div><textarea class="edit-ta" id="ef-camerasNext">${esc(c.camerasNext)}</textarea></div>
+        <div class="edit-field full"><div class="edit-lbl">LIGHTING NEXT</div><textarea class="edit-ta" id="ef-lightingNext">${esc(c.lightingNext)}</textarea></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button class="edit-save-btn" onclick="saveSceneEdit()">SAVE CHANGES</button>
+        <button class="edit-close-btn" onclick="closeSceneEdit()">CANCEL</button>
+      </div>
+    </div>`;
+  document.getElementById('scene-edit-container').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function saveSceneEdit() {
+  if (editingSceneIdx === null) return;
+  const c = showData.cues[editingSceneIdx];
+  c.scene       = document.getElementById('ef-scene').value;
+  c.dur         = document.getElementById('ef-dur').value;
+  c.stageType   = document.getElementById('ef-stageType').value;
+  c.booName     = document.getElementById('ef-booName').value;
+  c.booMsg      = document.getElementById('ef-booMsg').value;
+  c.w5          = document.getElementById('ef-w5').value;
+  c.w2          = document.getElementById('ef-w2').value;
+  c.audioNow    = document.getElementById('ef-audioNow').value;
+  c.videoNow    = document.getElementById('ef-videoNow').value;
+  c.camerasNow  = document.getElementById('ef-camerasNow').value;
+  c.lightingNow = document.getElementById('ef-lightingNow').value;
+  c.audioNext   = document.getElementById('ef-audioNext').value;
+  c.videoNext   = document.getElementById('ef-videoNext').value;
+  c.camerasNext = document.getElementById('ef-camerasNext').value;
+  c.lightingNext= document.getElementById('ef-lightingNext').value;
+  updateAllDisplays();
+  saveState();
+  closeSceneEdit();
+}
+
+function closeSceneEdit() {
+  editingSceneIdx = null;
+  document.getElementById('scene-edit-container').innerHTML = '';
+}
+
+// ─── GENERATE RUN OF SHOW ───
+function generateROS() {
+  const cues = showData.cues;
+  if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
+
+  const btn = document.getElementById('ros-btn');
+  btn.textContent = '⏳ BUILDING...';
+  btn.disabled = true;
+
+  const totalDur = cues.reduce((a, c) => a + (parseInt(c.dur) || 1), 0);
+  const cx = 430, cy = 430, outerR = 370, innerR = 130;
+  const typeColors = { pod:'#00b4cc', music:'#e6a817', kitchen:'#e07a30', video:'#8855cc', '':'#4a4a6a' };
+  const preliveColor = '#1a5c2a';
+
+  let wedges = '';
+  let labelEls = '';
+  const GAP_RAD = 0.018;
+  let curAngle = -Math.PI / 2;
+
+  cues.forEach((c, i) => {
+    const dur = parseInt(c.dur) || 1;
+    const sweep = (dur / totalDur) * 2 * Math.PI;
+    const sa = curAngle + GAP_RAD / 2;
+    const ea = curAngle + sweep - GAP_RAD / 2;
+    const mid = (sa + ea) / 2;
+    const large = sweep > Math.PI ? 1 : 0;
+    const color = c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']);
+
+    const p = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    const [ix1,iy1] = p(innerR, sa); const [ox1,oy1] = p(outerR, sa);
+    const [ox2,oy2] = p(outerR, ea); const [ix2,iy2] = p(innerR, ea);
+    wedges += `<path d="M${ix1},${iy1} L${ox1},${oy1} A${outerR},${outerR} 0 ${large} 1 ${ox2},${oy2} L${ix2},${iy2} A${innerR},${innerR} 0 ${large} 0 ${ix1},${iy1} Z" fill="${color}" stroke="#080c14" stroke-width="1.5"/>`;
+
+    if (sweep > 0.13) {
+      const lr = (innerR + outerR) / 2;
+      const [lx,ly] = p(lr, mid);
+      const degRaw = mid * 180 / Math.PI + 90;
+      const deg = (mid > Math.PI / 2 && mid < 3 * Math.PI / 2) ? degRaw + 180 : degRaw;
+      const name = (c.scene||'').length > 16 ? (c.scene||'').slice(0,14)+'…' : (c.scene||'');
+      const fs = sweep > 0.38 ? 11 : 9;
+      labelEls += `<g transform="rotate(${deg.toFixed(1)},${lx.toFixed(1)},${ly.toFixed(1)})">
+        <text x="${lx.toFixed(1)}" y="${(ly-7).toFixed(1)}" text-anchor="middle" fill="white" font-family="Barlow Condensed,sans-serif" font-weight="700" font-size="${fs}" letter-spacing="0.5">${i+1}</text>
+        ${sweep > 0.22 ? `<text x="${lx.toFixed(1)}" y="${(ly+5).toFixed(1)}" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="Barlow Condensed,sans-serif" font-size="${fs-1}">${name}</text>` : ''}
+        ${sweep > 0.32 ? `<text x="${lx.toFixed(1)}" y="${(ly+16).toFixed(1)}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="Barlow Condensed,sans-serif" font-size="8">${c.dur||'?'}m</text>` : ''}
+      </g>`;
+    }
+    curAngle += sweep;
+  });
+
+  const cfg = CLIENT_CONFIG;
+  const center = `
+    <circle cx="${cx}" cy="${cy}" r="${innerR-6}" fill="#080c14" stroke="${cfg.brandColor}" stroke-width="2.5"/>
+    ${cfg.logoUrl ? `<image href="${cfg.logoUrl}" x="${cx-50}" y="${cy-50}" width="100" height="100" clip-path="circle(46px at 50px 50px)"/>` : `
+    <text x="${cx}" y="${cy-14}" text-anchor="middle" fill="${cfg.brandColor}" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="34" letter-spacing="5">${cfg.showShortName}</text>
+    <text x="${cx}" y="${cy+8}" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="Barlow Condensed,sans-serif" font-size="11" letter-spacing="2">${cfg.showName.toUpperCase()}</text>`}
+    <text x="${cx}" y="${cy+28}" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-family="Barlow Condensed,sans-serif" font-size="10">E${showData.epNum||'X'} · ${showData.epLen||90} MIN</text>`;
+
+  const legendColors = [
+    {label:'PRE-SHOW',color:preliveColor},{label:'POD STAGE',color:typeColors.pod},
+    {label:'MUSIC STAGE',color:typeColors.music},{label:'KITCHEN DISCO',color:typeColors.kitchen},{label:'VIDEO',color:typeColors.video}
+  ];
+  let legend = '';
+  legendColors.forEach((l,i) => {
+    const lx = 100 + i * 160;
+    legend += `<rect x="${lx}" y="822" width="10" height="10" fill="${l.color}" rx="2"/>
+      <text x="${lx+15}" y="831" fill="rgba(255,255,255,0.5)" font-family="Barlow Condensed,sans-serif" font-size="10" letter-spacing="0.5">${l.label}</text>`;
+  });
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 855" width="860" height="855">
+    <rect width="860" height="855" fill="#080c14"/>
+    ${wedges}${labelEls}${center}${legend}
+  </svg>`;
+
+  const sceneRows = cues.map((c,i) => {
+    const color = c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']);
+    return `<tr>
+      <td style="padding:8px 12px;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:1px;">SCENE ${i+1}${c.prelive?'<br><span style="color:#2a8c4a;font-size:9px">PRE-SHOW</span>':''}</td>
+      <td style="padding:8px 4px;"><div style="width:10px;height:10px;border-radius:50%;background:${color};"></div></td>
+      <td style="padding:8px 12px;color:white;font-weight:700;font-size:13px;">${c.scene||'(untitled)'}</td>
+      <td style="padding:8px 12px;color:rgba(255,255,255,0.4);font-size:12px;">${c.dur||'?'} min</td>
+      <td style="padding:8px 12px;color:rgba(255,255,255,0.3);font-size:11px;">${(c.stageType||'').toUpperCase()}</td>
+    </tr>`;
+  }).join('');
+
+  const epNum = showData.epNum||'X';
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>LBV E${epNum} — Run of Show</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { background:#080c14; margin:0; padding:40px 20px; font-family:'Barlow Condensed',sans-serif; display:flex; flex-direction:column; align-items:center; }
+  h1 { color:${cfg.brandColor}; letter-spacing:5px; font-size:20px; margin:0 0 4px; text-align:center; }
+  .sub { color:rgba(255,255,255,0.35); font-size:12px; letter-spacing:3px; margin:0 0 32px; text-align:center; }
+  .ros-wrap { max-width:700px; width:100%; }
+  table { max-width:700px; width:100%; border-collapse:collapse; margin-top:24px; }
+  thead td { color:rgba(255,255,255,0.25); font-size:9px; letter-spacing:3px; padding:0 12px 8px; border-bottom:1px solid rgba(255,255,255,0.08); }
+  tbody tr:hover td { background:rgba(255,255,255,0.03); }
+  @media print { body { padding:20px; } }
+</style></head><body>
+<h1>${cfg.showName.toUpperCase()} — RUN OF SHOW</h1>
+<p class="sub">EPISODE ${epNum}${showData.epTitle?' · '+showData.epTitle:''} ${showData.epDate?' · '+showData.epDate:''}</p>
+<div class="ros-wrap">${svg}</div>
+<table>
+  <thead><tr><td>SCENE</td><td></td><td>NAME</td><td>DURATION</td><td>STAGE</td></tr></thead>
+  <tbody>${sceneRows}</tbody>
+</table>
+</body></html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  btn.textContent = '✓ OPENED IN NEW TAB';
+  setTimeout(() => { btn.textContent = '🗺 GENERATE RUN OF SHOW'; btn.disabled = false; }, 2500);
 }
 
 // ─── INIT ───
