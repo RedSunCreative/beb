@@ -87,7 +87,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .guest-type{font-size:10px;color:var(--teal);letter-spacing:2px;}
 
 .runtime-bar{background:var(--dark);border-radius:6px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
-.runtime-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;}
+.runtime-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:500;}
 .runtime-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
 
 .thinking{display:flex;gap:5px;align-items:center;padding:14px 16px;}
@@ -760,6 +760,10 @@ window.addEventListener('load', async () => {
     });
     updateAllDisplays();
     const msg = "Hey Mark! Welcome back — I've got everything we worked on. Just pick up wherever you left off. What do you want to add or change?";
+    addBooMessage(msg);
+    await speakBoo(msg);
+  } else if (loaded && showData.epNum) {
+    const msg = "Hey Mark! Welcome back — I've got all your show data loaded. History got cleared somewhere along the way, but I can see the episode, guests, and cues. What do you want to work on?";
     addBooMessage(msg);
     await speakBoo(msg);
   } else {
