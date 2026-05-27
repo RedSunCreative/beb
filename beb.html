@@ -539,7 +539,7 @@ Cue shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", 
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SB_KEY}` },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      max_tokens: 8192,
       system: systemPrompt,
       messages: [...conversationHistory, { role: 'user', content: userMessage }]
     })
@@ -595,10 +595,16 @@ async function processUserInput(text) {
     conversationHistory.push({ role: 'assistant', content: JSON.stringify(response) });
     if (conversationHistory.length > 40) conversationHistory = conversationHistory.slice(-40);
 
-    addBooMessage(response.display || response.speech);
+    const rawDisplay = response.display || response.speech || '';
+    const rawSpeech = response.speech || response.display || '';
+    const looksLikeJSON = rawDisplay.trimStart().startsWith('{');
+    const safeDisplay = looksLikeJSON ? "Done — I've updated the show data. Check the panel!" : rawDisplay;
+    const safeSpeech = looksLikeJSON ? "Done! I've updated the show data — check the panel." : rawSpeech;
+
+    addBooMessage(safeDisplay);
     updateAllDisplays();
     saveState();
-    await speakBoo(response.speech || response.display);
+    await speakBoo(safeSpeech);
   } catch(e) {
     hideThinking();
     document.getElementById('mic-btn').classList.remove('thinking');
