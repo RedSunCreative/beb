@@ -544,7 +544,7 @@ Cue shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", 
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SB_KEY}` },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1024,
       system: systemPrompt,
       messages: [...conversationHistory, { role: 'user', content: userMessage }]
