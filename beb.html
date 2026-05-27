@@ -293,7 +293,7 @@ function setSaveBadge(t, c) {
 let recognition = null;
 let silenceTimer = null;
 let pendingTranscript = '';
-let thinkingAlertTimer = null;
+let thinkingStartTime = null;
 
 function initMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -675,14 +675,14 @@ async function processUserInput(text) {
   setMicStatus("BOO IS THINKING...", "thinking");
   document.getElementById('mic-btn').classList.add('thinking');
   showThinking();
-  thinkingAlertTimer = setTimeout(playSosumi, 15000);
+  thinkingStartTime = Date.now();
 
   conversationHistory.push({ role: 'user', content: text });
 
   try {
     const response = await callClaude(text);
-    clearTimeout(thinkingAlertTimer);
     hideThinking();
+    if (Date.now() - thinkingStartTime > 10000) playSosumi();
     document.getElementById('mic-btn').classList.remove('thinking');
 
     if (response.updates) {
