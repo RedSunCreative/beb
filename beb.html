@@ -371,15 +371,18 @@ function initMic() {
     }
     if (finalChunk) {
       const norm = finalChunk.toLowerCase();
-      if (!booChillMode && (norm.includes('boo chill') || norm.includes('boo take five') || norm.includes('boo be quiet'))) {
+      if (!booChillMode && (norm.includes('chill boo') || norm.includes('boo chill') || norm.includes('boo take five') || norm.includes('boo be quiet'))) {
         booChillMode = true;
+        stopBoo();
         pendingTranscript = '';
         clearTimeout(silenceTimer);
         document.getElementById('mic-text').value = '';
-        const chillMsg = "Chilling! Just say \"I'm ready\" whenever you need me back.";
-        addBooMessage(chillMsg);
-        speakBoo(chillMsg);
+        addBooMessage("Chilling. Say \"I'm ready\" whenever you need me back.");
         setMicStatus("BOO IS CHILLING... (say \"I'm ready\")", "");
+        const btn = document.getElementById('mic-btn');
+        btn.classList.remove('listening');
+        btn.classList.add('paused');
+        setTimeout(() => { try { recognition?.start(); } catch(e) {} }, 300);
         return;
       }
       if (booChillMode) {
@@ -388,6 +391,7 @@ function initMic() {
           pendingTranscript = '';
           clearTimeout(silenceTimer);
           document.getElementById('mic-text').value = '';
+          document.getElementById('mic-btn').classList.remove('paused');
           const wakeMsg = "I'm back! What are we working on?";
           addBooMessage(wakeMsg);
           speakBoo(wakeMsg);
@@ -413,7 +417,7 @@ function initMic() {
   };
 
   recognition.onend = () => {
-    if (!isSpeaking && !micPaused) {
+    if (!isSpeaking && (!micPaused || booChillMode)) {
       setTimeout(() => { try { recognition.start(); } catch(e){} }, 200);
     }
   };
@@ -449,9 +453,20 @@ function muteMicWhileSpeaking() {
 function unmuteMicAfterSpeaking() {
   isSpeaking = false;
   document.getElementById('mic-btn').classList.remove('speaking');
-  if (!micPaused) {
+  if (!micPaused && !booChillMode) {
     setTimeout(() => { try { recognition?.start(); } catch(e) {} }, 300);
   }
+}
+
+function stopBoo() {
+  if (currentAudio) {
+    currentAudio.onended = null;
+    currentAudio.pause();
+    try { URL.revokeObjectURL(currentAudio._url); } catch(e) {}
+    currentAudio = null;
+  }
+  isSpeaking = false;
+  document.getElementById('mic-btn').classList.remove('speaking', 'thinking');
 }
 
 function setMicStatus(text, cls) {
