@@ -91,15 +91,15 @@ body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:r
 .live-edit-header{display:flex;justify-content:space-between;align-items:center;}
 .live-edit-title{font-size:13px;color:#E8431A;letter-spacing:3px;font-weight:bold;}
 .live-edit-close{background:none;border:1px solid #E8431A;color:#E8431A;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;}
-.le-section-title{font-size:10px;color:#C4B9A8;letter-spacing:3px;margin-bottom:8px;}
-.cue-block{background:#1a1a2a;border:1px solid #333;border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
-.cue-block.current{border-color:#3BB8C9;background:#051525;}
-.cue-block.removed{opacity:0.4;background:#111;}
+.le-section-title{font-size:11px;color:#C4B9A8;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.cue-block{background:#141422;border:1px solid #2a2a3e;border-left:4px solid #445;border-radius:8px;padding:11px 14px;display:flex;align-items:center;gap:12px;}
+.cue-block.current{border-left-color:#3BB8C9;background:#051525;border-color:#2a3a45;}
+.cue-block.removed{opacity:0.35;background:#0d0d18;}
 .cue-block-info{flex:1;}
-.cue-block-time{font-size:9px;color:#C4B9A8;letter-spacing:2px;margin-bottom:3px;}
-.cue-block-name{font-size:14px;color:#fff;font-weight:bold;}
-.cue-block-remove{background:#3a0a00;border:1px solid #E8431A;color:#E8431A;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:bold;white-space:nowrap;}
-.cue-block-current-badge{font-size:9px;color:#3BB8C9;letter-spacing:2px;}
+.cue-block-time{font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:2px;margin-top:2px;}
+.cue-block-name{font-size:15px;color:#fff;font-weight:bold;line-height:1.2;}
+.cue-block-remove{background:#3a0a00;border:1px solid #E8431A;color:#E8431A;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:bold;white-space:nowrap;flex-shrink:0;}
+.cue-block-current-badge{font-size:9px;color:#3BB8C9;letter-spacing:2px;margin-bottom:2px;}
 .insert-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .insert-btn{padding:14px 10px;background:#0a0a1a;border:1px solid #3BB8C9;color:#3BB8C9;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;text-align:center;line-height:1.4;}
 .go-closing-btn{width:100%;padding:16px 0;background:#3a0a00;border:2px solid #E8431A;color:#E8431A;border-radius:8px;cursor:pointer;font-size:15px;font-weight:bold;}
@@ -432,7 +432,7 @@ body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:r
       <div class="live-edit-title">⚡ LIVE EDIT MODE</div>
       <button class="live-edit-close" onclick="closeLiveEdit()">✕ CLOSE</button>
     </div>
-    <div><div class="le-section-title">REMAINING CUES — TAP TO REMOVE</div><div id="le-cue-list" style="display:flex;flex-direction:column;gap:8px;"></div></div>
+    <div><div class="le-section-title">REMAINING CUES — TAP TO REMOVE &nbsp;<span id="le-remaining-count" style="color:#3BB8C9;font-weight:700;"></span></div><div id="le-cue-list" style="display:flex;flex-direction:column;gap:8px;"></div></div>
     <div id="insert-section">
       <div class="le-section-title">INSERT REPLACEMENT SEGMENT</div>
       <div class="insert-grid">
@@ -915,11 +915,19 @@ function closeLiveEdit(){document.getElementById("live-edit-overlay").style.disp
 
 function buildCueList(){
   const list=document.getElementById("le-cue-list");list.innerHTML="";
+  const stageColors={pod:"#0097ae",music:"#c49a0a",kitchen:"#c96820",video:"#7744bb","":" #445566"};
+  const remaining=CUES.slice(cueIdx).filter((_,j)=>!removedIndices.has(cueIdx+j)).length;
+  const countEl=document.getElementById("le-remaining-count");
+  if(countEl) countEl.textContent=remaining+" remaining";
+  if(CUES.length===0){list.innerHTML='<div style="color:#888;font-size:12px;padding:10px 0;">No cues loaded — regenerate BSM from Boo Episode Builder.</div>';return;}
   for(let i=cueIdx;i<CUES.length;i++){
     const c=CUES[i],isCurrent=i===cueIdx,isRemoved=removedIndices.has(i);
+    const color=c.prelive?"#1d6b35":(stageColors[c.stageType||""]||"#445566");
+    const stageLabel=(c.stageType||"pre-show").toUpperCase();
     const block=document.createElement("div");
     block.className=`cue-block${isCurrent?" current":""}${isRemoved?" removed":""}`;
-    block.innerHTML=`<div class="cue-block-info">${isCurrent?`<div class="cue-block-current-badge">▶ CURRENT</div>`:""}<div class="cue-block-name">${isRemoved?"[REMOVED] ":""}${c.scene}</div><div class="cue-block-time">${c.dur} min</div></div>${!isCurrent&&!isRemoved?`<button class="cue-block-remove" onclick="removeCue(${i})">REMOVE</button>`:""}`;
+    block.style.borderLeftColor=color;
+    block.innerHTML=`<div class="cue-block-info">${isCurrent?`<div class="cue-block-current-badge">▶ CURRENT SCENE</div>`:""}<div class="cue-block-name">${isRemoved?"[REMOVED] ":""}S${i+1} — ${c.scene}</div><div class="cue-block-time">${c.dur} min · ${stageLabel}</div></div>${!isCurrent&&!isRemoved?`<button class="cue-block-remove" onclick="removeCue(${i})">REMOVE</button>`:""}`;
     list.appendChild(block);
   }
 }

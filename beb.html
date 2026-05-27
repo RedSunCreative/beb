@@ -64,15 +64,15 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .data-panel{overflow-y:auto;height:calc(100vh - 60px);padding:20px;}
 .data-section{background:var(--card);border-radius:10px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden;}
 .data-section-header{background:var(--panel);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;}
-.data-section-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--gold);letter-spacing:3px;}
+.data-section-title{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--gold);letter-spacing:3px;}
 .data-section-count{font-size:10px;color:var(--teal);letter-spacing:2px;}
 .data-section-body{padding:14px 16px;}
 
 .ep-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .ep-field{background:var(--dark);border-radius:6px;padding:8px 10px;}
-.ep-label{font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:3px;}
-.ep-val{font-size:14px;color:var(--white);font-weight:600;}
-.ep-val.empty{color:var(--border);font-style:italic;font-size:12px;}
+.ep-label{font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;}
+.ep-val{font-size:18px;color:var(--white);font-weight:700;}
+.ep-val.empty{color:var(--border);font-style:italic;font-size:14px;}
 
 .cue-item{background:var(--dark);border-radius:6px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--border);}
 .cue-item.has-data{border-left-color:var(--teal);}
@@ -177,7 +177,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('ep-body')">
-        <div class="data-section-title">EPISODE INFO</div>
+        <div class="data-section-title">EPISODE INFO <span id="d-ep-badge" style="color:var(--teal);font-weight:900;"></span></div>
         <div class="data-section-count" id="ep-complete">—</div>
       </div>
       <div class="data-section-body" id="ep-body">
@@ -255,6 +255,7 @@ const CLIENT_CONFIG = {
   elevenlabsVoiceId: "FPpdnlvxEUXCNHKHbJwP",      // ElevenLabs voice ID for Boo
   defaultEpLen:      90,                           // Default episode length (minutes)
   defaultPin:        "5000",                       // Default BSM PIN
+  qrUrl:             null,                         // URL for ROS QR code (e.g. BSM link or show page)
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -812,6 +813,8 @@ function setVal(id, val, fallback) {
 function updateAllDisplays() {
   setVal('d-epnum', showData.epNum);
   setVal('d-eptitle', showData.epTitle);
+  const epBadge = document.getElementById('d-ep-badge');
+  if (epBadge) epBadge.textContent = showData.epNum ? `— E${showData.epNum}` : '';
   setVal('d-epdate', showData.epDate);
   setVal('d-eplen', showData.epLen ? showData.epLen + ' min' : '');
   setVal('d-eppin', showData.pin);
@@ -1013,104 +1016,149 @@ function generateROS() {
   btn.textContent = '⏳ BUILDING...';
   btn.disabled = true;
 
-  const totalDur = cues.reduce((a, c) => a + (parseInt(c.dur) || 1), 0);
-  const cx = 430, cy = 430, outerR = 370, innerR = 130;
-  const typeColors = { pod:'#00b4cc', music:'#e6a817', kitchen:'#e07a30', video:'#8855cc', '':'#4a4a6a' };
-  const preliveColor = '#1a5c2a';
+  const cfg = CLIENT_CONFIG;
+  const epNum = showData.epNum || 'X';
+  const totalDur = cues.reduce((a, c) => a + Math.max(1, parseInt(c.dur) || 0), 0);
+  const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseInt(c.dur) || 0)), 0);
 
+  const typeColors = { pod:'#0097ae', music:'#c49a0a', kitchen:'#c96820', video:'#7744bb', '':'#445566' };
+  const preliveColor = '#1d6b35';
+  const typeIcons = { pod:'🎙', music:'🎵', kitchen:'🪩', video:'📹', '':'◆' };
+  function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
+  function getIcon(c) { return c.prelive ? '⏱' : (typeIcons[c.stageType] || typeIcons['']); }
+
+  // ── CIRCLE SVG ────────────────────────────────────────────────────────────
+  const cx = 250, cy = 250, outerR = 215, innerR = 85;
+  const GAP = 0.018;
   let wedges = '';
-  let labelEls = '';
-  const GAP_RAD = 0.018;
   let curAngle = -Math.PI / 2;
 
   cues.forEach((c, i) => {
-    const dur = parseInt(c.dur) || 1;
+    const dur = Math.max(1, parseInt(c.dur) || 0);
     const sweep = (dur / totalDur) * 2 * Math.PI;
-    const sa = curAngle + GAP_RAD / 2;
-    const ea = curAngle + sweep - GAP_RAD / 2;
+    const sa = curAngle + GAP / 2;
+    const ea = curAngle + sweep - GAP / 2;
     const mid = (sa + ea) / 2;
     const large = sweep > Math.PI ? 1 : 0;
-    const color = c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']);
-
+    const color = getColor(c);
     const p = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
-    const [ix1,iy1] = p(innerR, sa); const [ox1,oy1] = p(outerR, sa);
-    const [ox2,oy2] = p(outerR, ea); const [ix2,iy2] = p(innerR, ea);
-    wedges += `<path d="M${ix1},${iy1} L${ox1},${oy1} A${outerR},${outerR} 0 ${large} 1 ${ox2},${oy2} L${ix2},${iy2} A${innerR},${innerR} 0 ${large} 0 ${ix1},${iy1} Z" fill="${color}" stroke="#080c14" stroke-width="1.5"/>`;
-
-    if (sweep > 0.13) {
-      const lr = (innerR + outerR) / 2;
-      const [lx,ly] = p(lr, mid);
-      const degRaw = mid * 180 / Math.PI + 90;
-      const deg = (mid > Math.PI / 2 && mid < 3 * Math.PI / 2) ? degRaw + 180 : degRaw;
-      const name = (c.scene||'').length > 16 ? (c.scene||'').slice(0,14)+'…' : (c.scene||'');
-      const fs = sweep > 0.38 ? 11 : 9;
-      labelEls += `<g transform="rotate(${deg.toFixed(1)},${lx.toFixed(1)},${ly.toFixed(1)})">
-        <text x="${lx.toFixed(1)}" y="${(ly-7).toFixed(1)}" text-anchor="middle" fill="white" font-family="Barlow Condensed,sans-serif" font-weight="700" font-size="${fs}" letter-spacing="0.5">${i+1}</text>
-        ${sweep > 0.22 ? `<text x="${lx.toFixed(1)}" y="${(ly+5).toFixed(1)}" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-family="Barlow Condensed,sans-serif" font-size="${fs-1}">${name}</text>` : ''}
-        ${sweep > 0.32 ? `<text x="${lx.toFixed(1)}" y="${(ly+16).toFixed(1)}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="Barlow Condensed,sans-serif" font-size="8">${c.dur||'?'}m</text>` : ''}
-      </g>`;
+    const [ix1,iy1] = p(innerR, sa), [ox1,oy1] = p(outerR, sa);
+    const [ox2,oy2] = p(outerR, ea), [ix2,iy2] = p(innerR, ea);
+    wedges += `<path d="M${ix1.toFixed(1)},${iy1.toFixed(1)} L${ox1.toFixed(1)},${oy1.toFixed(1)} A${outerR},${outerR} 0 ${large} 1 ${ox2.toFixed(1)},${oy2.toFixed(1)} L${ix2.toFixed(1)},${iy2.toFixed(1)} A${innerR},${innerR} 0 ${large} 0 ${ix1.toFixed(1)},${iy1.toFixed(1)} Z" fill="${color}" stroke="#080c14" stroke-width="2"/>`;
+    if (sweep > 0.07) {
+      const nr = (innerR + outerR) / 2;
+      const [nx, ny] = p(nr, mid);
+      const fs = sweep > 0.45 ? 16 : sweep > 0.25 ? 13 : sweep > 0.12 ? 10 : 8;
+      wedges += `<text x="${nx.toFixed(1)}" y="${(ny + fs * 0.38).toFixed(1)}" text-anchor="middle" fill="rgba(255,255,255,0.95)" font-family="Barlow Condensed,sans-serif" font-weight="700" font-size="${fs}">${i + 1}</text>`;
     }
     curAngle += sweep;
   });
 
-  const cfg = CLIENT_CONFIG;
-  const center = `
-    <circle cx="${cx}" cy="${cy}" r="${innerR-6}" fill="#080c14" stroke="${cfg.brandColor}" stroke-width="2.5"/>
-    ${cfg.logoUrl ? `<image href="${cfg.logoUrl}" x="${cx-50}" y="${cy-50}" width="100" height="100" clip-path="circle(46px at 50px 50px)"/>` : `
-    <text x="${cx}" y="${cy-14}" text-anchor="middle" fill="${cfg.brandColor}" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="34" letter-spacing="5">${cfg.showShortName}</text>
-    <text x="${cx}" y="${cy+8}" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="Barlow Condensed,sans-serif" font-size="11" letter-spacing="2">${cfg.showName.toUpperCase()}</text>`}
-    <text x="${cx}" y="${cy+28}" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-family="Barlow Condensed,sans-serif" font-size="10">E${showData.epNum||'X'} · ${showData.epLen||90} MIN</text>`;
+  const centerEl = cfg.logoUrl
+    ? `<image href="${cfg.logoUrl}" x="${cx-48}" y="${cy-48}" width="96" height="96" style="clip-path:circle(48px at 48px 48px)"/>
+       <text x="${cx}" y="${cy+63}" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="Barlow Condensed,sans-serif" font-size="11" letter-spacing="3">E${epNum}</text>`
+    : `<circle cx="${cx}" cy="${cy}" r="${innerR - 7}" fill="#080c14" stroke="${cfg.brandColor}" stroke-width="2.5"/>
+       <text x="${cx}" y="${cy - 18}" text-anchor="middle" fill="${cfg.brandColor}" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="16" letter-spacing="4">${cfg.showShortName}</text>
+       <text x="${cx}" y="${cy + 22}" text-anchor="middle" fill="${cfg.accentColor}" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="42">E${epNum}</text>
+       <text x="${cx}" y="${cy + 38}" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-family="Barlow Condensed,sans-serif" font-size="9" letter-spacing="1">${showRuntime} MIN</text>`;
 
-  const legendColors = [
-    {label:'PRE-SHOW',color:preliveColor},{label:'POD STAGE',color:typeColors.pod},
-    {label:'MUSIC STAGE',color:typeColors.music},{label:'KITCHEN DISCO',color:typeColors.kitchen},{label:'VIDEO',color:typeColors.video}
-  ];
-  let legend = '';
-  legendColors.forEach((l,i) => {
-    const lx = 100 + i * 160;
-    legend += `<rect x="${lx}" y="822" width="10" height="10" fill="${l.color}" rx="2"/>
-      <text x="${lx+15}" y="831" fill="rgba(255,255,255,0.5)" font-family="Barlow Condensed,sans-serif" font-size="10" letter-spacing="0.5">${l.label}</text>`;
-  });
+  const circleSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="420" height="420"><rect width="500" height="500" fill="transparent"/>${wedges}${centerEl}</svg>`;
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 855" width="860" height="855">
-    <rect width="860" height="855" fill="#080c14"/>
-    ${wedges}${labelEls}${center}${legend}
-  </svg>`;
-
-  const sceneRows = cues.map((c,i) => {
-    const color = c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']);
-    return `<tr>
-      <td style="padding:8px 12px;color:rgba(255,255,255,0.35);font-size:11px;letter-spacing:1px;">SCENE ${i+1}${c.prelive?'<br><span style="color:#2a8c4a;font-size:9px">PRE-SHOW</span>':''}</td>
-      <td style="padding:8px 4px;"><div style="width:10px;height:10px;border-radius:50%;background:${color};"></div></td>
-      <td style="padding:8px 12px;color:white;font-weight:700;font-size:13px;">${c.scene||'(untitled)'}</td>
-      <td style="padding:8px 12px;color:rgba(255,255,255,0.4);font-size:12px;">${c.dur||'?'} min</td>
-      <td style="padding:8px 12px;color:rgba(255,255,255,0.3);font-size:11px;">${(c.stageType||'').toUpperCase()}</td>
-    </tr>`;
+  // ── SCENE LIST ───────────────────────────────────────────────────────────
+  const sceneRows = cues.map((c, i) => {
+    const color = getColor(c);
+    const icon = getIcon(c);
+    const stageLabel = c.prelive ? 'PRE-SHOW' : (c.stageType || '').toUpperCase();
+    return `<div class="srow">
+      <div class="snum" style="color:${color}">S${i + 1}</div>
+      <div class="sicon">${icon}</div>
+      <div class="sinfo">
+        <div class="sname">${c.scene || '(untitled)'}</div>
+        <div class="smeta">${stageLabel}${c.dur ? ' · ' + c.dur + 'm' : ''}</div>
+      </div>
+    </div>`;
   }).join('');
 
-  const epNum = showData.epNum||'X';
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>LBV E${epNum} — Run of Show</title>
+  // ── FULL HTML ─────────────────────────────────────────────────────────────
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${cfg.showName} E${epNum} — Run of Show</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
+${cfg.qrUrl ? '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>' : ''}
 <style>
-  * { box-sizing: border-box; }
-  body { background:#080c14; margin:0; padding:40px 20px; font-family:'Barlow Condensed',sans-serif; display:flex; flex-direction:column; align-items:center; }
-  h1 { color:${cfg.brandColor}; letter-spacing:5px; font-size:20px; margin:0 0 4px; text-align:center; }
-  .sub { color:rgba(255,255,255,0.35); font-size:12px; letter-spacing:3px; margin:0 0 32px; text-align:center; }
-  .ros-wrap { max-width:700px; width:100%; }
-  table { max-width:700px; width:100%; border-collapse:collapse; margin-top:24px; }
-  thead td { color:rgba(255,255,255,0.25); font-size:9px; letter-spacing:3px; padding:0 12px 8px; border-bottom:1px solid rgba(255,255,255,0.08); }
-  tbody tr:hover td { background:rgba(255,255,255,0.03); }
-  @media print { body { padding:20px; } }
-</style></head><body>
-<h1>${cfg.showName.toUpperCase()} — RUN OF SHOW</h1>
-<p class="sub">EPISODE ${epNum}${showData.epTitle?' · '+showData.epTitle:''} ${showData.epDate?' · '+showData.epDate:''}</p>
-<div class="ros-wrap">${svg}</div>
-<table>
-  <thead><tr><td>SCENE</td><td></td><td>NAME</td><td>DURATION</td><td>STAGE</td></tr></thead>
-  <tbody>${sceneRows}</tbody>
-</table>
-</body></html>`;
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#080c14;color:#fff;font-family:'Barlow Condensed',sans-serif;}
+.page{max-width:960px;margin:0 auto;padding:36px 24px;}
+
+/* Header */
+.hdr{text-align:center;padding-bottom:28px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:28px;}
+.hdr-show{font-size:13px;color:${cfg.brandColor};letter-spacing:9px;text-transform:uppercase;margin-bottom:4px;}
+.hdr-epnum{font-size:120px;font-weight:900;color:${cfg.accentColor};line-height:0.88;letter-spacing:-4px;}
+.hdr-title{font-size:24px;font-weight:700;letter-spacing:2px;margin-top:10px;text-transform:uppercase;}
+.hdr-sub{font-size:13px;color:rgba(255,255,255,0.32);letter-spacing:3px;margin-top:6px;}
+
+/* Layout */
+.main{display:flex;gap:28px;align-items:flex-start;}
+.circle-col{flex-shrink:0;}
+.list-col{flex:1;min-width:0;}
+.list-head{font-size:10px;color:rgba(255,255,255,0.22);letter-spacing:5px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.07);}
+
+/* Scene rows */
+.srow{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.snum{font-size:12px;font-weight:700;letter-spacing:1px;width:34px;flex-shrink:0;padding-top:2px;}
+.sicon{font-size:16px;width:22px;text-align:center;flex-shrink:0;padding-top:1px;}
+.sinfo{flex:1;min-width:0;}
+.sname{font-size:15px;font-weight:700;line-height:1.2;}
+.smeta{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-top:2px;}
+
+/* Footer */
+.foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.07);gap:20px;flex-wrap:wrap;}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;}
+.leg{display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1px;}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.qr-wrap{text-align:center;flex-shrink:0;}
+.qr-box{background:#fff;padding:7px;border-radius:6px;display:inline-block;}
+.qr-lbl{font-size:9px;color:rgba(255,255,255,0.22);letter-spacing:2px;margin-top:5px;}
+@media print{body{background:#fff;color:#111;}.hdr-epnum{color:#c49a0a;}.hdr-show,.snum,.hdr-sub,.smeta{color:#555;}.sname{color:#111;}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <div class="hdr-show">${cfg.showName}</div>
+    <div class="hdr-epnum">E${epNum}</div>
+    ${showData.epTitle ? `<div class="hdr-title">${showData.epTitle}</div>` : ''}
+    <div class="hdr-sub">${[showData.epDate, showRuntime + ' MIN RUNTIME', cues.length + ' SCENES'].filter(Boolean).join(' &nbsp;·&nbsp; ')}</div>
+  </div>
+
+  <div class="main">
+    <div class="circle-col">${circleSVG}</div>
+    <div class="list-col">
+      <div class="list-head">RUN OF SHOW</div>
+      ${sceneRows}
+    </div>
+  </div>
+
+  <div class="foot">
+    <div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.22);letter-spacing:4px;margin-bottom:10px;">STAGE LEGEND</div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:${preliveColor}"></div>⏱ PRE-SHOW</div>
+        <div class="leg"><div class="leg-dot" style="background:${typeColors.pod}"></div>🎙 POD STAGE</div>
+        <div class="leg"><div class="leg-dot" style="background:${typeColors.music}"></div>🎵 MUSIC STAGE</div>
+        <div class="leg"><div class="leg-dot" style="background:${typeColors.kitchen}"></div>🪩 KITCHEN DISCO</div>
+        <div class="leg"><div class="leg-dot" style="background:${typeColors.video}"></div>📹 VIDEO</div>
+      </div>
+    </div>
+    ${cfg.qrUrl ? `<div class="qr-wrap"><div class="qr-box" id="qr-ros"></div><div class="qr-lbl">SCAN FOR MORE</div></div>` : ''}
+  </div>
+</div>
+${cfg.qrUrl ? `<script>new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(cfg.qrUrl)},width:100,height:100,colorDark:"#111",colorLight:"#fff"});<\/script>` : ''}
+</body>
+</html>`;
 
   const blob = new Blob([html], {type:'text/html'});
   const url = URL.createObjectURL(blob);
