@@ -230,6 +230,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     </div>
 
     <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">🗺 GENERATE RUN OF SHOW</button>
+    <button class="generate-btn ros" id="ros-simple-btn" onclick="generateROSSimple()" style="margin-top:4px;opacity:0.8;">⭕ ROS VISUAL (PRINT)</button>
     <button class="generate-btn" id="generate-btn" onclick="generateBSM()">⚡ GENERATE BOO SHOW MANAGER</button>
 
   </div>
@@ -1185,6 +1186,143 @@ ${cfg.qrUrl ? `<script>new QRCode(document.getElementById('qr-ros'),{text:${JSON
   window.open(url, '_blank');
   btn.textContent = '✓ OPENED IN NEW TAB';
   setTimeout(() => { btn.textContent = '🗺 GENERATE RUN OF SHOW'; btn.disabled = false; }, 2500);
+}
+
+// ─── GENERATE ROS SIMPLE ─────────────────────────────────────────────────────
+function generateROSSimple() {
+  const cues = showData.cues;
+  if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
+
+  const btn = document.getElementById('ros-simple-btn');
+  btn.textContent = '⏳ BUILDING...';
+  btn.disabled = true;
+
+  const cfg = CLIENT_CONFIG;
+  const epNum = showData.epNum || 'X';
+  const totalDur = cues.reduce((a, c) => a + Math.max(1, parseInt(c.dur) || 0), 0);
+  const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseInt(c.dur) || 0)), 0);
+
+  const typeColors = { pod:'#3BB8C9', music:'#F5D03A', kitchen:'#E8431A', video:'#7744bb', '':'#445566' };
+  const preliveColor = '#1d6b35';
+  function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
+
+  const cx = 340, cy = 340, outerR = 315, innerR = 115;
+  const GAP = 0.015;
+  let wedgeSVG = '';
+  let curAngle = -Math.PI / 2;
+
+  cues.forEach((c, i) => {
+    const dur = Math.max(1, parseInt(c.dur) || 0);
+    const sweep = (dur / totalDur) * 2 * Math.PI;
+    const sa = curAngle + GAP / 2;
+    const ea = curAngle + sweep - GAP / 2;
+    const mid = (sa + ea) / 2;
+    const midDeg = mid * 180 / Math.PI;
+    const large = sweep > Math.PI ? 1 : 0;
+    const color = getColor(c);
+    const p = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    const [ix1, iy1] = p(innerR, sa), [ox1, oy1] = p(outerR, sa);
+    const [ox2, oy2] = p(outerR, ea), [ix2, iy2] = p(innerR, ea);
+
+    wedgeSVG += `<path d="M${ix1.toFixed(1)},${iy1.toFixed(1)} L${ox1.toFixed(1)},${oy1.toFixed(1)} A${outerR},${outerR} 0 ${large} 1 ${ox2.toFixed(1)},${oy2.toFixed(1)} L${ix2.toFixed(1)},${iy2.toFixed(1)} A${innerR},${innerR} 0 ${large} 0 ${ix1.toFixed(1)},${iy1.toFixed(1)} Z" fill="${color}" stroke="white" stroke-width="1.5"/>`;
+
+    if (sweep > 0.06) {
+      // Rotate so text is never upside-down: flip in bottom half of circle
+      const textRot = Math.sin(mid) > 0 ? midDeg - 90 : midDeg + 90;
+      const textR = (innerR + outerR) / 2;
+      const [tx, ty] = p(textR, mid);
+      const ns  = sweep > 0.5 ? 24 : sweep > 0.3 ? 18 : sweep > 0.15 ? 13 : 10;
+      const nms = sweep > 0.5 ? 12 : sweep > 0.3 ? 10 : 9;
+      const maxCh = sweep > 0.6 ? 18 : sweep > 0.4 ? 13 : sweep > 0.25 ? 9 : sweep > 0.15 ? 6 : 0;
+      const rawName = (c.scene || '(untitled)').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const shortName = maxCh > 0 ? (rawName.length > maxCh ? rawName.substring(0, maxCh - 1) + '…' : rawName) : '';
+      const numLabel = `S${i + 1}`;
+      // Center the text block vertically around the wedge midpoint
+      const blockGap = 4;
+      const numY = -Math.round((ns + blockGap) / 2);
+      const nameY = numY + ns + blockGap;
+
+      if (shortName) {
+        wedgeSVG += `<text transform="translate(${tx.toFixed(1)},${ty.toFixed(1)}) rotate(${textRot.toFixed(1)})" text-anchor="middle" fill="white" font-family="'Barlow Condensed',Arial,sans-serif"><tspan x="0" y="${numY}" font-size="${ns}" font-weight="900">${numLabel}</tspan><tspan x="0" y="${nameY}" font-size="${nms}" font-weight="400" opacity="0.9">${shortName}</tspan></text>`;
+      } else {
+        wedgeSVG += `<text transform="translate(${tx.toFixed(1)},${ty.toFixed(1)}) rotate(${textRot.toFixed(1)})" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="'Barlow Condensed',Arial,sans-serif" font-size="${ns}" font-weight="900">${numLabel}</text>`;
+      }
+    }
+    curAngle += sweep;
+  });
+
+  // Center disc with logo
+  const logoR = innerR - 6;
+  const centerEl = cfg.logoUrl
+    ? `<defs><clipPath id="lcs"><circle cx="${cx}" cy="${cy}" r="${logoR}"/></clipPath></defs>
+       <circle cx="${cx}" cy="${cy}" r="${logoR}" fill="white"/>
+       <image href="${cfg.logoUrl}" x="${cx-logoR}" y="${cy-logoR}" width="${logoR*2}" height="${logoR*2}" clip-path="url(#lcs)" preserveAspectRatio="xMidYMid meet"/>`
+    : `<circle cx="${cx}" cy="${cy}" r="${logoR}" fill="#f0f4f8"/>
+       <text x="${cx}" y="${cy-8}" text-anchor="middle" fill="${cfg.brandColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="16">${cfg.showShortName}</text>
+       <text x="${cx}" y="${cy+28}" text-anchor="middle" fill="#111" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="36">E${epNum}</text>`;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 680" style="max-width:100%;height:auto;display:block;margin:0 auto;"><rect width="680" height="680" fill="white"/>${wedgeSVG}${centerEl}</svg>`;
+
+  const legendEntries = [
+    {c:preliveColor,   l:'PRE-SHOW'},
+    {c:typeColors.pod, l:'POD STAGE'},
+    {c:typeColors.music, l:'MUSIC STAGE'},
+    {c:typeColors.kitchen, l:'KITCHEN DISCO'},
+    {c:typeColors.video, l:'VIDEO'},
+  ];
+  const legendHTML = legendEntries.map(e =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;margin-bottom:4px;"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${e.c};flex-shrink:0;"></span>${e.l}</span>`
+  ).join('');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${cfg.showName} E${epNum} — ROS Visual</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
+${cfg.qrUrl ? '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>' : ''}
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:white;color:#111;font-family:'Barlow Condensed',Arial,sans-serif;}
+.page{max-width:700px;margin:0 auto;padding:18px 24px;}
+.hdr{text-align:center;padding-bottom:10px;border-bottom:2px solid #ddd;margin-bottom:12px;}
+.hdr-show{font-size:11px;color:${cfg.brandColor};letter-spacing:8px;text-transform:uppercase;}
+.hdr-epnum{font-size:64px;font-weight:900;color:#111;line-height:0.9;letter-spacing:-2px;}
+.hdr-title{font-size:18px;font-weight:700;letter-spacing:2px;margin-top:5px;text-transform:uppercase;}
+.hdr-sub{font-size:10px;color:#888;letter-spacing:3px;margin-top:3px;}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:2px solid #ddd;flex-wrap:wrap;gap:12px;}
+.legend-head{font-size:9px;color:#aaa;letter-spacing:4px;font-weight:700;margin-bottom:6px;}
+.legend{font-size:11px;color:#444;font-weight:700;letter-spacing:0.5px;display:flex;flex-wrap:wrap;}
+.qr-lbl{font-size:8px;color:#aaa;letter-spacing:2px;margin-top:4px;text-align:center;}
+@media print{@page{size:letter portrait;margin:0.4in;}body{background:white !important;}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <div class="hdr-show">${cfg.showName}</div>
+    <div class="hdr-epnum">E${epNum}</div>
+    ${showData.epTitle ? `<div class="hdr-title">${showData.epTitle}</div>` : ''}
+    <div class="hdr-sub">${[showData.epDate, showRuntime + ' MIN', cues.length + ' SCENES'].filter(Boolean).join(' \xb7 ')}</div>
+  </div>
+  ${svg}
+  <div class="foot">
+    <div>
+      <div class="legend-head">STAGE LEGEND</div>
+      <div class="legend">${legendHTML}</div>
+    </div>
+    ${cfg.qrUrl ? `<div><div style="background:white;padding:5px;border:1px solid #ddd;border-radius:4px;display:inline-block;" id="qr-simple"></div><div class="qr-lbl">SCAN FOR LIVE VIEW</div></div>` : ''}
+  </div>
+</div>
+${cfg.qrUrl ? `<script>new QRCode(document.getElementById('qr-simple'),{text:${JSON.stringify(cfg.qrUrl)},width:80,height:80,colorDark:"#111",colorLight:"#fff"});<\/script>` : ''}
+</body>
+</html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  btn.textContent = '✓ OPENED';
+  setTimeout(() => { btn.textContent = '⭕ ROS VISUAL (PRINT)'; btn.disabled = false; }, 2500);
 }
 
 // ─── INIT ───
