@@ -527,19 +527,11 @@ RESPOND WITH JSON — no markdown, no code fences, always valid JSON:
   "speech": "What Boo says out loud — 2 to 4 sentences, conversational, warm",
   "display": "Same text for the chat UI — can use <strong> tags",
   "updates": {
-    "epNum": "only if changed",
-    "epTitle": "only if changed",
-    "epSubtitle": "only if changed",
-    "epDate": "only if changed",
-    "epLen": 90,
-    "pin": "only if changed",
-    "prelivePerformer": "only if changed",
-    "guests": [],
-    "cues": []
+    "fieldName": "only include a field if it actually changed — omit everything else"
   }
 }
 
-Only include fields in "updates" that actually changed. For guests and cues always send the COMPLETE updated array — never partial.
+CRITICAL: Only include fields in "updates" that actually changed. NEVER include "cues" or "guests" unless you are sending a new or updated array. Sending an empty array wipes the data. For cues and guests, always send the COMPLETE updated array — never partial.
 
 Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
 Cue shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext }`;
@@ -598,8 +590,8 @@ async function processUserInput(text) {
       if (u.pin !== undefined) showData.pin = u.pin;
       if (u.prelivePerformer !== undefined) showData.prelivePerformer = u.prelivePerformer;
       if (u.preliveMsg !== undefined) showData.preliveMsg = u.preliveMsg;
-      if (u.guests?.length >= 0) showData.guests = u.guests;
-      if (u.cues?.length >= 0) showData.cues = u.cues;
+      if (u.guests?.length > 0) showData.guests = u.guests;
+      if (u.cues?.length > 0) showData.cues = u.cues;
     }
 
     conversationHistory.push({ role: 'assistant', content: JSON.stringify(response) });
