@@ -292,11 +292,12 @@ function initMic() {
       pendingTranscript += finalChunk;
       clearTimeout(silenceTimer);
       silenceTimer = setTimeout(() => {
+        if (isSpeaking || isThinking || micPaused) { pendingTranscript = ''; return; }
         const text = pendingTranscript.trim();
         pendingTranscript = '';
         document.getElementById('mic-text').value = '';
         if (text) processUserInput(text);
-      }, 2500);
+      }, 4000);
     }
     document.getElementById('mic-text').value = pendingTranscript + interimChunk;
   };
@@ -330,6 +331,9 @@ function toggleMicPause() {
 
 function muteMicWhileSpeaking() {
   isSpeaking = true;
+  clearTimeout(silenceTimer);
+  pendingTranscript = '';
+  document.getElementById('mic-text').value = '';
   try { recognition?.stop(); } catch(e) {}
   setMicStatus("BOO IS SPEAKING...", "speaking");
   document.getElementById('mic-btn').classList.add('speaking');
@@ -558,6 +562,9 @@ Cue shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", 
 async function processUserInput(text) {
   if (!text.trim() || isThinking) return;
   isThinking = true;
+  clearTimeout(silenceTimer);
+  pendingTranscript = '';
+  document.getElementById('mic-text').value = '';
   document.getElementById('send-btn').disabled = true;
   addUserMessage(text);
   setMicStatus("BOO IS THINKING...", "thinking");
