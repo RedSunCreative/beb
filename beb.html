@@ -238,7 +238,17 @@ const sb = createClient(SB_URL, SB_KEY);
 
 async function saveState() {
   try {
-    await sb.from('builder_state').upsert({ id: BUILDER_ROW, data: showData, history: conversationHistory, updated_at: new Date().toISOString() });
+    const dataToSave = { ...showData };
+    // Never overwrite Supabase cues with an empty array — cues may have been
+    // written externally (e.g. by Claude Code) while the browser had cues:[].
+    // The merge RPC does JSONB || so only keys present in dataToSave are updated.
+    if (dataToSave.cues && dataToSave.cues.length === 0) delete dataToSave.cues;
+    const { error } = await sb.rpc('merge_builder_state', {
+      p_id: BUILDER_ROW,
+      p_data: dataToSave,
+      p_history: conversationHistory
+    });
+    if (error) throw error;
     setSaveBadge("● SAVED", "var(--green)");
   } catch(e) { setSaveBadge("● SAVE ERR", "var(--orange)"); }
 }
