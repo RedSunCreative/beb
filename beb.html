@@ -42,15 +42,17 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .mic-status.thinking{color:var(--orange);}
 .mic-row{display:flex;gap:10px;align-items:center;}
 
-.mic-btn{width:64px;height:64px;border-radius:50%;border:3px solid var(--orange);background:#3a0a00;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;}
-.mic-btn.listening{background:#003a2a;border-color:var(--teal);box-shadow:0 0 0 8px rgba(59,184,201,0.15);}
-.mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid var(--teal);animation:pulse 1.2s ease-out infinite;}
+.mic-btn{width:64px;height:64px;border-radius:50%;border:3px solid #6a0000;background:#3a0000;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;}
+.mic-btn.listening{background:#003a10;border-color:#00c44a;box-shadow:0 0 0 8px rgba(0,196,74,0.15);}
+.mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid #00c44a;animation:pulse 1.2s ease-out infinite;}
 .mic-btn.speaking{background:#2a2a00;border-color:var(--gold);}
 .mic-btn.thinking{background:#3a1a00;border-color:var(--orange);}
 @keyframes pulse{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(1.6);opacity:0;}}
 .mic-icon{width:28px;height:28px;fill:var(--orange);}
-.mic-btn.listening .mic-icon{fill:var(--teal);}
+.mic-btn.listening .mic-icon{fill:#00c44a;}
 .mic-btn.speaking .mic-icon{fill:var(--gold);}
+.mic-btn.paused{background:#3a0000;border-color:#cc2222;box-shadow:0 0 0 6px rgba(204,34,34,0.15);}
+.mic-btn.paused .mic-icon{fill:#cc2222;}
 
 .mic-text-wrap{flex:1;}
 .mic-text{width:100%;background:var(--dark);border:1px solid var(--border);color:var(--white);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Barlow',sans-serif;resize:none;height:64px;outline:none;transition:border-color 0.2s;}
@@ -343,7 +345,6 @@ function setSaveBadge(t, c) {
 let recognition = null;
 let silenceTimer = null;
 let pendingTranscript = '';
-let thinkingStartTime = null;
 
 function initMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -423,10 +424,11 @@ function toggleMicPause() {
   const btn = document.getElementById('mic-btn');
   if (micPaused) {
     try { recognition?.stop(); } catch(e) {}
-    btn.style.borderColor = 'var(--muted)';
+    btn.classList.remove('listening');
+    btn.classList.add('paused');
     setMicStatus("MIC PAUSED — TAP TO RESUME", "");
   } else {
-    btn.style.borderColor = '';
+    btn.classList.remove('paused');
     try { recognition?.start(); } catch(e) {}
   }
 }
@@ -751,15 +753,14 @@ async function processUserInput(text) {
   setMicStatus("BOO IS THINKING...", "thinking");
   document.getElementById('mic-btn').classList.add('thinking');
   showThinking();
-  thinkingStartTime = Date.now();
+
 
   conversationHistory.push({ role: 'user', content: text });
 
   try {
     const response = await callClaude(text);
     hideThinking();
-    if (Date.now() - thinkingStartTime > 8000) playSosumi();
-    document.getElementById('mic-btn').classList.remove('thinking');
+document.getElementById('mic-btn').classList.remove('thinking');
 
     if (response.updates) {
       const u = response.updates;
