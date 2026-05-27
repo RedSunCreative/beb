@@ -886,7 +886,7 @@ async function generateBSM() {
   btn.disabled = true;
 
   const split = s => s ? s.split('\n').map(l => l.trim()).filter(Boolean) : [];
-  const q = s => s ? `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"` : 'null';
+  const q = s => s ? `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"` : 'null';
 
   const episodeBlock = `const EPISODE = {
   num: ${q(showData.epNum)},
@@ -899,6 +899,7 @@ async function generateBSM() {
 
   const cueLines = showData.cues.map(c => `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
+    prelive: ${c.prelive ? 'true' : 'false'},
     booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
     w5: ${q(c.w5)}, w2: ${q(c.w2)},
     next: ${q(c.nextHint)}, nextScene: ${q(c.nextScene)},
