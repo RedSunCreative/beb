@@ -229,7 +229,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
 
-    <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">📋 CREW RUN OF SHOW (PDF)</button>
+    <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">📄 GENERATE RoS PDF</button>
     <button class="generate-btn ros" id="ros-simple-btn" onclick="generateROSSimple()" style="margin-top:4px;opacity:0.9;">⭕ ROS VISUAL (PRINT)</button>
     <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);">✏️ EDIT RUN OF SHOW</button>
     <button class="generate-btn" id="generate-btn" onclick="generateBSM()">⚡ GENERATE BOO SHOW MANAGER</button>
@@ -1061,46 +1061,6 @@ function generateROS() {
   function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
   function getIcon(c) { return c.prelive ? '⏱' : (typeIcons[c.stageType] || typeIcons['']); }
 
-  // ── CIRCLE SVG ────────────────────────────────────────────────────────────
-  const cx = 250, cy = 250, outerR = 215, innerR = 85;
-  const GAP = 0.018;
-  let wedges = '';
-  let curAngle = -Math.PI / 2;
-
-  cues.forEach((c, i) => {
-    const dur = Math.max(1, parseInt(c.dur) || 0);
-    const sweep = (dur / totalDur) * 2 * Math.PI;
-    const sa = curAngle + GAP / 2;
-    const ea = curAngle + sweep - GAP / 2;
-    const mid = (sa + ea) / 2;
-    const large = sweep > Math.PI ? 1 : 0;
-    const color = getColor(c);
-    const p = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
-    const [ix1,iy1] = p(innerR, sa), [ox1,oy1] = p(outerR, sa);
-    const [ox2,oy2] = p(outerR, ea), [ix2,iy2] = p(innerR, ea);
-    wedges += `<path d="M${ix1.toFixed(1)},${iy1.toFixed(1)} L${ox1.toFixed(1)},${oy1.toFixed(1)} A${outerR},${outerR} 0 ${large} 1 ${ox2.toFixed(1)},${oy2.toFixed(1)} L${ix2.toFixed(1)},${iy2.toFixed(1)} A${innerR},${innerR} 0 ${large} 0 ${ix1.toFixed(1)},${iy1.toFixed(1)} Z" fill="${color}" stroke="#080c14" stroke-width="2"/>`;
-    if (sweep > 0.07) {
-      const nr = (innerR + outerR) / 2;
-      const [nx, ny] = p(nr, mid);
-      const fs = sweep > 0.45 ? 16 : sweep > 0.25 ? 13 : sweep > 0.12 ? 10 : 8;
-      wedges += `<text x="${nx.toFixed(1)}" y="${(ny + fs * 0.38).toFixed(1)}" text-anchor="middle" fill="rgba(255,255,255,0.95)" font-family="Barlow Condensed,sans-serif" font-weight="700" font-size="${fs}">${i + 1}</text>`;
-    }
-    curAngle += sweep;
-  });
-
-  const logoR = innerR - 6;
-  const centerEl = cfg.logoUrl
-    ? `<defs><clipPath id="logo-clip"><circle cx="${cx}" cy="${cy}" r="${logoR}"/></clipPath></defs>
-       <circle cx="${cx}" cy="${cy}" r="${logoR}" fill="white"/>
-       <image href="${cfg.logoUrl}" x="${cx - logoR}" y="${cy - logoR}" width="${logoR * 2}" height="${logoR * 2}" clip-path="url(#logo-clip)" preserveAspectRatio="xMidYMid meet"/>
-       <text x="${cx}" y="${cy + logoR + 16}" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="13" letter-spacing="3">E${epNum}</text>`
-    : `<circle cx="${cx}" cy="${cy}" r="${logoR}" fill="#080c14" stroke="${cfg.brandColor}" stroke-width="2.5"/>
-       <text x="${cx}" y="${cy - 18}" text-anchor="middle" fill="${cfg.brandColor}" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="16" letter-spacing="4">${cfg.showShortName}</text>
-       <text x="${cx}" y="${cy + 22}" text-anchor="middle" fill="${cfg.accentColor}" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="42">E${epNum}</text>
-       <text x="${cx}" y="${cy + 38}" text-anchor="middle" fill="rgba(255,255,255,0.28)" font-family="Barlow Condensed,sans-serif" font-size="9" letter-spacing="1">${showRuntime} MIN</text>`;
-
-  const circleSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="420" height="420"><rect width="500" height="500" fill="transparent"/>${wedges}${centerEl}</svg>`;
-
   // ── SCENE LIST ───────────────────────────────────────────────────────────
   const crewNowFields = ['audioNow','videoNow','camerasNow','lightingNow'];
   const crewNextFields = ['audioNext','videoNext','camerasNext','lightingNext'];
@@ -1130,89 +1090,85 @@ function generateROS() {
     </div>`;
   }).join('');
 
-  // ── FULL HTML ─────────────────────────────────────────────────────────────
+  // ── FULL HTML (print-ready PDF, no circle) ────────────────────────────────
+  const bsmQrUrl = cfg.qrUrl || `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${cfg.showName} E${epNum} — Run of Show</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
-${cfg.qrUrl ? '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>' : ''}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:#080c14;color:#fff;font-family:'Barlow Condensed',sans-serif;}
-.page{max-width:960px;margin:0 auto;padding:36px 24px;}
-
-/* Header */
-.hdr{text-align:center;padding-bottom:28px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:28px;}
-.hdr-show{font-size:13px;color:${cfg.brandColor};letter-spacing:9px;text-transform:uppercase;margin-bottom:4px;}
-.hdr-epnum{font-size:120px;font-weight:900;color:${cfg.accentColor};line-height:0.88;letter-spacing:-4px;}
-.hdr-title{font-size:24px;font-weight:700;letter-spacing:2px;margin-top:10px;text-transform:uppercase;}
-.hdr-sub{font-size:13px;color:rgba(255,255,255,0.32);letter-spacing:3px;margin-top:6px;}
-
-/* Layout */
-.main{display:flex;gap:28px;align-items:flex-start;}
-.circle-col{flex-shrink:0;}
-.list-col{flex:1;min-width:0;}
-.list-head{font-size:10px;color:rgba(255,255,255,0.22);letter-spacing:5px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.07);}
-
-/* Scene rows */
-.srow{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
-.snum{font-size:12px;font-weight:700;letter-spacing:1px;width:34px;flex-shrink:0;padding-top:2px;}
-.sicon{font-size:16px;width:22px;text-align:center;flex-shrink:0;padding-top:1px;}
+body{background:white;color:#111;font-family:'Barlow Condensed',sans-serif;}
+.page{max-width:720px;margin:0 auto;padding:26px 22px;}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #111;margin-bottom:18px;gap:20px;}
+.hdr-show{font-size:11px;color:${cfg.brandColor};letter-spacing:8px;text-transform:uppercase;margin-bottom:2px;}
+.hdr-epnum{font-size:72px;font-weight:900;color:#111;line-height:0.88;letter-spacing:-3px;}
+.hdr-title{font-size:20px;font-weight:700;letter-spacing:2px;margin-top:6px;text-transform:uppercase;}
+.hdr-sub{font-size:11px;color:#666;letter-spacing:3px;margin-top:4px;}
+.hdr-qr{text-align:center;flex-shrink:0;}
+.qr-box{padding:4px;border:1px solid #ddd;border-radius:4px;display:inline-block;}
+.qr-lbl{font-size:9px;color:#aaa;letter-spacing:1px;margin-top:4px;text-align:center;}
+.srow{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid #e5e5e5;}
+.snum{font-size:13px;font-weight:700;letter-spacing:1px;width:38px;flex-shrink:0;padding-top:2px;}
+.sicon{font-size:17px;width:24px;text-align:center;flex-shrink:0;padding-top:1px;}
 .sinfo{flex:1;min-width:0;}
-.sname{font-size:15px;font-weight:700;line-height:1.2;}
-.smeta{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:1px;margin-top:2px;}
-.sboo{font-size:11px;color:rgba(255,255,255,0.4);margin-top:5px;font-style:italic;line-height:1.4;}
-.crew-block{margin-top:6px;padding:5px 8px;background:rgba(255,255,255,0.04);border-radius:4px;border-left:2px solid rgba(255,255,255,0.12);}
-.crew-head{font-size:8px;color:rgba(255,255,255,0.22);letter-spacing:4px;font-weight:700;margin-bottom:3px;}
-.crew-item{font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:2px;line-height:1.4;}
-.crew-lbl{font-size:9px;color:rgba(255,255,255,0.28);letter-spacing:2px;font-weight:700;margin-right:5px;}
-
-/* Footer */
-.foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.07);gap:20px;flex-wrap:wrap;}
-.legend{display:flex;flex-wrap:wrap;gap:8px 18px;}
-.leg{display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1px;}
-.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.qr-wrap{text-align:center;flex-shrink:0;}
-.qr-box{background:#fff;padding:7px;border-radius:6px;display:inline-block;}
-.qr-lbl{font-size:9px;color:rgba(255,255,255,0.22);letter-spacing:2px;margin-top:5px;}
-@media print{body{background:#fff;color:#111;}.hdr-epnum{color:#c49a0a;}.hdr-show,.snum,.hdr-sub,.smeta,.crew-head,.crew-lbl{color:#555;}.sname{color:#111;}.sboo{color:#888;}.crew-block{background:#f5f5f5;border-left-color:#ccc;}.crew-item{color:#444;}}
+.sname{font-size:16px;font-weight:700;line-height:1.2;color:#111;}
+.smeta{font-size:10px;color:#888;letter-spacing:1.5px;margin-top:2px;text-transform:uppercase;}
+.sboo{font-size:12px;color:#555;margin-top:6px;font-style:italic;line-height:1.45;border-left:3px solid ${cfg.brandColor};padding-left:8px;}
+.crew-block{margin-top:7px;padding:6px 10px;background:#f7f7f7;border-radius:4px;border-left:3px solid #ddd;}
+.crew-head{font-size:8px;color:#aaa;letter-spacing:4px;font-weight:700;margin-bottom:4px;text-transform:uppercase;}
+.crew-item{font-size:11px;color:#444;margin-bottom:3px;line-height:1.4;}
+.crew-lbl{font-size:9px;color:#999;letter-spacing:2px;font-weight:700;margin-right:6px;text-transform:uppercase;}
+.foot{margin-top:22px;padding-top:14px;border-top:3px solid #111;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;}
+.leg{display:flex;align-items:center;gap:7px;font-size:12px;color:#444;letter-spacing:0.5px;font-weight:700;}
+.leg-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
+.print-btn{position:fixed;top:14px;right:14px;background:#111;color:#fff;border:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;}
+@media print{
+  @page{size:letter portrait;margin:0.5in;}
+  .print-btn{display:none;}
+  .srow{page-break-inside:avoid;}
+}
 </style>
 </head>
 <body>
+<button class="print-btn" onclick="window.print()">🖨 PRINT / SAVE PDF</button>
 <div class="page">
   <div class="hdr">
-    <div class="hdr-show">${cfg.showName}</div>
-    <div class="hdr-epnum">E${epNum}</div>
-    ${showData.epTitle ? `<div class="hdr-title">${showData.epTitle}</div>` : ''}
-    <div class="hdr-sub">${[showData.epDate, showRuntime + ' MIN RUNTIME', cues.length + ' SCENES'].filter(Boolean).join(' &nbsp;·&nbsp; ')}</div>
-  </div>
-
-  <div class="main">
-    <div class="circle-col">${circleSVG}</div>
-    <div class="list-col">
-      <div class="list-head">RUN OF SHOW</div>
-      ${sceneRows}
+    <div>
+      <div class="hdr-show">${cfg.showName}</div>
+      <div class="hdr-epnum">E${epNum}</div>
+      ${showData.epTitle ? `<div class="hdr-title">${showData.epTitle}</div>` : ''}
+      <div class="hdr-sub">${[showData.epDate, showRuntime + ' MIN', cues.length + ' SCENES'].filter(Boolean).join(' \xb7 ')}</div>
+    </div>
+    <div class="hdr-qr">
+      <div class="qr-box" id="qr-ros"></div>
+      <div class="qr-lbl">LIVE SHOW MANAGER</div>
     </div>
   </div>
-
+  ${sceneRows}
   <div class="foot">
     <div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.22);letter-spacing:4px;margin-bottom:10px;">STAGE LEGEND</div>
+      <div style="font-size:9px;color:#aaa;letter-spacing:4px;font-weight:700;margin-bottom:8px;">STAGE LEGEND</div>
       <div class="legend">
-        <div class="leg"><div class="leg-dot" style="background:${preliveColor}"></div>⏱ PRE-SHOW</div>
-        <div class="leg"><div class="leg-dot" style="background:${typeColors.pod}"></div>🎙 POD STAGE</div>
-        <div class="leg"><div class="leg-dot" style="background:${typeColors.music}"></div>🎵 MUSIC STAGE</div>
-        <div class="leg"><div class="leg-dot" style="background:${typeColors.kitchen}"></div>🪩 KITCHEN DISCO</div>
-        <div class="leg"><div class="leg-dot" style="background:${typeColors.video}"></div>📹 VIDEO</div>
+        <div class="leg"><div class="leg-dot" style="background:${preliveColor}"></div>PRE-SHOW</div>
+        <div class="leg"><div class="leg-dot" style="background:${typeColors.pod}"></div>POD STAGE</div>
+        <div class="leg"><div class="leg-dot" style="background:${typeColors.music}"></div>MUSIC STAGE</div>
+        <div class="leg"><div class="leg-dot" style="background:${typeColors.kitchen}"></div>KITCHEN DISCO</div>
+        <div class="leg"><div class="leg-dot" style="background:${typeColors.video}"></div>VIDEO</div>
       </div>
     </div>
-    ${cfg.qrUrl ? `<div class="qr-wrap"><div class="qr-box" id="qr-ros"></div><div class="qr-lbl">SCAN FOR MORE</div></div>` : ''}
+    <div style="font-size:10px;color:#aaa;letter-spacing:2px;text-align:right;">${cfg.showName} · E${epNum} · ${new Date().toLocaleDateString()}</div>
   </div>
 </div>
-${cfg.qrUrl ? `<script>new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(cfg.qrUrl)},width:100,height:100,colorDark:"#111",colorLight:"#fff"});<\/script>` : ''}
+<script>
+  new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(bsmQrUrl)},width:88,height:88,colorDark:"#111",colorLight:"#fff"});
+  setTimeout(()=>window.print(), 700);
+<\/script>
 </body>
 </html>`;
 
@@ -1241,9 +1197,10 @@ function generateROSSimple() {
   const preliveColor = '#1d6b35';
   function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
 
-  const cx = 340, cy = 340, outerR = 315, innerR = 115;
-  const textR = (innerR + outerR) / 2;  // 215
-  const GAP = 0.014;
+  const cx = 370, cy = 370, outerR = 355, innerR = 122;
+  // Shift text toward outer ring for more arc width and bigger fonts
+  const textR = Math.round(innerR + (outerR - innerR) * 0.70);  // ~285
+  const GAP = 0.012;
 
   // Word-wrap for SVG wedge text
   const wrapWords = (text, maxCh, maxLines = 3) => {
@@ -1283,9 +1240,9 @@ function generateROSSimple() {
       const textRot = Math.sin(mid) > 0 ? midDeg - 90 : midDeg + 90;
       const [tx, ty] = p(textR, mid);
 
-      // Scale text size to wedge size
-      const ns  = sweep > 0.55 ? 26 : sweep > 0.35 ? 22 : sweep > 0.18 ? 16 : 12;
-      const nms = sweep > 0.55 ? 14 : sweep > 0.35 ? 13 : sweep > 0.18 ? 11 : 9;
+      // Scale text size to wedge size — bigger since text is now near outer ring
+      const ns  = sweep > 0.55 ? 30 : sweep > 0.35 ? 26 : sweep > 0.18 ? 20 : 14;
+      const nms = sweep > 0.55 ? 16 : sweep > 0.35 ? 14 : sweep > 0.18 ? 12 : 10;
       const lineH = nms * 1.3;
 
       // Chord at textR constrains characters per line
@@ -1318,22 +1275,25 @@ function generateROSSimple() {
   });
 
   // Center disc: small logo in upper portion, E# + title below
-  const discR = innerR - 6;
-  const logoSmR = Math.round(discR * 0.38);   // ~41
-  const logoCY  = cy - Math.round(discR * 0.3); // ~cy-33
+  const discR = innerR - 6;                      // 116
+  const logoSmR = Math.round(discR * 0.40);      // ~46
+  const logoCY  = cy - Math.round(discR * 0.30); // ~cy-35
   const centerEl = cfg.logoUrl
     ? `<defs><clipPath id="lcs"><circle cx="${cx}" cy="${logoCY}" r="${logoSmR}"/></clipPath></defs>
        <circle cx="${cx}" cy="${cy}" r="${discR}" fill="white"/>
        <circle cx="${cx}" cy="${logoCY}" r="${logoSmR}" fill="white"/>
        <image href="${cfg.logoUrl}" x="${cx-logoSmR}" y="${logoCY-logoSmR}" width="${logoSmR*2}" height="${logoSmR*2}" clip-path="url(#lcs)" preserveAspectRatio="xMidYMid meet"/>
-       <text x="${cx}" y="${cy+32}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="30">E${epNum}</text>
-       ${showData.epTitle ? `<text x="${cx}" y="${cy+50}" text-anchor="middle" fill="#555" font-family="'Barlow Condensed',Arial,sans-serif" font-size="9" font-weight="700">${showData.epTitle.substring(0, 24).toUpperCase()}</text>` : ''}
-       <text x="${cx}" y="${cy+64}" text-anchor="middle" fill="#999" font-family="'Barlow Condensed',Arial,sans-serif" font-size="8">${[showData.epDate, showRuntime + ' MIN'].filter(Boolean).join(' \xb7 ')}</text>`
+       <text x="${cx}" y="${cy+36}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="34">E${epNum}</text>
+       ${showData.epTitle ? `<text x="${cx}" y="${cy+56}" text-anchor="middle" fill="#555" font-family="'Barlow Condensed',Arial,sans-serif" font-size="10" font-weight="700">${showData.epTitle.substring(0, 24).toUpperCase()}</text>` : ''}
+       <text x="${cx}" y="${cy+72}" text-anchor="middle" fill="#aaa" font-family="'Barlow Condensed',Arial,sans-serif" font-size="9">${[showData.epDate, showRuntime + ' MIN'].filter(Boolean).join(' \xb7 ')}</text>`
     : `<circle cx="${cx}" cy="${cy}" r="${discR}" fill="#f0f4f8"/>
-       <text x="${cx}" y="${cy-10}" text-anchor="middle" fill="${cfg.brandColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="16">${cfg.showShortName}</text>
-       <text x="${cx}" y="${cy+28}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="34">E${epNum}</text>`;
+       <text x="${cx}" y="${cy-10}" text-anchor="middle" fill="${cfg.brandColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="18">${cfg.showShortName}</text>
+       <text x="${cx}" y="${cy+34}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="38">E${epNum}</text>`;
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 680" style="max-width:100%;height:auto;display:block;margin:0 auto;"><rect width="680" height="680" fill="white"/>${wedgeSVG}${centerEl}</svg>`;
+  const vbSize = cx * 2;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbSize} ${vbSize}" style="max-width:100%;height:auto;display:block;margin:0 auto;"><rect width="${vbSize}" height="${vbSize}" fill="white"/>${wedgeSVG}${centerEl}</svg>`;
+
+  const bsmQrUrl = cfg.qrUrl || `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
 
   const legendEntries = [
     {c:preliveColor, l:'PRE-SHOW'},
@@ -1343,10 +1303,8 @@ function generateROSSimple() {
     {c:typeColors.video, l:'VIDEO'},
   ];
   const legendHTML = legendEntries.map(e =>
-    `<span style="display:inline-flex;align-items:center;gap:5px;margin:0 12px 6px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${e.c};flex-shrink:0;"></span>${e.l}</span>`
+    `<span style="display:inline-flex;align-items:center;gap:8px;margin:0 18px 8px 0;font-size:15px;color:#333;font-weight:700;letter-spacing:1px;"><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:${e.c};flex-shrink:0;"></span>${e.l}</span>`
   ).join('');
-
-  const metaSub = [showData.epDate, showRuntime + ' MIN', cues.length + ' SCENES'].filter(Boolean).join(' \xb7 ');
 
   const html = `<!DOCTYPE html>
 <html>
@@ -1354,44 +1312,38 @@ function generateROSSimple() {
 <meta charset="UTF-8">
 <title>${cfg.showName} E${epNum} — ROS Visual</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
-${cfg.qrUrl ? '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>' : ''}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:white;color:#111;font-family:'Barlow Condensed',Arial,sans-serif;}
-.page{max-width:700px;margin:0 auto;padding:14px 22px;}
-.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:10px;border-bottom:2px solid #ddd;margin-bottom:12px;gap:16px;}
-.hdr-info{}
-.hdr-show{font-size:11px;color:${cfg.brandColor};letter-spacing:8px;text-transform:uppercase;margin-bottom:2px;}
-.hdr-epnum{font-size:42px;font-weight:900;color:#111;line-height:0.95;letter-spacing:-1px;}
-.hdr-title{font-size:16px;font-weight:700;letter-spacing:2px;margin-top:4px;text-transform:uppercase;color:#333;}
-.hdr-sub{font-size:10px;color:#888;letter-spacing:2px;margin-top:3px;}
-.hdr-qr{text-align:center;flex-shrink:0;padding-top:2px;}
-.qr-box{background:white;padding:4px;border:1px solid #ddd;border-radius:4px;display:inline-block;}
-.qr-tag{font-size:9px;color:#666;margin-top:5px;line-height:1.4;text-align:center;max-width:90px;letter-spacing:0.3px;}
-.foot{text-align:center;margin-top:10px;padding-top:10px;border-top:2px solid #ddd;}
-.legend-head{font-size:9px;color:#aaa;letter-spacing:4px;font-weight:700;margin-bottom:8px;}
-.legend{font-size:11px;color:#444;font-weight:700;letter-spacing:0.5px;display:inline-flex;flex-wrap:wrap;justify-content:center;}
-@media print{@page{size:letter portrait;margin:0.4in;}body{background:white !important;}}
+body{background:white;font-family:'Barlow Condensed',Arial,sans-serif;}
+.page{max-width:760px;margin:0 auto;padding:10px 16px 16px;}
+.foot{display:flex;justify-content:center;align-items:center;gap:40px;margin-top:10px;padding-top:12px;border-top:2px solid #ddd;flex-wrap:wrap;}
+.legend-wrap{text-align:center;}
+.legend-head{font-size:11px;color:#aaa;letter-spacing:4px;font-weight:700;margin-bottom:10px;}
+.legend{display:inline-flex;flex-wrap:wrap;justify-content:center;}
+.qr-wrap{text-align:center;}
+.qr-box{background:white;padding:5px;border:1px solid #ddd;border-radius:5px;display:inline-block;}
+.qr-lbl{font-size:12px;color:#555;letter-spacing:1px;margin-top:6px;font-weight:700;}
+.qr-sub{font-size:10px;color:#aaa;letter-spacing:0.5px;margin-top:2px;}
+@media print{@page{size:letter portrait;margin:0.35in;}body{background:white !important;}}
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="hdr">
-    <div class="hdr-info">
-      <div class="hdr-show">${cfg.showName}</div>
-      <div class="hdr-epnum">E${epNum}</div>
-      ${showData.epTitle ? `<div class="hdr-title">${showData.epTitle}</div>` : ''}
-      ${metaSub ? `<div class="hdr-sub">${metaSub}</div>` : ''}
-    </div>
-    ${cfg.qrUrl ? `<div class="hdr-qr"><div class="qr-box" id="qr-hdr"></div><div class="qr-tag">Download real-time Show Updates!</div></div>` : ''}
-  </div>
   ${svg}
   <div class="foot">
-    <div class="legend-head">STAGE LEGEND</div>
-    <div class="legend">${legendHTML}</div>
+    <div class="legend-wrap">
+      <div class="legend-head">STAGE LEGEND</div>
+      <div class="legend">${legendHTML}</div>
+    </div>
+    <div class="qr-wrap">
+      <div class="qr-box" id="qr-vis"></div>
+      <div class="qr-lbl">BOO SHOW MANAGER</div>
+      <div class="qr-sub">E${epNum} · SCAN TO OPEN</div>
+    </div>
   </div>
 </div>
-${cfg.qrUrl ? `<script>new QRCode(document.getElementById('qr-hdr'),{text:${JSON.stringify(cfg.qrUrl)},width:78,height:78,colorDark:"#111",colorLight:"#fff"});<\/script>` : ''}
+<script>new QRCode(document.getElementById('qr-vis'),{text:${JSON.stringify(bsmQrUrl)},width:96,height:96,colorDark:"#111",colorLight:"#fff"});<\/script>
 </body>
 </html>`;
 
