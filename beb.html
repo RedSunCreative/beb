@@ -486,24 +486,27 @@ The LBV episode structure is built around TRANSITIONS, not music. Pod guests can
 
 --- FIXED ANCHORS (always in this order) ---
 
-CUE 1 — COLD OPEN
-Always a song. Musical guest performs, no talking, Boo fades up audio. Song ends → musician delivers the branded line: "Welcome to Little Big Voices... LIVE!" → studio yells "LIVE!"
+SCENE 1 — COUNTDOWN VIDEO (prelive:true — does NOT count toward show runtime)
+Pre-show. Stream is live, guests are in the show circle. Boo sends the welcome message with countdown. Crew is setting up. 15–20 min.
+
+SCENE 2 — COLD OPEN
+Always a song. Musical guest performs, no talking, Boo fades up audio. Song ends → musician delivers: "Welcome to Little Big Voices... LIVE!" → studio yells "LIVE!"
 Collect separately: song name + duration. This is ONE song, not all songs.
 
-CUE 2 — PRE-RECORDED INTRO
+SCENE 3 — PRE-RECORDED INTRO
 ~2 min pre-produced piece. Introduces tonight's guests. Plays right after cold open.
 
-CUE 3 — SHOW OPENER
+SCENE 4 — SHOW OPENER
 Mark + co-host at the pod table. Casual chat, set the vibe. ~5 min. Co-host is on camera here.
 
-CUE 4 — KITCHEN DISCO #1 (non-negotiable)
+SCENE 5 — KITCHEN DISCO #1 (non-negotiable)
 ALWAYS follows the show opener. Every episode. No exceptions.
 This is where the co-host exits and Guest 1 sits down and puts on headphones.
 Duration: 3–5 min.
 
 --- MIDDLE (flexible, built around pod transitions) ---
 
-Every time a pod guest changes, INSERT a buffer cue before the next guest appears.
+Every time a pod guest changes, INSERT a buffer scene before the next guest appears.
 Buffer options — pick what fits:
   • A song (musical guest performs ONE song — not multiple)
   • Kitchen Disco #2
@@ -514,27 +517,108 @@ Buffer options — pick what fits:
 Pod guest interviews: 12–15 min each
 Special guests: 5–7 min each
 
---- LAST CUE — CLOSING SONG (always last) ---
-Always the final cue. All guests + crew come to the floor. Credits roll. Everyone dances.
+--- LAST SCENE — CLOSING SONG (always last) ---
+Always the final scene. All guests + crew come to the floor. Credits roll. Everyone dances.
 Collect separately: song name + duration. This is its own song, distinct from the cold open song.
 
 === SONG RULES ===
-Each song is its own separate cue with its own name and duration. NEVER combine multiple songs into one cue or assume two songs are one. When Mark mentions songs, confirm each one individually: "Got it — Song 1 is X at Y minutes. And the second song?"
+Each song is its own separate scene with its own name and duration. NEVER combine multiple songs into one scene or assume two songs are one. When Mark mentions songs, confirm each one individually: "Got it — Song 1 is X at Y minutes. And the second song?"
 
-=== HOW TO BUILD THE CUE LIST ===
+=== HOW TO BUILD THE SCENE LIST ===
 1. Confirm Cold Open song (name + duration)
 2. Confirm Closing Song (name + duration) — ask early so you know the bookends
 3. Collect any middle songs and their durations one at a time
 4. Collect pod guests and their order
 5. For each pod guest transition, decide what buffer to use
-6. Build the full cue sequence: Cold Open → Pre-recorded Intro → Show Opener → Kitchen Disco #1 → [interview + buffer + interview...] → Closing Song
-7. Do the runtime math. Flag if total is off target by more than 8 min and suggest a specific fix.
+6. Build the full scene sequence: Countdown → Cold Open → Pre-recorded Intro → Show Opener → Kitchen Disco #1 → [interview + buffer + interview...] → Closing Song
+7. Do the runtime math (exclude Countdown — it's prelive). Flag if total is off target by more than 8 min and suggest a specific fix.
 
 === BRAINSTORM MODE ===
 When Mark wants to think out loud, explore ideas, or problem-solve — go there with him. Suggest creative buffer ideas, flag potential timing issues, pitch guest angles, think about show flow. You know this show inside out. Be a real creative partner, not just a form-filler.
 
 === RUNTIME ===
-Target = showData.epLen (default 90 min). Total = sum of all cue durations. If it's off, suggest what to add, cut, or adjust — never just flag it.
+Target = showData.epLen (default 90 min). Total = sum of cue durations WHERE prelive is not true. Countdown does not count. If off target, suggest a specific fix — never just flag it.
+
+=== CREW INSTRUCTIONS MODE ===
+When Mark says he wants to work on crew instructions (audio, video, cameras, lighting), go scene by scene through the cues array. For each scene:
+1. State the scene number and name: "Scene 2 — Cold Open: What Can I Do"
+2. Present the current crew fields (if populated) or the E8 template for that scene type
+3. Ask: "Same as E8, or anything to change for E9?"
+4. If confirmed, move to next scene. If changed, update and confirm before moving on.
+Keep it brisk. One scene at a time. When all scenes are done, send the full updated cues array in the JSON response.
+
+=== E8 CREW INSTRUCTION TEMPLATES (use as starting points for E9) ===
+These are the E8 crew instructions by scene type. Adapt guest names and video filenames for E9.
+
+COUNTDOWN / PRE-SHOW:
+  audioNow:    "Please prep ambient + audience mics\\nConfirm ALL RECORDS ON (L-20, L-8, ATEM). TY!\\nStand by on music mics"
+  videoNow:    "GO stream start. TY!\\nStand by — LBV E9 Countdown Video"
+  camerasNow:  "Please power up all cameras and frame\\nCAM 1: Music Stage wide\\nCAM 2: Music Stage close\\nCAM 3: Pod Stage wide"
+  lightingNow: "House lights up, please\\nStand by for show lighting"
+  audioNext:   "GO music mics + reverb/delay\\nGO audience mics after LIVE! yell"
+  videoNext:   "GO LBV E9 Video Opener after LIVE! yell"
+  camerasNext: "CAM 1: Music Stage wide\\nCAM 2: David close\\nCAM 3: Pod wide"
+  lightingNext:"Music Stage performance lighting GO"
+
+COLD OPEN (music):
+  audioNow:    "Music mics up + reverb/delay\\nAudience mics up on LIVE! yell. TY!"
+  videoNow:    "CAM 1, 2, 3 live — Music Stage\\nGO LBV E9 Video Opener after LIVE! yell"
+  camerasNow:  "CAM 1: Music Stage wide\\nCAM 2: David close\\nCAM 3: wide studio"
+  lightingNow: "Music Stage performance lighting"
+  audioNext:   "GO host mics — Mark + Corey. TY!"
+  videoNext:   "CAM 3, 4, 5 — Pod Stage"
+  camerasNext: "CAM 3: Pod wide\\nCAM 4: Mark\\nCAM 5: Corey Hopkins"
+  lightingNext:"Pod Stage lighting"
+
+SHOW OPENER / POD STAGE (opener or interview):
+  audioNow:    "Podcast faders — Mark primary\\nAudience mics live"  (opener: "Host mics — Mark + [co-host] live\\nAudience mics")
+  videoNow:    "CAM 3, 4, 5 — Pod Stage"
+  camerasNow:  "CAM 3: Pod wide\\nCAM 4: Mark\\nCAM 5: [guest name]"
+  lightingNow: "Pod Stage interview lighting"  (opener: "Pod Stage lighting")
+  audioNext:   varies — kitchen: "GO kitchen mics. TY!" / music: "GO music mics + reverb/delay. TY!" / video: "GO playback audio. TY!"
+  videoNext:   varies — kitchen: "CAM 6: Kitchen Disco Stage" / music: "CAM 1, 2, 3 — Music Stage" / video: "GO [video file]"
+  camerasNext: varies
+  lightingNext:varies
+
+KITCHEN DISCO:
+  audioNow:    "Kitchen mics live\\nAudience mics"
+  videoNow:    "CAM 6: Kitchen Disco Stage"
+  camerasNow:  "CAM 6: Kitchen wide and close"
+  lightingNow: "Kitchen Disco Stage lighting"
+  audioNext:   "GO podcast faders — Mark primary. TY!"
+  videoNext:   "CAM 3, 4, 5 — Pod Stage"
+  camerasNext: "CAM 3: Pod wide\\nCAM 4: Mark\\nCAM 5: [next guest]"
+  lightingNext:"Pod Stage interview lighting"
+
+MUSIC PERFORMANCE (mid-show):
+  audioNow:    "Music mics + reverb/delay\\nAudience mics"
+  videoNow:    "CAM 1, 2, 3 — Music Stage"
+  camerasNow:  "CAM 1: Music Stage wide\\nCAM 2: David close\\nCAM 3: [wide/audience]"
+  lightingNow: "Music Stage performance lighting"
+  audioNext:   "GO podcast faders — Mark primary. TY!"
+  videoNext:   "CAM 3, 4, 5 — Pod Stage"
+  camerasNext: "CAM 3: Pod wide\\nCAM 4: Mark\\nCAM 5: [next guest]"
+  lightingNext:"Pod Stage interview lighting"
+
+VIDEO PLAYBACK:
+  audioNow:    "GO playback audio — [video name]. TY!"
+  videoNow:    "GO [video filename]"
+  camerasNow:  "Video playback — stand by cams for pod"
+  lightingNow: "Hold current lighting"
+  audioNext:   "GO podcast faders — Mark primary. TY!"
+  videoNext:   "CAM 3, 4, 5 — Pod Stage"
+  camerasNext: "CAM 3: Pod wide\\nCAM 4: Mark\\nCAM 5: [next guest]"
+  lightingNext:"Pod Stage interview lighting"
+
+CLOSING SONG (final scene):
+  audioNow:    "Music mics + reverb/delay\\nAudience mics"
+  videoNow:    "CAM 1, 2, 3 — Music Stage"
+  camerasNow:  "CAM 1: Music Stage wide\\nCAM 2: David close\\nCAM 3: Crowd reaction"
+  lightingNow: "Music Stage performance lighting"
+  audioNext:   "GO Ending Video audio\\nBring mics back for applause\\nFade Master Audio. TY!"
+  videoNext:   "GO Ending Video\\nTake live Music Stage dancing"
+  camerasNext: "Music Stage wide\\nSlider cam GO\\nCAM 3: Atrium Viewing Area crowd"
+  lightingNext:"GO disco lighting — Music Stage. TY!"
 
 RESPOND WITH JSON — no markdown, no code fences, always valid JSON:
 {
@@ -548,7 +632,8 @@ RESPOND WITH JSON — no markdown, no code fences, always valid JSON:
 CRITICAL: Only include fields in "updates" that actually changed. NEVER include "cues" or "guests" unless you are sending a new or updated array. Sending an empty array wipes the data. For cues and guests, always send the COMPLETE updated array — never partial.
 
 Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
-Cue shape: { scene, liveLabel, dur, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext }`;
+Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext }
+prelive:true means pre-show (Countdown) — excluded from runtime total.`;
 
   const res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
     method: 'POST',
@@ -648,7 +733,7 @@ function updateAllDisplays() {
   setVal('d-eplen', showData.epLen ? showData.epLen + ' min' : '');
   setVal('d-eppin', showData.pin);
 
-  const totalMins = showData.cues.reduce((a, c) => a + (parseInt(c.dur) || 0), 0);
+  const totalMins = showData.cues.reduce((a, c) => a + (c.prelive ? 0 : (parseInt(c.dur) || 0)), 0);
   const target = parseInt(showData.epLen) || 90;
   const delta = totalMins - target;
   document.getElementById('rt-cues').textContent = showData.cues.length;
@@ -677,7 +762,7 @@ function updateAllDisplays() {
     ? '<div style="font-size:12px;color:var(--muted)">Tell Boo what\'s in the show...</div>'
     : showData.cues.map((c, i) => `
       <div class="cue-item ${c.stageType === 'music' ? 'music' : c.stageType === 'kitchen' ? 'kitchen' : c.scene ? 'has-data' : ''}">
-        <div class="cue-num-label">CUE ${i + 1}</div>
+        <div class="cue-num-label">SCENE ${i + 1}${c.prelive ? ' · PRE-SHOW' : ''}</div>
         <div class="cue-item-name">${c.scene || '(untitled)'}</div>
         <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
         ${c.booName ? `<div class="cue-item-boo">→ ${c.booName}</div>` : ''}
