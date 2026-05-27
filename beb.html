@@ -168,6 +168,8 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
           <div class="ep-field" style="grid-column:1/-1"><div class="ep-label">TITLE</div><div class="ep-val" id="d-eptitle"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">LENGTH</div><div class="ep-val" id="d-eplen"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">PIN</div><div class="ep-val" id="d-eppin"><span class="empty">not set</span></div></div>
+          <div class="ep-field"><div class="ep-label">SAVED</div><div class="ep-val" id="d-saved" style="font-size:11px;color:var(--muted)">—</div></div>
+          <div class="ep-field"><div class="ep-label">BUILD</div><div class="ep-val" id="d-build" style="font-size:11px;color:var(--muted)">—</div></div>
         </div>
       </div>
     </div>
@@ -250,6 +252,7 @@ async function saveState() {
     });
     if (error) throw error;
     setSaveBadge("● SAVED", "var(--green)");
+    setSavedTime(new Date().toISOString());
   } catch(e) { setSaveBadge("● SAVE ERR", "var(--orange)"); }
 }
 
@@ -261,10 +264,21 @@ async function loadState() {
       conversationHistory = data.history || [];
       updateAllDisplays();
       setSaveBadge("● LOADED", "var(--green)");
+      if (data.updated_at) setSavedTime(data.updated_at);
       return true;
     }
   } catch(e) {}
   return false;
+}
+
+function setSavedTime(ts) {
+  const el = document.getElementById('d-saved');
+  if (!el) return;
+  try {
+    const d = new Date(ts);
+    el.textContent = d.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ' · ' +
+      d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+  } catch(e) { el.textContent = ts; }
 }
 
 function setSaveBadge(t, c) {
@@ -747,6 +761,13 @@ async function generateBSM() {
 
 // ─── INIT ───
 window.addEventListener('load', async () => {
+  fetch('https://api.github.com/repos/RedSunCreative/beb/commits/main')
+    .then(r => r.json())
+    .then(d => {
+      const el = document.getElementById('d-build');
+      if (el && d.sha) el.textContent = d.sha.slice(0, 7);
+    })
+    .catch(() => {});
   initMic();
   const loaded = await loadState();
 
