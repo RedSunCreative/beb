@@ -1317,7 +1317,7 @@ async function generateBSM() {
     // Upload to GitHub if PAT is configured
     if (localStorage.getItem('beb_github_pat') || CLIENT_CONFIG.githubPAT) {
       btn.textContent = '⬆️ UPLOADING TO GITHUB...';
-      btn.style.color = 'var(--gold)';
+      btn.style.color = '#F5D03A';
       const ok = await uploadToGitHub(filename, output);
       const epDate = showData.epDate || new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
       btn.style.color = '';
