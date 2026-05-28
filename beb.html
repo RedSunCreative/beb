@@ -230,6 +230,16 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
 
+    <div class="data-section">
+      <div class="data-section-header" onclick="toggleSection('memory-body')">
+        <div class="data-section-title">BOO'S MEMORY</div>
+        <div class="data-section-count" id="memory-count">0</div>
+      </div>
+      <div class="data-section-body" id="memory-body" style="display:none;">
+        <div id="memory-list"><div style="font-size:12px;color:var(--muted)">No memories yet...</div></div>
+      </div>
+    </div>
+
     <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">📄 GENERATE RoS PDF</button>
     <button class="generate-btn ros" id="ros-simple-btn" onclick="generateROSSimple()" style="margin-top:4px;opacity:0.9;">⭕ ROS VISUAL (PRINT)</button>
     <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);">✏️ EDIT RUN OF SHOW</button>
@@ -290,7 +300,7 @@ const CLIENT_CONFIG = {
 let showData = {
   epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:90, pin:"5000",
   prelivePerformer:"", preliveMsg:"",
-  guests:[], cues:[]
+  guests:[], cues:[], booMemory:[]
 };
 let conversationHistory = [];
 let isThinking = false;
@@ -328,6 +338,7 @@ async function saveState() {
     // written externally (e.g. by Claude Code) while the browser had cues:[].
     // The merge RPC does JSONB || so only keys present in dataToSave are updated.
     if (dataToSave.cues && dataToSave.cues.length === 0) delete dataToSave.cues;
+    if (dataToSave.booMemory && dataToSave.booMemory.length === 0) delete dataToSave.booMemory;
     const { error } = await sb.rpc('merge_builder_state', {
       p_id: BUILDER_ROW,
       p_data: dataToSave,
@@ -596,10 +607,21 @@ async function speakBoo(text) {
 
 // ─── CLAUDE ───
 async function callClaude(userMessage) {
-  const systemPrompt = `You are Boo — sharp, efficient, and focused. You help Mark plan and build Little Big Voices episodes. Do the work, confirm what you captured, and stop. Do NOT ask follow-up questions unless something is genuinely ambiguous and you cannot proceed without the answer. Do NOT try to keep the conversation going. Do NOT express enthusiasm or hype. Mark is a professional — treat him like one.
+  const memoryBlock = (showData.booMemory && showData.booMemory.length > 0)
+    ? `\n=== WHAT BOO KNOWS ABOUT MARK & LBV ===\n${showData.booMemory.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
+    : '';
+
+  const systemPrompt = `You are Boo — executive producer instincts drawn from the people who built live television. Lorne Michaels running SNL for fifty years. The EPs who made Letterman work night after night. You've seen every kind of live show go sideways and right. You're dry, experienced, and occasionally sharp. You don't perform enthusiasm. You have opinions and you share them briefly when they're relevant.
+
+Your job: help Mark plan and build Little Big Voices episodes. Do the work, confirm what you captured, and stop. Do NOT ask follow-up questions unless something is genuinely ambiguous and you cannot proceed without the answer. Do NOT try to keep the conversation going. Do NOT express enthusiasm or hype. Mark is a professional — treat him like one.
 
 Mark talks to you hands-free. Keep responses SHORT — 1 to 3 sentences max. Confirm what you recorded, then be quiet.
 
+=== MEMORY ===
+You learn from Mark over time. When you observe something worth remembering — a preference he's stated, a rule he confirmed, a correction he made, a fact about the show or the crew — silently append one or more tags at the very end of your "speech" value ONLY:
+[[REMEMBER: one clear sentence about what you learned]]
+You may include multiple tags if needed. Do NOT mention the tags to Mark. Do NOT comment on saving them. The app handles extraction and strips them before display. Only tag genuinely new information — never repeat something already in the memory list above.
+${memoryBlock}
 CURRENT SHOW DATA:
 ${JSON.stringify(showData, null, 2)}
 
@@ -803,6 +825,22 @@ async function processUserInput(text) {
     hideThinking();
 document.getElementById('mic-btn').classList.remove('thinking');
 
+    // Extract [[REMEMBER:...]] tags from speech, push to booMemory, strip from display/speech
+    const rememberRe = /\[\[REMEMBER:\s*([^\]]+)\]\]/g;
+    let rm;
+    const newMems = [];
+    const speechRaw = response.speech || '';
+    while ((rm = rememberRe.exec(speechRaw)) !== null) {
+      const m = rm[1].trim();
+      if (m && !(showData.booMemory || []).includes(m)) newMems.push(m);
+    }
+    if (newMems.length > 0) {
+      if (!showData.booMemory) showData.booMemory = [];
+      showData.booMemory.push(...newMems);
+    }
+    response.speech = speechRaw.replace(/\[\[REMEMBER:[^\]]*\]\]/g, '').trim();
+    if (response.display) response.display = response.display.replace(/\[\[REMEMBER:[^\]]*\]\]/g, '').trim();
+
     if (response.updates) {
       const u = response.updates;
       if (u.epNum !== undefined) showData.epNum = u.epNum;
@@ -883,6 +921,8 @@ function updateAllDisplays() {
         <div class="guest-type">${(g.stageType||'').toUpperCase()}</div>
       </div>`).join('');
 
+  renderMemory();
+
   const cl = document.getElementById('cue-list-display');
   cl.innerHTML = showData.cues.length === 0
     ? '<div style="font-size:12px;color:var(--muted)">Tell Boo what\'s in the show...</div>'
@@ -896,6 +936,30 @@ function updateAllDisplays() {
         <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
         ${c.booName ? `<div class="cue-item-boo">→ ${c.booName}</div>` : ''}
       </div>`).join('');
+}
+
+function renderMemory() {
+  const mems = showData.booMemory || [];
+  const countEl = document.getElementById('memory-count');
+  if (countEl) countEl.textContent = mems.length;
+  const el = document.getElementById('memory-list');
+  if (!el) return;
+  if (!mems.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted)">No memories yet...</div>';
+    return;
+  }
+  el.innerHTML = mems.map((m, i) => `
+    <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div style="flex:1;font-size:12px;color:var(--muted);line-height:1.4;">${m}</div>
+      <button onclick="deleteMemory(${i})" style="background:none;border:none;color:var(--orange);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0;line-height:1;" title="Forget this">×</button>
+    </div>`).join('');
+}
+
+function deleteMemory(i) {
+  if (!showData.booMemory) return;
+  showData.booMemory.splice(i, 1);
+  renderMemory();
+  saveState();
 }
 
 function toggleSection(id) {
