@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Boo Show Manager · Little Big Voices</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#3a3f4a;min-height:100vh;font-family:'Helvetica Neue',Arial,sans-serif;padding:16px;}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+body.tv-mode{padding:0;overflow:hidden;}
+body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:rotate(90deg) translateY(-100%);transform-origin:top left;position:fixed;top:0;left:0;overflow-y:auto;padding:16px;}
+.toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid #464d59;}
+.toggle-btn{flex:1;padding:10px 4px;border:none;font-size:11px;letter-spacing:1px;cursor:pointer;font-weight:bold;transition:background 0.2s;}
+.now-live-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 18px;background:#1a0000;border-radius:8px;border:2px solid #cc0000;box-shadow:0 0 14px #ff000044;}
+.nl-dot{width:11px;height:11px;border-radius:50%;background:#E8431A;flex-shrink:0;}
+.nl-label{font-size:15px;font-weight:900;letter-spacing:2px;color:#E8431A;font-family:'Helvetica Neue',Arial,sans-serif;}
+.card{background:#5a6270;border-radius:12px;border:3px solid #464d59;overflow:hidden;}
+.top-bar{background:#464d59;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.boo-id{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+.boo-name{display:flex;flex-direction:column;min-width:0;}
+.boo-name-main{font-size:11px;color:#F5D03A;font-weight:bold;letter-spacing:1px;white-space:nowrap;}
+.boo-name-sub{font-size:9px;color:#C4B9A8;letter-spacing:1px;white-space:nowrap;}
+.timers{display:flex;gap:10px;align-items:center;flex-shrink:0;}
+.timer-block{text-align:center;}
+.timer-label{font-size:9px;color:#F5D03A;letter-spacing:2px;margin-bottom:1px;font-weight:bold;}
+.timer-val{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;color:#F5D03A;transition:color 0.3s;}
+.divider-v{width:1px;height:28px;background:rgba(255,255,255,0.12);}
+.main{padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
+.scene-name{font-size:19px;color:#fff;font-weight:bold;margin-bottom:2px;}
+.boo-card{background:#4a5260;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px 16px;}
+.boo-tag{font-size:10px;color:#3BB8C9;letter-spacing:3px;margin-bottom:8px;}
+.boo-msg{font-size:15px;color:#fff;line-height:1.6;}
+.boo-name-flash{font-size:22px;font-weight:900;display:block;margin-bottom:8px;}
+.warn-banner{border-radius:8px;padding:12px 16px;transition:all 0.3s;border:2px solid transparent;display:none;}
+.warn-tag{font-size:11px;letter-spacing:3px;margin-bottom:5px;font-weight:bold;}
+.warn-msg{font-size:15px;color:#fff;line-height:1.5;}
+.standby-banner{border-radius:8px;padding:16px;border:2px solid #F5D03A;background:#2a2000;text-align:center;display:none;}
+.standby-title{font-size:28px;font-weight:900;color:#F5D03A;letter-spacing:4px;margin-bottom:10px;}
+.standby-who{font-size:22px;font-weight:900;color:#fff;margin-bottom:6px;}
+.standby-where{font-size:16px;color:#F5D03A;margin-bottom:8px;letter-spacing:1px;}
+.standby-inst{font-size:14px;color:#C4B9A8;line-height:1.5;}
+.prelive-banner{border-radius:8px;padding:16px;border:2px solid #F5D03A;background:#1a1400;display:none;}
+.prelive-title{font-size:11px;color:#F5D03A;letter-spacing:3px;margin-bottom:8px;text-align:center;}
+.prelive-msg{font-size:14px;color:#fff;line-height:1.8;}
+.ros-change-banner{border-radius:8px;padding:14px 16px;border:2px solid #E8431A;background:#1a0500;display:none;}
+.ros-change-msg{font-size:15px;color:#fff;line-height:1.5;}
+.up-next{background:#383f4d;border:2px solid #F5D03A;border-radius:10px;padding:16px 18px;}
+.un-label{font-size:11px;color:#F5D03A;letter-spacing:3px;margin-bottom:6px;font-weight:bold;}
+.un-scene{font-size:20px;color:#F5D03A;font-weight:900;margin-bottom:4px;}
+.un-cue{font-size:17px;color:#3BB8C9;font-weight:bold;}
+.applause-banner{position:fixed;top:0;left:0;right:0;bottom:0;background:#000;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200;}
+.applause-text{font-size:72px;font-weight:900;color:#F5D03A;letter-spacing:8px;text-align:center;}
+.applause-sub{font-size:24px;color:#fff;margin-top:16px;letter-spacing:3px;}
+.applause-close{position:absolute;top:20px;right:20px;background:none;border:2px solid #555;color:#555;padding:10px 16px;border-radius:6px;cursor:pointer;font-size:14px;}
+.applause-reset{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);background:#1a0000;border:2px solid #E8431A;color:#E8431A;padding:14px 28px;border-radius:8px;cursor:pointer;font-size:15px;font-weight:bold;letter-spacing:2px;white-space:nowrap;}
+.allclear-screen{background:#5a6270;border-radius:12px;border:3px solid #4ade80;overflow:hidden;padding:40px 24px;text-align:center;display:none;flex-direction:column;align-items:center;gap:20px;}
+.allclear-text{font-size:36px;font-weight:900;color:#4ade80;line-height:1.3;}
+.allclear-sub{font-size:18px;color:#fff;line-height:1.6;}
+.allclear-reset{padding:16px 32px;background:#1a0000;border:2px solid #E8431A;color:#E8431A;border-radius:8px;cursor:pointer;font-size:15px;font-weight:bold;letter-spacing:2px;margin-top:8px;}
+.progress-bar{height:4px;background:#464d59;}
+.progress-fill{height:100%;background:#3BB8C9;transition:width 0.5s;}
+.tech-tabs{display:flex;border-bottom:2px solid #464d59;background:#464d59;}
+.tech-tab{flex:1;padding:10px 4px;border:none;font-size:12px;font-weight:bold;color:#C4B9A8;background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;letter-spacing:1px;}
+.tech-tab.active{color:#F5D03A;border-bottom-color:#F5D03A;background:#4a5260;}
+.tech-content{padding:16px 20px;display:flex;flex-direction:column;gap:10px;}
+.tech-section{background:#4a5260;border-radius:8px;padding:12px 14px;}
+.tech-section-title{font-size:12px;color:#F5D03A;letter-spacing:2px;margin-bottom:8px;font-weight:bold;}
+.tech-line{font-size:14px;color:#fff;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.06);line-height:1.5;}
+.tech-line:last-child{border-bottom:none;}
+.tech-next{background:#383f4d;border:1px solid #F5D03A;border-radius:8px;padding:12px 14px;}
+.tech-next-label{font-size:11px;color:#F5D03A;letter-spacing:3px;margin-bottom:6px;font-weight:bold;}
+.tech-next-lines{font-size:14px;color:#3BB8C9;line-height:1.8;}
+.host-wrap{background:#464d59;border-radius:12px;border:2px solid #5a6270;padding:14px;display:flex;flex-direction:column;gap:11px;}
+.timer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.timer-card{background:#5a6270;border-radius:8px;padding:10px 12px;text-align:center;}
+.big-timer{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;color:#F5D03A;}
+.timer-sub{font-size:10px;color:#C4B9A8;margin-top:3px;}
+.schedule-badge{text-align:center;font-size:13px;font-weight:bold;letter-spacing:1px;padding:5px 0;}
+.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.add-btn{padding:12px 0;border:none;border-radius:8px;font-size:15px;font-weight:bold;letter-spacing:1px;cursor:pointer;}
+.host-btn{padding:14px 0;border-radius:8px;font-size:14px;font-weight:bold;letter-spacing:1px;cursor:pointer;border:2px solid;width:100%;margin-top:2px;}
+.nav-grid{display:grid;grid-template-columns:1fr 2fr;gap:8px;}
+.nav-btn{padding:13px 0;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:bold;letter-spacing:1px;}
+.next-hint{font-size:13px;color:#F5D03A;text-align:center;background:#383f4d;border:2px solid #F5D03A;border-radius:6px;padding:8px;}
+.sync-badge{font-size:10px;text-align:center;padding:4px;letter-spacing:2px;}
+.live-edit-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:100;overflow-y:auto;padding:20px;display:none;}
+.live-edit-wrap{max-width:540px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+.live-edit-header{display:flex;justify-content:space-between;align-items:center;}
+.live-edit-title{font-size:13px;color:#E8431A;letter-spacing:3px;font-weight:bold;}
+.live-edit-close{background:none;border:1px solid #E8431A;color:#E8431A;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:12px;}
+.le-section-title{font-size:11px;color:#C4B9A8;letter-spacing:3px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.cue-block{background:#141422;border:1px solid #2a2a3e;border-left:4px solid #445;border-radius:8px;padding:11px 14px;display:flex;align-items:center;gap:12px;}
+.cue-block.current{border-left-color:#3BB8C9;background:#051525;border-color:#2a3a45;}
+.cue-block.removed{opacity:0.35;background:#0d0d18;}
+.cue-block-info{flex:1;}
+.cue-block-time{font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:2px;margin-top:2px;}
+.cue-block-name{font-size:15px;color:#fff;font-weight:bold;line-height:1.2;}
+.cue-block-remove{background:#3a0a00;border:1px solid #E8431A;color:#E8431A;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:bold;white-space:nowrap;flex-shrink:0;}
+.cue-block-current-badge{font-size:9px;color:#3BB8C9;letter-spacing:2px;margin-bottom:2px;}
+.insert-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.insert-btn{padding:14px 10px;background:#0a0a1a;border:1px solid #3BB8C9;color:#3BB8C9;border-radius:8px;cursor:pointer;font-size:12px;font-weight:bold;text-align:center;line-height:1.4;}
+.go-closing-btn{width:100%;padding:16px 0;background:#3a0a00;border:2px solid #E8431A;color:#E8431A;border-radius:8px;cursor:pointer;font-size:15px;font-weight:bold;}
+.custom-input{width:100%;padding:12px;background:#0d0d1a;border:1px solid #3BB8C9;color:#fff;border-radius:8px;font-size:14px;font-family:inherit;}
+.custom-fire-btn{width:100%;padding:13px 0;background:#0a2a1a;border:2px solid #2d6a2d;color:#4ade80;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold;margin-top:6px;}
+.confirm-card{background:#0a1a0a;border:2px solid #4ade80;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;}
+.confirm-title{font-size:11px;color:#4ade80;letter-spacing:3px;}
+.confirm-detail{font-size:15px;color:#fff;font-weight:bold;line-height:1.5;}
+.confirm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.confirm-yes{padding:14px 0;background:#0a2a1a;border:2px solid #4ade80;color:#4ade80;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold;}
+.confirm-no{padding:14px 0;background:#1a0000;border:2px solid #E8431A;color:#E8431A;border-radius:8px;cursor:pointer;font-size:14px;font-weight:bold;}
+.pin-screen{background:#464d59;border-radius:12px;border:2px solid #5a6270;padding:30px 20px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.pin-display{font-size:36px;font-weight:900;letter-spacing:12px;color:#fff;min-height:50px;text-align:center;}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;}
+.pin-btn{padding:18px 0;background:#5a6270;border:1px solid #6a7280;border-radius:8px;color:#fff;font-size:20px;font-weight:bold;cursor:pointer;}
+.pin-error{font-size:12px;color:#E8431A;letter-spacing:2px;min-height:18px;}
+.welcome-card{background:#5a6270;border-radius:12px;border:3px solid #464d59;overflow:hidden;display:flex;flex-direction:column;align-items:center;padding:24px 22px;gap:16px;text-align:center;}
+.welcome-show{font-size:28px;color:#fff;font-weight:900;line-height:1.2;}
+.welcome-ep{font-size:14px;color:#F5D03A;letter-spacing:2px;margin-top:2px;}
+.welcome-boo-row{background:#4a5260;border-radius:10px;padding:18px;width:100%;text-align:left;display:flex;gap:14px;align-items:flex-start;}
+.welcome-boo-text{flex:1;font-size:15px;color:#fff;line-height:1.8;}
+.welcome-instruction{background:#4a5260;border-radius:10px;padding:16px 18px;width:100%;text-align:left;}
+.welcome-instruction-title{font-size:11px;color:#F5D03A;font-weight:bold;letter-spacing:3px;margin-bottom:10px;}
+.welcome-instruction-text{font-size:15px;color:#fff;line-height:1.8;}
+.standby-pulse{background:#1a0000;border:2px solid #cc0000;border-radius:8px;padding:12px 20px;display:flex;align-items:center;gap:10px;justify-content:center;width:100%;}
+.standby-pulse-dot{width:10px;height:10px;border-radius:50%;background:#E8431A;flex-shrink:0;}
+.standby-pulse-text{font-size:14px;font-weight:900;color:#E8431A;letter-spacing:2px;}
+.qr-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:#fff;border-radius:8px;}
+.qr-label{font-size:9px;color:#3a3f4a;letter-spacing:1px;font-weight:bold;text-align:center;}
+.footer{text-align:center;font-size:10px;color:rgba(255,255,255,0.12);letter-spacing:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toggle" id="main-toggle">
+    <button class="toggle-btn" id="btn-tv" onclick="setView('tv')">📺 TV</button>
+    <button class="toggle-btn" id="btn-tech" onclick="setView('tech')">🎛️ TECH</button>
+    <button class="toggle-btn" id="btn-host" onclick="tryHost()">🎙️ HOST ONLY</button>
+  </div>
+  <div class="sync-badge" id="sync-badge" style="color:#F5D03A;">● CONNECTING...</div>
+
+  <!-- TV WELCOME -->
+  <div id="view-tv-welcome" class="welcome-card">
+    <svg width="80" height="80" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="96" fill="none" stroke="#fff" stroke-width="6"/>
+      <text x="28" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#E8431A">l.</text>
+      <text x="72" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#F5D03A">b.</text>
+      <text x="134" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#3BB8C9">v.</text>
+    </svg>
+    <div>
+      <div class="welcome-show">Little Big Voices!</div>
+      <div class="welcome-ep" id="ep-label-tv">LITTLE BIG VOICES · STAND BY</div>
+    </div>
+    <div class="welcome-boo-row">
+      <svg width="60" height="70" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+        <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+        <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+        <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/><ellipse cx="93" cy="62" rx="10" ry="7" fill="#A0430F" transform="rotate(-20 93 62)"/>
+        <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+        <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+        <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+        <circle cx="57" cy="81" r="1" fill="#fff"/><circle cx="79" cy="81" r="1" fill="#fff"/>
+        <path d="M48 74 Q54 70 60 73" stroke="#6B2A0A" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M70 73 Q76 70 82 74" stroke="#6B2A0A" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M57 99 Q65 104 73 99" fill="#E8431A" opacity="0.6"/>
+        <ellipse cx="46" cy="92" rx="7" ry="5" fill="#f4a0a0" opacity="0.4"/><ellipse cx="84" cy="92" rx="7" ry="5" fill="#f4a0a0" opacity="0.4"/>
+        <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+        <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+        <path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/>
+        <rect x="30" y="112" width="28" height="34" rx="3" fill="#c8a870"/><rect x="41" y="108" width="8" height="7" rx="2" fill="#888"/>
+        <path d="M72 116 Q65 110 72 105" stroke="#F5D03A" stroke-width="2" fill="none"/>
+      </svg>
+      <div class="welcome-boo-text" id="welcome-boo-text">
+        <strong style="color:#F5D03A;font-size:16px;">I'm Boo, your Little Big Show Manager!</strong><br><br>
+        Welcome to Little Big Voices! Please keep your attention on the screens around the studio — I'll give you your cues for where to be and when.<br><br>
+        Love, Boo 💛
+      </div>
+    </div>
+    <div class="welcome-instruction">
+      <div class="welcome-instruction-title">🎵 PERFORMANCE GUESTS</div>
+      <div class="welcome-instruction-text">1. Please check in with the Master Control Team for your sound check.<br>2. Stand by for your cue from Mark.<br>3. You'll kick it off right after he introduces you. Thank you! ❤️</div>
+    </div>
+    <div class="welcome-instruction">
+      <div class="welcome-instruction-title">🎙️ INTERVIEW GUESTS</div>
+      <div class="welcome-instruction-text">1. Please check into the Green Room to get settled.<br>2. We'll come get you for your sound and video check at the Pod Stage.<br>3. Watch the monitors — Boo will guide you in. Thank you! 😊</div>
+    </div>
+    <div class="standby-pulse">
+      <div class="standby-pulse-dot" id="tv-standby-dot"></div>
+      <div class="standby-pulse-text">STAND BY FOR SHOW CIRCLE</div>
+    </div>
+    <div class="qr-wrap" style="width:130px"><div id="qr-tv-welcome"></div><div class="qr-label">SCAN FOR MOBILE APP</div></div>
+  </div>
+
+  <!-- TECH WELCOME -->
+  <div id="view-tech-welcome" class="welcome-card" style="display:none">
+    <svg width="80" height="80" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="96" fill="none" stroke="#fff" stroke-width="6"/>
+      <text x="28" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#E8431A">l.</text>
+      <text x="72" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#F5D03A">b.</text>
+      <text x="134" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#3BB8C9">v.</text>
+    </svg>
+    <div><div class="welcome-show">Little Big Voices!</div><div class="welcome-ep" id="ep-label-tech">TECH CREW · STANDING BY</div></div>
+    <div class="welcome-instruction">
+      <div class="welcome-instruction-title">🎛️ TECH CREW</div>
+      <div class="welcome-instruction-text" style="font-size:16px;">1. Please complete your pre-show checks.<br>2. Stand by at your stations.<br>3. Show Circle is in progress — Mark will start the show shortly. Thank you! ❤️</div>
+    </div>
+    <div class="standby-pulse"><div class="standby-pulse-dot"></div><div class="standby-pulse-text">STAND BY FOR SHOW CIRCLE</div></div>
+  </div>
+
+  <!-- PIN -->
+  <div id="view-pin" class="pin-screen" style="display:none">
+    <div style="font-size:10px;color:#C4B9A8;letter-spacing:3px;">HOST ONLY ACCESS</div>
+    <svg width="50" height="60" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+      <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+      <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
+      <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+      <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+      <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+      <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+      <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+      <path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/>
+    </svg>
+    <div style="font-size:13px;color:#F5D03A;text-align:center;">Enter PIN to access Host Controls</div>
+    <div class="pin-display" id="pin-display">_ _ _ _</div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinPress('1')">1</button><button class="pin-btn" onclick="pinPress('2')">2</button><button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button><button class="pin-btn" onclick="pinPress('5')">5</button><button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button><button class="pin-btn" onclick="pinPress('8')">8</button><button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn" onclick="pinClear()" style="color:#E8431A;">CLR</button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn" onclick="pinBack()">⌫</button>
+    </div>
+    <button onclick="setView('tv')" style="background:none;border:none;color:#C4B9A8;font-size:12px;cursor:pointer;">← BACK TO TV VIEW</button>
+  </div>
+
+  <!-- HOST WELCOME -->
+  <div id="view-host-welcome" class="host-wrap" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg width="26" height="32" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+        <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+        <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
+        <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+        <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+        <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+        <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+        <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+        <path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/>
+      </svg>
+      <div class="boo-name"><div class="boo-name-main">I'M BOO! 👋 HOST ONLY VIEW</div><div class="boo-name-sub">YOUR LITTLE BIG SHOW MANAGER</div></div>
+    </div>
+    <div style="background:#4a5260;border-radius:8px;padding:16px;font-size:15px;color:#C4B9A8;line-height:1.7;text-align:center;">Show Circle is in progress.<br>When stations are confirmed and everyone is ready —</div>
+    <button onclick="startShowCircle()" style="width:100%;padding:20px 0;background:#0a2a0a;border:2px solid #2d6a2d;color:#4ade80;font-size:18px;font-weight:bold;border-radius:10px;cursor:pointer;">▶ START SHOW CIRCLE — 20 MIN</button>
+  </div>
+
+  <!-- TV LIVE VIEW -->
+  <div id="view-tv" class="card" style="display:none">
+    <div class="top-bar">
+      <div class="boo-id">
+        <svg width="28" height="34" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+          <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+          <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+          <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
+          <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+          <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+          <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+          <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+          <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+          <path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/>
+        </svg>
+        <div class="boo-name">
+          <div class="boo-name-main">I'M BOO! 👋 · YOUR LITTLE BIG SHOW MANAGER</div>
+        </div>
+      </div>
+      <div class="timers">
+        <div class="timer-block"><div class="timer-label">SEG</div><div class="timer-val" id="tv-seg">20:00</div></div>
+        <div class="divider-v"></div>
+        <div class="timer-block"><div class="timer-label">SHOW</div><div class="timer-val" id="tv-show">90:00</div></div>
+      </div>
+    </div>
+    <div style="padding:8px 16px 0;"><div class="now-live-bar" id="tv-now-live-bar"><div class="nl-dot" id="tv-nl-dot"></div><div class="nl-label" id="tv-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div></div>
+    <div class="main">
+      <div class="scene-name" id="tv-scene">PRE-SHOW COUNTDOWN VIDEO</div>
+      <div class="ros-change-banner" id="ros-change-banner"><div class="ros-change-msg" id="ros-change-msg"></div></div>
+      <div class="prelive-banner" id="prelive-banner"><div class="prelive-title">🎯 PRE-LIVE — PLEASE READ</div><div class="prelive-msg" id="prelive-msg"></div></div>
+      <div class="standby-banner" id="standby-banner">
+        <div class="standby-title">🎯 STAND BY</div>
+        <div class="standby-who" id="standby-who"></div>
+        <div class="standby-where" id="standby-where"></div>
+        <div class="standby-inst" id="standby-inst"></div>
+      </div>
+      <div class="warn-banner" id="warn-banner"><div class="warn-tag" id="warn-tag"></div><div class="warn-msg" id="warn-msg"></div></div>
+      <div class="boo-card" id="boo-card" style="display:none">
+        <div class="boo-tag">👋 BOO SAYS</div>
+        <div class="boo-msg" id="boo-msg"></div>
+      </div>
+      <div class="up-next" id="up-next" style="display:none">
+        <div class="un-label">UP NEXT</div>
+        <div class="un-scene" id="un-scene"></div>
+        <div class="un-cue" id="un-cue"></div>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+  </div>
+
+  <!-- TECH LIVE VIEW -->
+  <div id="view-tech" class="card" style="display:none">
+    <div class="top-bar">
+      <div class="boo-id">
+        <svg width="26" height="32" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+          <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+          <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+          <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
+          <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+          <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+          <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+          <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+          <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+          <path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/>
+        </svg>
+        <div class="boo-name"><div class="boo-name-main">BOO — TECH CREW</div><div class="boo-name-sub" id="ep-label-tech-live">LITTLE BIG VOICES</div></div>
+      </div>
+      <div class="timers">
+        <div class="timer-block"><div class="timer-label">SEG</div><div class="timer-val" id="tech-seg">20:00</div></div>
+        <div class="divider-v"></div>
+        <div class="timer-block"><div class="timer-label">SHOW</div><div class="timer-val" id="tech-show">90:00</div></div>
+      </div>
+    </div>
+    <div style="padding:8px 16px 0;"><div class="now-live-bar" id="tech-now-live-bar"><div class="nl-dot" id="tech-nl-dot"></div><div class="nl-label" id="tech-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div></div>
+    <div class="tech-tabs">
+      <button class="tech-tab active" id="tab-audio" onclick="setTechTab('audio')">AUDIO</button>
+      <button class="tech-tab" id="tab-video" onclick="setTechTab('video')">VIDEO</button>
+      <button class="tech-tab" id="tab-cameras" onclick="setTechTab('cameras')">CAMERAS</button>
+      <button class="tech-tab" id="tab-lighting" onclick="setTechTab('lighting')">LIGHTS</button>
+    </div>
+    <div class="tech-content">
+      <div class="tech-section"><div class="tech-section-title" id="tech-now-title">NOW</div><div id="tech-now-lines"></div></div>
+      <div class="tech-next"><div class="tech-next-label" id="tech-next-label">UP NEXT</div><div class="tech-next-lines" id="tech-next-lines"></div></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="tech-progress" style="width:0%"></div></div>
+  </div>
+
+  <!-- HOST LIVE VIEW -->
+  <div id="view-host" class="host-wrap" style="display:none">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg width="26" height="32" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/>
+        <ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/>
+        <ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/>
+        <ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/>
+        <ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/>
+        <circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/>
+        <path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/>
+        <ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/>
+        <path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/>
+      </svg>
+      <div class="boo-name"><div class="boo-name-main">I'M BOO! 👋 HOST ONLY VIEW</div><div class="boo-name-sub">YOUR LITTLE BIG SHOW MANAGER</div></div>
+    </div>
+    <div class="now-live-bar" id="host-now-live-bar"><div class="nl-dot" id="host-nl-dot"></div><div class="nl-label" id="host-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div>
+    <div class="timer-grid">
+      <div class="timer-card"><div class="timer-label">SEGMENT</div><div class="big-timer" id="h-seg">20:00</div><div class="timer-sub" id="h-scene">PRE-SHOW</div></div>
+      <div class="timer-card"><div class="timer-label">SHOW</div><div class="big-timer" id="h-show">90:00</div><div class="timer-sub" id="ep-label-host-timer">LITTLE BIG VOICES</div></div>
+    </div>
+    <div class="schedule-badge" id="schedule-badge" style="color:#C4B9A8">ON SCHEDULE</div>
+    <div class="add-grid">
+      <button class="add-btn" onclick="addTime(5)" style="background:#1a3a2a;color:#3BB8C9;border:1px solid #3BB8C9;">+ 5 MIN</button>
+      <button class="add-btn" onclick="addTime(3)" style="background:#1a2a3a;color:#7ab8c9;border:1px solid #7ab8c9;">+ 3 MIN</button>
+    </div>
+    <button class="host-btn" id="prelive-btn" onclick="firePreLive()" style="background:#1a1400;border-color:#F5D03A;color:#F5D03A;display:none;">🎯 FIRE: PRE-LIVE — 2 MIN WARNING</button>
+    <button class="host-btn" id="standby-btn" onclick="fireStandby()" style="background:#2a2000;border-color:#F5D03A;color:#F5D03A;display:none;">🎯 FIRE STAND BY</button>
+    <button class="host-btn" id="applause-host-btn" onclick="fireApplause()" style="background:#1a0a00;border-color:#F5D03A;color:#F5D03A;display:none;">👏 FIRE APPLAUSE</button>
+    <button class="host-btn" id="live-edit-btn" onclick="openLiveEdit()" style="background:#1a0500;border-color:#E8431A;color:#E8431A;display:none;">⚡ LIVE EDIT MODE</button>
+    <button class="host-btn" id="start-show-btn" onclick="startShowCircle()" style="background:#0a2a0a;border-color:#2d6a2d;color:#4ade80;">▶ START SHOW CIRCLE — 20 MIN</button>
+    <button class="host-btn" onclick="resetShow()" style="background:#111;border-color:#444;color:#555;margin-top:6px;">↺ RESET SHOW TO START</button>
+    <div class="nav-grid" id="nav-grid" style="display:none">
+      <button class="nav-btn" id="back-btn" onclick="goPrev()" style="background:#444;color:#C4B9A8;">← BACK</button>
+      <button class="nav-btn" id="next-btn" onclick="goNext()" style="background:#0a2a1a;color:#4ade80;border:2px solid #2d6a2d;">NEXT CUE →</button>
+    </div>
+    <div class="next-hint" id="next-hint" style="display:none"></div>
+  </div>
+
+  <!-- ALL CLEAR SCREEN -->
+  <div id="view-allclear" class="allclear-screen" style="display:none">
+    <svg width="80" height="80" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="96" fill="none" stroke="#4ade80" stroke-width="6"/>
+      <text x="28" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#E8431A">l.</text>
+      <text x="72" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#F5D03A">b.</text>
+      <text x="134" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#3BB8C9">v.</text>
+    </svg>
+    <div class="allclear-text">ALL CLEAR! 🎉</div>
+    <div class="allclear-sub">Great show, everyone!<br>Thank you for making something beautiful tonight.<br><br>Love, Boo 💛</div>
+    <button class="allclear-reset" onclick="resetShow()">↺ START OVER — RESET SHOW</button>
+  </div>
+
+  <div class="footer">BOO PRODUCTION SUITE · LITTLE BIG VOICES</div>
+</div>
+
+<!-- APPLAUSE OVERLAY -->
+<div class="applause-banner" id="applause-banner">
+  <button class="applause-close" onclick="closeApplause()">✕ CLOSE</button>
+  <div class="applause-text" id="applause-text">👏 APPLAUSE 👏</div>
+  <div class="applause-sub">Thank you!</div>
+  <button class="applause-reset" onclick="resetShow()">↺ START OVER — RESET SHOW</button>
+</div>
+
+<!-- LIVE EDIT OVERLAY -->
+<div class="live-edit-overlay" id="live-edit-overlay">
+  <div class="live-edit-wrap">
+    <div class="live-edit-header">
+      <div class="live-edit-title">⚡ LIVE EDIT MODE</div>
+      <button class="live-edit-close" onclick="closeLiveEdit()">✕ CLOSE</button>
+    </div>
+    <div><div class="le-section-title">REMAINING CUES — TAP TO REMOVE &nbsp;<span id="le-remaining-count" style="color:#3BB8C9;font-weight:700;"></span></div><div id="le-cue-list" style="display:flex;flex-direction:column;gap:8px;"></div></div>
+    <div id="insert-section">
+      <div class="le-section-title">INSERT REPLACEMENT SEGMENT</div>
+      <div class="insert-grid">
+        <button class="insert-btn" onclick="proposeInsert('spotlight')">🎬 LBV Spotlight Video<br><span style="font-size:10px;color:#888;font-weight:normal;">~3 min</span></button>
+        <button class="insert-btn" onclick="proposeInsert('kitchen')">🍳 Kitchen Disco<br><span style="font-size:10px;color:#888;font-weight:normal;">Check-in</span></button>
+        <button class="insert-btn" onclick="proposeInsert('crew')">🎙️ Crew Spotlight<br><span style="font-size:10px;color:#888;font-weight:normal;">Chat</span></button>
+        <button class="insert-btn" onclick="proposeInsert('greenroom')">🟢 Green Room<br><span style="font-size:10px;color:#888;font-weight:normal;">Check-in</span></button>
+        <button class="insert-btn" onclick="proposeInsert('online')">💻 Online Audience<br><span style="font-size:10px;color:#888;font-weight:normal;">Check-in</span></button>
+        <button class="insert-btn" onclick="proposeInsert('custom')" style="border-color:#F5D03A;color:#F5D03A;">✏️ Custom</button>
+      </div>
+      <div id="custom-input-wrap" style="display:none;margin-top:10px;">
+        <input class="custom-input" id="custom-segment-input" placeholder="Describe the segment"/>
+        <button class="custom-fire-btn" onclick="proposeCustom()">PREVIEW</button>
+      </div>
+    </div>
+    <div class="confirm-card" id="confirm-card" style="display:none">
+      <div class="confirm-title">⚡ CONFIRM REPLACEMENT</div>
+      <div class="confirm-detail" id="confirm-detail"></div>
+      <div class="confirm-grid">
+        <button class="confirm-yes" onclick="confirmInsert()">✓ CONFIRM</button>
+        <button class="confirm-no" onclick="cancelInsert()">✕ CANCEL</button>
+      </div>
+    </div>
+    <button class="go-closing-btn" onclick="goToClosing()">🔚 GO TO CLOSING NOW</button>
+  </div>
+</div>
+
+<script>
+const SB_URL="https://gogudwpuhmidngsbqfjg.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvZ3Vkd3B1aG1pZG5nc2JxZmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MTQ2NTMsImV4cCI6MjA5NDI5MDY1M30.O6n_tRQsMU29wFV_RArcN9n6gP8KSDWJQqM4P6cTq3s";
+const ROW_ID=1;
+const{createClient}=supabase;
+const sbClient=createClient(SB_URL,SB_KEY);
+
+async function sbGet(){try{const{data,error}=await sbClient.from('show_state').select('*').eq('id',ROW_ID).single();if(error)throw error;return data;}catch(e){return null;}}
+async function sbSet(patch){try{const{error}=await sbClient.from('show_state').update({...patch,updated_at:new Date().toISOString()}).eq('id',ROW_ID);if(error)throw error;}catch(e){console.error('sbSet:',e);}}
+
+let _poll=null;
+function startRealtime(){
+  sbClient.channel('boo_e'+(EPISODE.num||'x'))
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'show_state'},payload=>{
+      if(view!=='host'&&view!=='host-welcome') applyRemoteState(payload.new);
+    })
+    .subscribe(status=>{
+      if(status==='SUBSCRIBED') setSyncBadge('● LIVE SYNC ACTIVE','#4ade80');
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setSyncBadge('● SYNC ERROR','#E8431A');startFallbackPoll();}
+      else setSyncBadge('○ CONNECTING...','#F5D03A');
+    });
+}
+function startFallbackPoll(){
+  if(_poll) return;
+  setSyncBadge('● SYNC (POLLING)','#3BB8C9');
+  _poll=setInterval(async()=>{
+    if(view==='host'||view==='host-welcome') return;
+    const s=await sbGet();if(s) applyRemoteState(s);
+  },1000);
+}
+function setSyncBadge(t,c){const el=document.getElementById('sync-badge');if(el){el.textContent=t;el.style.color=c;}}
+
+// ─── GENERATED BY BOO EPISODE BUILDER ────────────────────────────────────────
+const EPISODE = {
+  num: "9",
+  title: "Little Big Resilience",
+  subtitle: null,
+  showMins: 90,
+  pin: "5000",
+  prelivePerformer: null
+};
+
+const BASE_CUES = [
+  {
+    dur: 20, scene: "COUNTDOWN VIDEO", liveLabel: "NOW LIVE: COUNTDOWN VIDEO",
+    prelive: true,
+    booName: null, booTpl: "Welcome to Little Big Voices Episode 9 — Little Big Resilience! The show circle is happening now. We go live in {M}! Please keep your attention on Mark — he'll bring you in when it's time. Thank you!",
+    w5: null, w2: null,
+    next: "David → Music Stage", nextScene: "COLD OPEN — What Can I Do",
+    audio: ["Please prep ambient + audience mics", "Confirm ALL RECORDS ON (L-20, L-8, ATEM). TY!", "Stand by on music mics"],
+    video: ["GO stream start. TY!", "Stand by — LBV E9 Countdown Video"],
+    cameras: ["Please power up all cameras and frame", "CAM 1: Music Stage wide", "CAM 2: Music Stage close", "CAM 3: Pod Stage wide"],
+    lighting: ["House lights up, please", "Stand by for show lighting"],
+    audioNext: ["GO music mics + reverb/delay", "GO audience mics after LIVE! yell"],
+    videoNext: ["GO LBV E9 Video Opener after LIVE! yell"],
+    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
+    lightingNext: ["Music Stage performance lighting GO"]
+  },
+  {
+    dur: 5, scene: "COLD OPEN — What Can I Do", liveLabel: "NOW LIVE: COLD OPEN — What Can I Do",
+    prelive: false,
+    booName: null, booTpl: null,
+    w5: null, w2: "Please wrap up — Mark, please make your way to the Pod Stage. Thank you!",
+    next: "Pre-recorded Intro", nextScene: "PRE-RECORDED INTRO",
+    audio: ["Music mics up + reverb/delay", "Audience mics up on LIVE! yell. TY!"],
+    video: ["CAM 1, 2, 3 live — Music Stage", "GO LBV E9 Video Opener after LIVE! yell"],
+    cameras: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
+    lighting: ["Music Stage performance lighting"],
+    audioNext: ["GO host mics — Mark + Corey. TY!"],
+    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Corey Hopkins"],
+    lightingNext: ["Pod Stage lighting"]
+  },
+  {
+    dur: 2, scene: "PRE-RECORDED INTRO", liveLabel: "NOW LIVE: PRE-RECORDED INTRO",
+    prelive: false,
+    booName: null, booTpl: null,
+    w5: null, w2: null,
+    next: "Show Opener", nextScene: "SHOW OPENER",
+    audio: ["GO playback audio — LBV E9 Intro. TY!"],
+    video: ["GO LBV E9 Intro Video"],
+    cameras: ["Video playback — stand by cams for pod"],
+    lighting: ["Hold current lighting"],
+    audioNext: ["GO host mics — Mark + Corey. TY!"],
+    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Corey Hopkins"],
+    lightingNext: ["Pod Stage lighting"]
+  },
+  {
+    dur: 5, scene: "SHOW OPENER", liveLabel: "NOW LIVE: SHOW OPENER",
+    prelive: false,
+    booName: null, booTpl: null,
+    w5: null, w2: "Show Opener wrapping — heading to Kitchen Disco.",
+    next: "Karly Pittman to Pod Stage", nextScene: "KITCHEN DISCO #1",
+    audio: ["Host mics — Mark + Corey live", "Audience mics"],
+    video: ["CAM 3, 4, 5 — Pod Stage"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Corey Hopkins"],
+    lighting: ["Pod Stage lighting"],
+    audioNext: ["GO kitchen mics. TY!"],
+    videoNext: ["CAM 6: Kitchen Disco Stage"],
+    camerasNext: ["CAM 6: Kitchen wide and close"],
+    lightingNext: ["Kitchen Disco Stage lighting GO"]
+  },
+  {
+    dur: 4, scene: "KITCHEN DISCO #1", liveLabel: "NOW LIVE: KITCHEN DISCO #1",
+    prelive: false,
+    booName: "Karly Pittman", booTpl: "You have about {M} before you are on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
+    w5: null, w2: "Karly — please move to the Red X near the Pod Stage now.",
+    next: "Karly Pittman to Red X", nextScene: "INTERVIEW — Karly Pittman",
+    audio: ["Kitchen mics live", "Audience mics"],
+    video: ["CAM 6: Kitchen Disco Stage"],
+    cameras: ["CAM 6: Kitchen wide and close"],
+    lighting: ["Kitchen Disco Stage lighting"],
+    audioNext: ["GO podcast faders — Mark primary. TY!"],
+    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Karly Pittman"],
+    lightingNext: ["Pod Stage interview lighting"]
+  },
+  {
+    dur: 12, scene: "INTERVIEW — Karly Pittman", liveLabel: "NOW LIVE: INTERVIEW — Karly Pittman",
+    prelive: false,
+    booName: "David Rothgeb", booTpl: "You have about {M} before Missing In Our Kissing. Please head to the Music Stage when you are ready. Thank you!",
+    w5: "5 min left — David, please make your way to the Music Stage.", w2: "2 min — David, please take your place at the Music Stage now.",
+    next: "David Rothgeb to Music Stage", nextScene: "PERFORMANCE — Missing In Our Kissing",
+    audio: ["Podcast faders — Mark primary", "Audience mics live"],
+    video: ["CAM 3, 4, 5 — Pod Stage"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Karly Pittman"],
+    lighting: ["Pod Stage interview lighting"],
+    audioNext: ["GO music mics + reverb/delay. TY!"],
+    videoNext: ["CAM 1, 2, 3 — Music Stage"],
+    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
+    lightingNext: ["Music Stage performance lighting"]
+  },
+  {
+    dur: 4, scene: "PERFORMANCE — Missing In Our Kissing", liveLabel: "NOW LIVE: PERFORMANCE — Missing In Our Kissing",
+    prelive: false,
+    booName: "Kyndle Lee", booTpl: "You have about {M} before you join us on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
+    w5: null, w2: "Kyndle — please move to the Red X near the Pod Stage now.",
+    next: "Kyndle Lee to Red X", nextScene: "INTERVIEW — Kyndle Lee",
+    audio: ["Music mics + reverb/delay", "Audience mics"],
+    video: ["CAM 1, 2, 3 — Music Stage"],
+    cameras: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
+    lighting: ["Music Stage performance lighting"],
+    audioNext: ["GO podcast faders — Mark primary. TY!"],
+    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Kyndle Lee"],
+    lightingNext: ["Pod Stage interview lighting"]
+  },
+  {
+    dur: 12, scene: "INTERVIEW — Kyndle Lee", liveLabel: "NOW LIVE: INTERVIEW — Kyndle Lee",
+    prelive: false,
+    booName: null, booTpl: null,
+    w5: null, w2: "Kyndle wrapping — Kitchen Disco #2 up next.",
+    next: "Kitchen Disco #2", nextScene: "KITCHEN DISCO #2",
+    audio: ["Podcast faders — Mark primary", "Audience mics live"],
+    video: ["CAM 3, 4, 5 — Pod Stage"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Kyndle Lee"],
+    lighting: ["Pod Stage interview lighting"],
+    audioNext: ["GO kitchen mics. TY!"],
+    videoNext: ["CAM 6: Kitchen Disco Stage"],
+    camerasNext: ["CAM 6: Kitchen wide and close"],
+    lightingNext: ["Kitchen Disco Stage lighting GO"]
+  },
+  {
+    dur: 4, scene: "KITCHEN DISCO #2", liveLabel: "NOW LIVE: KITCHEN DISCO #2",
+    prelive: false,
+    booName: null, booTpl: null,
+    w5: null, w2: null,
+    next: "Corey & Kelia video", nextScene: "VIDEO — Corey & Kelia / AAYH Foundation",
+    audio: ["Kitchen mics live", "Audience mics"],
+    video: ["CAM 6: Kitchen Disco Stage"],
+    cameras: ["CAM 6: Kitchen wide and close"],
+    lighting: ["Kitchen Disco Stage lighting"],
+    audioNext: ["GO playback audio — Corey & Kelia video. TY!"],
+    videoNext: ["GO Corey & Kelia AAYH Foundation video"],
+    camerasNext: ["Video playback — stand by cams for pod"],
+    lightingNext: ["Hold current lighting"]
+  },
+  {
+    dur: 4, scene: "VIDEO — Corey & Kelia / AAYH Foundation", liveLabel: "NOW LIVE: VIDEO — Corey & Kelia / AAYH Foundation",
+    prelive: false,
+    booName: "Elaine Lofton", booTpl: "That is you being introduced! Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
+    w5: null, w2: "Elaine — please move to the Red X near the Pod Stage now.",
+    next: "Elaine Lofton to Red X", nextScene: "INTERVIEW — Elaine Lofton",
+    audio: ["GO playback audio — Corey & Kelia video. TY!"],
+    video: ["GO Corey & Kelia AAYH Foundation video"],
+    cameras: ["Video playback — stand by cams for pod"],
+    lighting: ["Hold current lighting"],
+    audioNext: ["GO podcast faders — Mark primary. TY!"],
+    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Elaine Lofton"],
+    lightingNext: ["Pod Stage interview lighting"]
+  },
+  {
+    dur: 12, scene: "INTERVIEW — Elaine Lofton", liveLabel: "NOW LIVE: INTERVIEW — Elaine Lofton",
+    prelive: false,
+    booName: null, booTpl: null,
+    w5: null, w2: "Elaine wrapping — AAYH Testimonial video up next.",
+    next: "AAYH Testimonial video", nextScene: "VIDEO — AAYH Testimonial",
+    audio: ["Podcast faders — Mark primary", "Audience mics live"],
+    video: ["CAM 3, 4, 5 — Pod Stage"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Elaine Lofton"],
+    lighting: ["Pod Stage interview lighting"],
+    audioNext: ["GO playback audio — AAYH Testimonial video. TY!"],
+    videoNext: ["GO AAYH Testimonial video"],
+    camerasNext: ["Video playback — stand by cams for pod"],
+    lightingNext: ["Hold current lighting"]
+  },
+  {
+    dur: 4, scene: "VIDEO — AAYH Testimonial", liveLabel: "NOW LIVE: VIDEO — AAYH Testimonial",
+    prelive: false,
+    booName: "Michael Lofton", booTpl: "That is the story of someone your organization changed. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
+    w5: null, w2: "Michael — please move to the Red X near the Pod Stage now.",
+    next: "Michael Lofton to Red X", nextScene: "INTERVIEW — Michael Lofton",
+    audio: ["GO playback audio — AAYH Testimonial video. TY!"],
+    video: ["GO AAYH Testimonial video"],
+    cameras: ["Video playback — stand by cams for pod"],
+    lighting: ["Hold current lighting"],
+    audioNext: ["GO podcast faders — Mark primary. TY!"],
+    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Michael Lofton"],
+    lightingNext: ["Pod Stage interview lighting"]
+  },
+  {
+    dur: 12, scene: "INTERVIEW — Michael Lofton", liveLabel: "NOW LIVE: INTERVIEW — Michael Lofton",
+    prelive: false,
+    booName: null, booTpl: null,
+    w5: null, w2: "Michael wrapping — TBD buffer up next.",
+    next: "TBD buffer", nextScene: "TBD BUFFER",
+    audio: ["Podcast faders — Mark primary", "Audience mics live"],
+    video: ["CAM 3, 4, 5 — Pod Stage"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Michael Lofton"],
+    lighting: ["Pod Stage interview lighting"],
+    audioNext: ["GO playback audio — TBD buffer. TY!"],
+    videoNext: ["GO TBD buffer video"],
+    camerasNext: ["Video playback — stand by cams for pod"],
+    lightingNext: ["Hold current lighting"]
+  },
+  {
+    dur: 5, scene: "TBD BUFFER", liveLabel: "NOW LIVE: TBD BUFFER",
+    prelive: false,
+    booName: "Surprise Guest", booTpl: "You are up next! Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
+    w5: null, w2: "Surprise Guest — please move to the Red X now.",
+    next: "Surprise Guest to Red X", nextScene: "INTERVIEW — Surprise Guest",
+    audio: ["GO playback audio — TBD buffer. TY!"],
+    video: ["GO TBD buffer video"],
+    cameras: ["Video playback — stand by cams for pod"],
+    lighting: ["Hold current lighting"],
+    audioNext: ["GO podcast faders — Mark primary. TY!"],
+    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Surprise Guest"],
+    lightingNext: ["Pod Stage interview lighting"]
+  },
+  {
+    dur: 5, scene: "INTERVIEW — Surprise Guest", liveLabel: "NOW LIVE: INTERVIEW — Surprise Guest",
+    prelive: false,
+    booName: "David Rothgeb", booTpl: "You have about {M} before Straight From the Hip — the closing song! Please head to the Music Stage when you are ready. Thank you!",
+    w5: "5 min — David, please make your way to the Music Stage.", w2: "2 min — David, please take your place at the Music Stage now.",
+    next: "David Rothgeb to Music Stage", nextScene: "CLOSING — Straight From the Hip",
+    audio: ["Podcast faders — Mark primary", "Audience mics live"],
+    video: ["CAM 3, 4, 5 — Pod Stage"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Surprise Guest"],
+    lighting: ["Pod Stage interview lighting"],
+    audioNext: ["GO music mics + reverb/delay. TY!"],
+    videoNext: ["CAM 1, 2, 3 — Music Stage"],
+    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: Audience reaction"],
+    lightingNext: ["Music Stage performance lighting"]
+  },
+  {
+    dur: 5, scene: "CLOSING — Straight From the Hip", liveLabel: "NOW LIVE: CLOSING — Straight From the Hip",
+    prelive: false,
+    booName: null, booTpl: "Everyone — please gather around the Music Stage! Credits are rolling. Dance!",
+    w5: null, w2: null,
+    next: null, nextScene: null,
+    audio: ["Music mics + reverb/delay", "Audience mics"],
+    video: ["CAM 1, 2, 3 — Music Stage"],
+    cameras: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: Crowd reaction"],
+    lighting: ["Music Stage performance lighting"],
+    audioNext: ["GO Ending Video audio", "Bring mics back for applause", "Fade Master Audio. TY!"],
+    videoNext: ["GO Ending Video", "Take live Music Stage dancing"],
+    camerasNext: ["Music Stage wide", "Slider cam GO", "CAM 3: Atrium Viewing Area crowd"],
+    lightingNext: ["GO disco lighting — Music Stage. TY!"]
+  }
+];
+
+const STANDBY_DEFS = [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
+// ─── END BEB OUTPUT ────────────────────────────────────────────────────────────
+
+const INSERT_DEFS={
+  spotlight:{dur:3,scene:"LBV SPOTLIGHT VIDEO",liveLabel:"NOW LIVE: LBV SPOTLIGHT VIDEO",booTpl:null,booName:"LBV Spotlight Video",audio:["GO playback — LBV Spotlight Video. TY!"],video:["GO LBV Spotlight Video.mp4"],cameras:["Video playback — stand by all cams"],lighting:["Hold current lighting"]},
+  kitchen:{dur:5,scene:"KITCHEN DISCO CHECK-IN",liveLabel:"NOW LIVE: KITCHEN DISCO CHECK-IN",booTpl:null,booName:"Kitchen Disco Check-in",audio:["GO kitchen mics. TY!"],video:["CAM 6: Kitchen Disco Stage"],cameras:["CAM 6: Kitchen wide and close"],lighting:["Kitchen Disco Stage lighting GO"]},
+  crew:{dur:4,scene:"CREW SPOTLIGHT",liveLabel:"NOW LIVE: CREW SPOTLIGHT",booTpl:null,booName:"Crew Spotlight",audio:["GO host mic — Mark primary. TY!"],video:["CAM 3, 4 — Pod Stage"],cameras:["CAM 3: Wide studio","CAM 4: Mark"],lighting:["Hold current lighting"]},
+  greenroom:{dur:4,scene:"GREEN ROOM CHECK-IN",liveLabel:"NOW LIVE: GREEN ROOM CHECK-IN",booTpl:null,booName:"Green Room Check-in",audio:["GO Green Room mics. TY!"],video:["Green Room cam — stand by"],cameras:["Green Room cam wide"],lighting:["Green Room lighting GO"]},
+  online:{dur:4,scene:"ONLINE AUDIENCE CHECK-IN",liveLabel:"NOW LIVE: ONLINE AUDIENCE CHECK-IN",booTpl:null,booName:"Online Audience Check-in",audio:["GO host mic. TY!"],video:["CAM 4: Mark — online check-in"],cameras:["CAM 4: Mark close"],lighting:["Hold current lighting"]}
+};
+
+const _UNUSED_BASE_CUES_REMOVED=[
+  {dur:20,scene:"PRE-SHOW COUNTDOWN VIDEO",liveLabel:"NOW LIVE: PRE-SHOW COUNTDOWN VIDEO",booName:null,booTpl:"Welcome to Little Big Voices E8 — Little. Big. Transitions. 🎉 The show circle is happening now. We go live in {M}! Please keep your attention on Mark — he'll bring you in when it's time. Thank you! ❤️",w5:null,w2:null,prelive:true,next:"Corey + Solace → Music Stage",nextScene:"COLD OPEN — Life",audio:["Please prep ambient + audience mics","Confirm ALL RECORDS ON (L-20, L-8, ATEM). TY!","Stand by on music mics"],video:["GO stream start. TY!","Stand by — LBV E8 Video Opener"],cameras:["Please power up all cameras and frame","CAM 1: Music Stage wide","CAM 2: Music Stage close","CAM 3: Pod Stage wide"],lighting:["House lights up, please","Stand by for show lighting"],audioNext:["GO music mics + reverb/delay","GO audience mics after LIVE! yell"],videoNext:["GO LBV E8 Video Opener after LIVE! yell"],camerasNext:["CAM 1: Music Stage wide","CAM 2: close","CAM 3: Pod wide"],lightingNext:["Music Stage performance lighting GO"]},
+  {dur:5,scene:"COLD OPEN — Life",liveLabel:"NOW LIVE: COLD OPEN — Life",booName:"Melba + Nancy",booTpl:"Melba — please take your place at the Pod Table. Nancy — please get ready in the Kitchen Disco Stage. Thank you both! 😊",w5:null,w2:"Please wrap up — Mark and Melba, please make your way to the Pod Stage now. Thank you! ❤️",next:"Shannon Cohen → Red X near Pod Stage",nextScene:"POD OPEN",audio:["Music mics up + reverb/delay","Audience mics up on LIVE! yell. TY!"],video:["CAM 1, 2, 3 live — Music Stage","GO LBV E8 Video Opener after LIVE! yell"],cameras:["CAM 1: Music Stage wide","CAM 2: Corey close","CAM 3: wide studio"],lighting:["Music Stage performance lighting"],audioNext:["GO host mics — Mark + Melba. TY!"],videoNext:["CAM 3, 4, 5, 7 — Pod Stage"],camerasNext:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Melba","CAM 7: Audience"],lightingNext:["Pod Stage lighting"]},
+  {dur:3,scene:"POD OPEN",liveLabel:"NOW LIVE: POD OPEN",booName:null,booTpl:null,w5:null,w2:"Pod Open wrapping — Nancy, please head toward the Kitchen Disco Stage! Thank you! 🎙️",next:"Nancy → Kitchen Disco Stage",nextScene:"KITCHEN DISCO",audio:["Host mics — Mark + Melba live","Audience mics"],video:["CAM 3, 4, 5, 7 — Pod Stage"],cameras:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Melba","CAM 7: Audience"],lighting:["Pod Stage lighting"],audioNext:["GO kitchen mics. TY!"],videoNext:["CAM 6: Kitchen Disco Stage"],camerasNext:["CAM 6: Kitchen Disco wide"],lightingNext:["Kitchen Disco Stage lighting GO"]},
+  {dur:4,scene:"KITCHEN DISCO",liveLabel:"NOW LIVE: KITCHEN DISCO",booName:"Shannon Cohen",booTpl:"You've got about {M} before you're on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you! 🎙️",w5:null,w2:"Shannon — please move to the Red X near the Pod Stage now and wait for Mark to motion you in. Thank you! ❤️",next:"Shannon Cohen → Red X near Pod Stage",nextScene:"INTERVIEW — Shannon Cohen",audio:["Kitchen mics live","Audience mics"],video:["CAM 6: Kitchen Disco Stage"],cameras:["CAM 6: Nancy wide and close"],lighting:["Kitchen Disco Stage lighting"],audioNext:["GO podcast faders — Mark primary. TY!"],videoNext:["CAM 3, 4, 5 — Pod Stage"],camerasNext:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Shannon"],lightingNext:["Pod Stage interview lighting"]},
+  {dur:10,scene:"INTERVIEW — Shannon Cohen",liveLabel:"NOW LIVE: INTERVIEW — Shannon Cohen",booName:"Corey + Solace Grove",booTpl:"You've got about {M} before Be Back. Please head toward the Music Stage when you're ready and keep your eye on Mark — he'll kick it off right after he introduces you. Thank you! 🎵",w5:"5 minutes left — Corey and Solace, please make your way to the Music Stage now. Thank you! 😊",w2:"2 minutes — Corey and Solace, please take your places at the Music Stage now. Thank you! ❤️",next:"Corey + Solace → Music Stage",nextScene:"PERFORMANCE — Be Back",audio:["Podcast faders — Mark primary","Audience mics live"],video:["CAM 3, 4, 5 — Pod Stage"],cameras:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Shannon"],lighting:["Pod Stage interview lighting"],audioNext:["GO music mics + reverb/delay. TY!"],videoNext:["CAM 1, 2, 3 — Music Stage"],camerasNext:["CAM 1: Music Stage wide","CAM 2: Corey close","CAM 3: Solace Grove"],lightingNext:["Music Stage performance lighting"]},
+  {dur:8,scene:"PERFORMANCE — Be Back",liveLabel:"NOW LIVE: PERFORMANCE — Be Back",booName:"Elliot Schnieder",booTpl:"You've got about {M} before you join us on the Pod Stage! Please come out of the Green Room when you're ready and keep your eye on Mark — he'll kick it off right after he introduces you. Shannon will shift one seat for you. Thank you! 😊",w5:null,w2:"Elliot — please move to the Red X near the Pod Stage now and wait for Mark to motion you in. Thank you! ❤️",next:"Elliot Schnieder → Red X near Pod Stage",nextScene:"INTERVIEW — Elliot Schnieder",audio:["Music mics + reverb/delay","Audience mics"],video:["CAM 1, 2, 3 — Music Stage"],cameras:["CAM 1: Music Stage wide","CAM 2: Corey close","CAM 3: Solace Grove"],lighting:["Music Stage performance lighting"],audioNext:["GO podcast faders. TY!"],videoNext:["CAM 3, 4, 5 — Pod Stage"],camerasNext:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Shannon + Elliot"],lightingNext:["Pod Stage interview lighting"]},
+  {dur:10,scene:"INTERVIEW — Elliot Schnieder",liveLabel:"NOW LIVE: INTERVIEW — Elliot Schnieder",booName:"Joe Mach",booTpl:"You've got about {M} before you join us! We'll play your video first, then you'll join us at the Pod Stage. Please keep your eye on Mark — he'll kick it off right after he introduces you! Thank you! 🙌",w5:"5 minutes left — Joe, please start making your way toward the Pod Stage entry. Thank you! 😊",w2:"Joe — please move to the Red X near the Pod Stage now. Your video is up next, then you're on! Thank you! ❤️",next:"Video: Joe Mach E6",nextScene:"JOE MACH VIDEO — E6",audio:["Podcast faders live","Audience mics"],video:["CAM 3, 4, 5 — Pod Stage","Please prep Joe Mach E6 Video.mp4 in playback. TY!"],cameras:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Elliot"],lighting:["Pod Stage interview lighting"],audioNext:["GO playback audio — Joe Mach video. TY!"],videoNext:["GO Joe Mach E6 Video.mp4"],camerasNext:["Video playback — please stand by cams for pod"],lightingNext:["Hold Pod Stage lighting"]},
+  {dur:6,scene:"JOE MACH VIDEO — E6",liveLabel:"NOW LIVE: VIDEO — Joe Mach E6",booName:"Joe Mach",booTpl:"That's you on screen! Please head to the Red X near the Pod Stage now and wait for Mark to motion you in. Everyone please shift one seat to make room. Thank you! 🎬",w5:null,w2:"Video wrapping — Joe, please move to the Red X near the Pod Stage now. All guests shift one seat. Thank you! ❤️",next:"Joe Mach → Red X near Pod Stage",nextScene:"INTERVIEW — Joe Mach",audio:["Playback audio live","Kill playback on Mark's cue"],video:["Joe Mach E6 Video.mp4 playing","Please ready CAM 3, 4, 5 for pod. TY!"],cameras:["Please stand by — CAM 3, 4, 5 for Pod Stage"],lighting:["Hold — please ready Pod interview lighting"],audioNext:["GO podcast faders. TY!"],videoNext:["CAM 3, 4, 5 — Pod Stage"],camerasNext:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Joe Mach"],lightingNext:["Pod Stage interview lighting"]},
+  {dur:10,scene:"INTERVIEW — Joe Mach",liveLabel:"NOW LIVE: INTERVIEW — Joe Mach",booName:"Corey Hopkins",booTpl:"You've got about {M} before Who Is She. Please head toward the Music Stage when you feel ready and keep your eye on Mark — he'll kick it off right after he introduces you. This one's going to be something special! Thank you! 💛",w5:"5 minutes left — Corey, please make your way to the Music Stage now. Thank you! 😊",w2:"Corey — please take your place at the Music Stage now. We can't wait! Thank you! ❤️",next:"Corey Hopkins → Music Stage",nextScene:"PERFORMANCE — Who Is She",audio:["Podcast faders live","Audience mics"],video:["CAM 3, 4, 5 — Pod Stage"],cameras:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Joe Mach"],lighting:["Pod Stage interview lighting"],audioNext:["GO music mics + reverb/delay. TY!"],videoNext:["CAM 1, 2, 3 — Music Stage"],camerasNext:["CAM 1: Music Stage wide","CAM 2: Corey close","CAM 3: Audience reaction"],lightingNext:["Music Stage performance lighting — Who Is She"]},
+  {dur:8,scene:"PERFORMANCE — Who Is She",liveLabel:"NOW LIVE: PERFORMANCE — Who Is She",booName:null,booTpl:"Everyone — please gather around the Music Stage! Come from the Green Room, Wardrobe, Quiet Room — wherever you are. Give Corey your full presence. Thank you! ✨",w5:null,w2:"2 minutes left — Mark, please start making your way back to the Pod Stage. Thank you! 😊",next:"All guests + crew → Music Stage",nextScene:"CLOSING — Pod Stage",audio:["Music mics + reverb/delay","Audience mics live"],video:["CAM 1, 2, 3 — Music Stage"],cameras:["CAM 1: Music Stage wide","CAM 2: Corey close","CAM 3: Crowd reaction"],lighting:["Music Stage performance lighting"],audioNext:["GO podcast faders. TY!"],videoNext:["CAM 3, 4, 5 — Pod Stage"],camerasNext:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Guests"],lightingNext:["Pod Stage closing lighting"]},
+  {dur:8,scene:"CLOSING — Pod Stage",liveLabel:"NOW LIVE: CLOSING — Pod Stage",booName:null,booTpl:null,w5:null,w2:"2 minutes to Live Closing — Full cast, please find your places. Let's bring it home! Thank you! 🎉",next:"Full cast → stand by for LIVE Closing",nextScene:"LIVE CLOSING",audio:["Podcast faders live","Audience mics"],video:["CAM 3, 4, 5 — Pod Stage"],cameras:["CAM 3: Pod wide","CAM 4: Mark","CAM 5: Guests"],lighting:["Pod Stage closing lighting"],audioNext:["GO audience + room mics full. TY!"],videoNext:["CAM 4: Mark — LIVE closing"],camerasNext:["CAM 4: Mark close for LIVE closing"],lightingNext:["Full studio lighting for LIVE closing"]},
+  {dur:3,scene:"LIVE CLOSING",liveLabel:"NOW LIVE: LIVE CLOSING",booName:null,booTpl:"Full cast — after LIVE, please head to the Music Stage and Kitchen Disco and be ready to yell LIVE! and then two minutes of dancing during the credits. Let's finish strong! Thank you! 🎉",w5:null,w2:null,next:"Full cast → Music Stage + Kitchen Disco",nextScene:"CREDITS + DANCE",audio:["Audience + room mics full","Kill house mics after LIVE yell"],video:["CAM 4: Mark — LIVE closing"],cameras:["CAM 4: Mark close"],lighting:["Full studio lighting"],audioNext:["GO Ending Video audio","Bring mics back for applause","Fade Master Audio. TY!"],videoNext:["GO Ending Video","Take live Music Stage dancing"],camerasNext:["Music Stage wide","Slider cam GO","CAM 3: Atrium Viewing Area crowd"],lightingNext:["GO disco lighting — Music Stage. TY!"]},
+  {dur:15,scene:"CREDITS + DANCE",liveLabel:"NOW LIVE: CREDITS + DANCE",booName:null,booTpl:"Mark — please hold your position at the Pod Stage until recording stops. Everyone else — the Music Stage and Kitchen Disco are yours. Dance! Thank you all! 🕺",w5:null,w2:null,next:null,nextScene:"APPLAUSE",audio:["Ending Video audio live","Bring mics back for applause","Fade Master Audio","Recording STOPS on Mark's cue. TY!"],video:["Ending Video playing","Take live Music Stage dancing"],cameras:["Music Stage wide","Slider cam — dance floor","CAM 3: Atrium Viewing Area crowd"],lighting:["Disco lighting GO","Fade to black at close"]},
+  {dur:1,scene:"APPLAUSE",liveLabel:"NOW LIVE: APPLAUSE",booName:null,booTpl:null,w5:null,w2:null,next:null,nextScene:"STAND BY TO CLOSE LIVE STREAM",audio:["Audience mics full for applause"],video:["Fade to black"],cameras:["All cams hold"],lighting:["Fade to black"],audioNext:[],videoNext:[],camerasNext:[],lightingNext:[]},
+  {dur:1,scene:"STAND BY TO CLOSE LIVE STREAM",liveLabel:"STAND BY: CLOSING LIVE STREAM",booName:null,booTpl:null,w5:null,w2:null,next:null,nextScene:"ALL CLEAR",audio:["Kill all audio"],video:["Kill stream"],cameras:["All cams off"],lighting:["House lights up"],audioNext:[],videoNext:[],camerasNext:[],lightingNext:[]}
+]; // (legacy E8 data — replaced by BEB output above)
+
+let CUES=[...BASE_CUES];
+let removedIndices=new Set();
+let pendingInsert=null;
+let cueIdx=0,segSecs=CUES[0]?.dur*60||0,showSecs=EPISODE.showMins*60;
+let running=false,timerInt=null,warning=null,flashOn=true;
+let view="tv",techTab="audio";
+let scheduleOffset=0,showLive=false,standbyActive=false,preLiveActive=false,preLiveFired=false;
+let showTimerStarted=false;
+let currentInsertStandby=null;
+const PIN=EPISODE.pin,PIN_DURATION=24*60*60*1000;
+let pinEntry="",pinUnlockedUntil=0;
+
+window.addEventListener('load',async()=>{
+  // Set episode-specific UI text from EPISODE config
+  const epNum=EPISODE.num?`E${EPISODE.num}`:'';
+  const epSub=(EPISODE.subtitle||EPISODE.title||'').toUpperCase();
+  const epLine=epNum&&epSub?`${epNum} · ${epSub}`:epNum||epSub||'LITTLE BIG VOICES';
+  document.title=`Boo Show Manager · LBV ${epLine}`;
+  const tvLabel=document.getElementById('ep-label-tv');if(tvLabel) tvLabel.textContent=epLine;
+  const techLabel=document.getElementById('ep-label-tech');if(techLabel) techLabel.textContent=`${epLine} · TECH CREW · STANDING BY`;
+  const techLive=document.getElementById('ep-label-tech-live');if(techLive) techLive.textContent=`LBV ${epLine}`;
+  const hostTimer=document.getElementById('ep-label-host-timer');if(hostTimer) hostTimer.textContent=`${epLine} · ${EPISODE.showMins} MIN`;
+  const booText=document.getElementById('welcome-boo-text');
+  if(booText){
+    const epDesc=EPISODE.title?(` ${epNum} — <em>${EPISODE.title}${EPISODE.subtitle?'. '+EPISODE.subtitle+'.':''}</em>`):'';
+    booText.innerHTML=`<strong style="color:#F5D03A;font-size:16px;">I'm Boo, your Little Big Show Manager!</strong><br><br>Welcome to Little Big Voices${epDesc}! Please keep your attention on the screens around the studio — I'll give you your cues for where to be and when.<br><br>Love, Boo 💛`;
+  }
+  if(CUES.length===0){
+    document.getElementById('sync-badge').textContent='⚠ NO CUES LOADED — PASTE BEB OUTPUT INTO SCRIPT';
+    document.getElementById('sync-badge').style.color='#E8431A';
+  }
+  ['qr-tv-welcome'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) new QRCode(el,{text:window.location.href,width:100,height:100,colorDark:"#3a3f4a",colorLight:"#ffffff"});
+  });
+  startRealtime();
+  const state=await sbGet();
+  if(state){
+    // If stuck on applause or end state, clear it automatically on load
+    if(state.ros_change_msg==="__APPLAUSE__"||(!state.is_live&&parseInt(state.cue_idx)===0)){
+      // don't restore applause state on reload — let it start fresh
+    } else if(CUES.length>0&&(state.is_live||parseInt(state.cue_idx)>0)){
+      cueIdx=parseInt(state.cue_idx)||0;
+      segSecs=CUES[cueIdx]?.dur*60||0;
+      showLive=!!state.is_live;
+      showTimerStarted=cueIdx>0;
+      showLiveUI();
+      running=true;timerInt=setInterval(tick,1000);
+      applyRemoteState(state);
+    }
+  }
+});
+
+setInterval(()=>{
+  flashOn=!flashOn;
+  ['tv-now-live-bar','tech-now-live-bar','host-now-live-bar'].forEach(id=>{
+    const el=document.getElementById(id);if(el) el.style.boxShadow=flashOn?"0 0 18px #ff000066":"0 0 4px #ff000022";
+  });
+  ['tv-nl-dot','tech-nl-dot','host-nl-dot','tv-standby-dot'].forEach(id=>{
+    const el=document.getElementById(id);if(el) el.style.opacity=flashOn?"1":"0.2";
+  });
+  const nameEl=document.getElementById('boo-name-flash-el');
+  if(nameEl) nameEl.style.color=flashOn?"#F5D03A":"#E8431A";
+  const appl=document.getElementById('applause-text');
+  if(appl&&document.getElementById('applause-banner').style.display!=='none'){
+    appl.style.color=flashOn?"#F5D03A":"#fff";
+  }
+  if(standbyActive){
+    const sb=document.getElementById("standby-banner");
+    if(sb){sb.style.borderColor=flashOn?"#F5D03A":"#7a6800";sb.style.background=flashOn?"#2a2000":"#1a1400";}
+  }
+  if(preLiveActive){
+    const pb=document.getElementById("prelive-banner");
+    if(pb){pb.style.borderColor=flashOn?"#F5D03A":"#7a6800";}
+  }
+  const rc=document.getElementById("ros-change-banner");
+  if(rc&&rc.style.display!=="none"){rc.style.borderColor=flashOn?"#E8431A":"#7a1a00";}
+  if(warning) applyFlash();
+},700);
+
+function applyFlash(){
+  const b=document.getElementById("warn-banner");if(!b||!warning) return;
+  const c=warning==="over"?"#E8431A":warning==="2"?"#F5D03A":"#3BB8C9";
+  const bg=warning==="over"?(flashOn?"#3a0a00":"#280700"):(warning==="2"?(flashOn?"#2a2000":"#1a1500"):(flashOn?"#0a2030":"#051525"));
+  b.style.background=bg;b.style.borderColor=flashOn?c:"transparent";
+}
+
+function fmt(s){const neg=s<0,a=Math.abs(Math.round(s)),m=Math.floor(a/60),r=a%60;return `${neg?"-":""}${m}:${r.toString().padStart(2,"0")}`;}
+function fmtOffset(s){if(Math.abs(s)<5) return "ON SCHEDULE";const neg=s<0,a=Math.abs(Math.round(s)),m=Math.floor(a/60),r=a%60;return neg?`▼ ${m}m${r?` ${r}s`:""} BEHIND`:`▲ ${m}m${r?` ${r}s`:""} AHEAD`;}
+function segColor(){if(warning==="over") return "#E8431A";if(warning==="2") return "#F5D03A";if(warning==="5") return "#3BB8C9";return "#F5D03A";}
+
+function getBooMsg(){
+  const c=CUES[cueIdx];
+  if(!c) return null;
+  if(cueIdx===0&&preLiveFired) return null;
+  if(standbyActive&&currentInsertStandby) return null;
+  const m=Math.max(1,Math.ceil(segSecs/60));
+  const min=m===1?"minute":"minutes";
+  if(c.booName&&c.booTpl) return {name:c.booName,msg:c.booTpl.replace("{M}",`${m} ${min}`)};
+  if(c.booTpl&&!c.booName) return {name:null,msg:c.booTpl.replace("{M}",`${m} ${min}`)};
+  return null;
+}
+
+function renderTechLines(lines){return (lines||[]).map(l=>`<div class="tech-line">${l}</div>`).join("")||`<div class="tech-line">—</div>`;}
+function setNowLiveLabels(label){const lbl=label||CUES[cueIdx]?.liveLabel||"";['tv-nl-label','tech-nl-label','host-nl-label'].forEach(id=>{const el=document.getElementById(id);if(el) el.textContent=lbl;});}
+
+function fireROSChangeMessage(nextName){
+  const banner=document.getElementById("ros-change-banner"),msg=document.getElementById("ros-change-msg");
+  if(banner&&msg){msg.textContent=`Run of Show Update: Next up is ${nextName}. TY!`;banner.style.display="block";}
+  sbSet({ros_change_msg:`Run of Show Update: Next up is ${nextName}. TY!`});
+}
+function clearROSBanner(){
+  const banner=document.getElementById("ros-change-banner");
+  if(banner) banner.style.display="none";
+  sbSet({ros_change_msg:""});
+}
+
+function getPreLiveHTML(){
+  const performer=EPISODE.prelivePerformer||'the opening act';
+  return `<strong style="color:#F5D03A;">${performer}</strong> — please make your way to the Music Stage and stand by. Mark will give you the cue. Thank you! 🎵<br><br>`+
+    `All crew — please be at your ready positions now. Thank you! ❤️<br><br>`+
+    `All guests not on deck — please settle into a comfortable viewing position in the <strong>Green Room</strong>, <strong>Nature Room outdoors</strong>, or <strong>Atrium Viewing Area</strong>.<br><br>`+
+    `We are entering <strong style="color:#F5D03A;">pre-live quiet mode</strong> — please whisper if necessary. 🤫<br><br>`+
+    `<strong style="color:#3BB8C9;">Thank you and have a great show! YOU. ARE. ENOUGH! 💛</strong>`;
+}
+
+function firePreLive(){
+  preLiveActive=!preLiveActive;
+  const banner=document.getElementById("prelive-banner"),btn=document.getElementById("prelive-btn");
+  if(preLiveActive){
+    preLiveFired=true;
+    document.getElementById("tv-scene").textContent="2 MINUTE WARNING COUNTDOWN";
+    setNowLiveLabels("NOW LIVE: 2 MINUTE WARNING COUNTDOWN");
+    document.getElementById("prelive-msg").innerHTML=getPreLiveHTML();
+    banner.style.display="block";
+    if(btn){btn.textContent="✕ CLEAR PRE-LIVE ALERT";btn.style.borderColor="#E8431A";btn.style.color="#E8431A";}
+  } else {
+    banner.style.display="none";
+    document.getElementById("tv-scene").textContent=CUES[cueIdx].scene;
+    setNowLiveLabels(CUES[cueIdx].liveLabel);
+    if(btn){btn.textContent="🎯 FIRE: PRE-LIVE — 2 MIN WARNING";btn.style.borderColor="#F5D03A";btn.style.color="#F5D03A";}
+  }
+  sbSet({prelive_active:preLiveActive});
+}
+
+function fireStandby(){
+  const sd=currentInsertStandby||STANDBY_DEFS[cueIdx];
+  if(!sd) return;
+  standbyActive=!standbyActive;
+  const banner=document.getElementById("standby-banner"),btn=document.getElementById("standby-btn");
+  if(standbyActive){
+    document.getElementById("standby-who").textContent=sd.who;
+    document.getElementById("standby-where").textContent="→ "+sd.stage;
+    document.getElementById("standby-inst").textContent=sd.isPod
+      ?"Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!"
+      :sd.isVideo?"Please stand by to play "+sd.stage+". Thank you!"
+      :"Please take your place at the "+sd.stage+" and stand by for Mark's cue. Thank you!";
+    banner.style.display="block";
+    if(btn){btn.textContent="✕ CLEAR STAND BY";btn.style.borderColor="#E8431A";btn.style.color="#E8431A";}
+  } else {
+    banner.style.display="none";
+    currentInsertStandby=null;
+    if(btn){btn.textContent="🎯 FIRE STAND BY";btn.style.borderColor="#F5D03A";btn.style.color="#F5D03A";}
+  }
+  sbSet({standby_active:standbyActive});
+}
+
+function fireApplause(){
+  const banner=document.getElementById("applause-banner");
+  if(banner) banner.style.display="flex";
+  sbSet({ros_change_msg:"__APPLAUSE__"});
+}
+function closeApplause(){
+  const banner=document.getElementById("applause-banner");
+  if(banner) banner.style.display="none";
+  sbSet({ros_change_msg:""});
+}
+
+function showLiveUI(){
+  if(view==="tv"||view==="tv-welcome"){
+    document.getElementById("view-tv-welcome").style.display="none";
+    document.getElementById("view-tv").style.display="block";
+    view="tv";
+  } else if(view==="tech"||view==="tech-welcome"){
+    document.getElementById("view-tech-welcome").style.display="none";
+    document.getElementById("view-tech").style.display="block";
+    view="tech";
+  } else if(view==="host-welcome"){
+    document.getElementById("view-host-welcome").style.display="none";
+    document.getElementById("view-host").style.display="flex";
+    view="host";
+  }
+  document.getElementById("nav-grid").style.display="grid";
+  document.getElementById("next-hint").style.display="block";
+  document.getElementById("start-show-btn").style.display="none";
+}
+
+function applyRemoteState(state){
+  if(view==="host"||view==="host-welcome") return;
+  const newIdx=parseInt(state.cue_idx)||0;
+  const wasLive=showLive;
+  showLive=!!state.is_live;
+
+  if(wasLive&&!showLive){
+    clearInterval(timerInt);running=false;warning=null;
+    cueIdx=0;segSecs=CUES[0].dur*60;showSecs=90*60;
+    standbyActive=false;preLiveActive=false;preLiveFired=false;
+    clearBanners();
+    if(view==="tv") setView("tv-welcome");
+    else if(view==="tech") setView("tech-welcome");
+    return;
+  }
+  if(showLive&&!wasLive){
+    cueIdx=newIdx;segSecs=CUES[newIdx]?.dur*60||0;
+    showLiveUI();running=true;timerInt=setInterval(tick,1000);
+  } else if(showLive&&newIdx!==cueIdx){
+    cueIdx=newIdx;segSecs=CUES[newIdx]?.dur*60||0;
+    warning=null;clearInterval(timerInt);running=true;timerInt=setInterval(tick,1000);
+  }
+  const newStandby=!!state.standby_active;
+  if(newStandby!==standbyActive){
+    standbyActive=newStandby;
+    const sd=STANDBY_DEFS[cueIdx];
+    const banner=document.getElementById("standby-banner");
+    if(standbyActive&&sd&&banner){
+      document.getElementById("standby-who").textContent=sd.who;
+      document.getElementById("standby-where").textContent="→ "+sd.stage;
+      document.getElementById("standby-inst").textContent=sd.isPod?"Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!":"Please take your place at the "+sd.stage+" and stand by for Mark's cue. Thank you!";
+      banner.style.display="block";
+    } else if(banner) banner.style.display="none";
+  }
+  const newPrelive=!!state.prelive_active;
+  if(newPrelive!==preLiveActive){
+    preLiveActive=newPrelive;
+    const banner=document.getElementById("prelive-banner");
+    if(preLiveActive&&banner){
+      preLiveFired=true;
+      document.getElementById("prelive-msg").innerHTML=getPreLiveHTML();
+      banner.style.display="block";
+      const tvs=document.getElementById("tv-scene");if(tvs) tvs.textContent="2 MINUTE WARNING COUNTDOWN";
+      setNowLiveLabels("NOW LIVE: 2 MINUTE WARNING COUNTDOWN");
+    } else if(banner) banner.style.display="none";
+  }
+  // ROS / Applause — never restore __APPLAUSE__ on remote state after page load
+  if(state.ros_change_msg==="__APPLAUSE__"){
+    // Only show if we're mid-show, not on fresh load
+    if(showLive){const banner=document.getElementById("applause-banner");if(banner) banner.style.display="flex";}
+  } else if(state.ros_change_msg&&state.ros_change_msg.length>2){
+    const banner=document.getElementById("ros-change-banner"),msg=document.getElementById("ros-change-msg");
+    if(banner&&msg){msg.textContent=state.ros_change_msg;banner.style.display="block";}
+  } else {
+    const banner=document.getElementById("ros-change-banner");if(banner) banner.style.display="none";
+    const appl=document.getElementById("applause-banner");if(appl&&state.ros_change_msg==="") appl.style.display="none";
+  }
+  if(showLive) render();
+}
+
+function render(){
+  if(!CUES[cueIdx]) return;
+  const c=CUES[cueIdx],sc=segColor();
+  if(c.scene==="APPLAUSE") document.getElementById("applause-banner").style.display="flex";
+  if(c.scene==="STAND BY TO CLOSE LIVE STREAM"){
+    const tvs=document.getElementById("tv-scene");if(tvs) tvs.textContent="STAND BY TO CLOSE LIVE STREAM";
+    setNowLiveLabels("STAND BY: CLOSING LIVE STREAM");
+  }
+  ["tv-seg","h-seg","tech-seg"].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=fmt(segSecs);el.style.color=sc;}});
+  ["tv-show","h-show","tech-show"].forEach(id=>{const el=document.getElementById(id);if(el) el.textContent=fmt(showTimerStarted?showSecs:90*60);});
+  if(!preLiveActive&&c.scene!=="STAND BY TO CLOSE LIVE STREAM"){
+    const tvs=document.getElementById("tv-scene");if(tvs) tvs.textContent=c.scene;
+    setNowLiveLabels(c.liveLabel);
+  }
+  const hs=document.getElementById("h-scene");if(hs) hs.textContent=c.scene;
+  ["progress","tech-progress"].forEach(id=>{const el=document.getElementById(id);if(el) el.style.width=`${(cueIdx/(CUES.length-1))*100}%`;});
+  const sb2=document.getElementById("schedule-badge");if(sb2){const t=fmtOffset(scheduleOffset);sb2.textContent=t;sb2.style.color=t==="ON SCHEDULE"?"#C4B9A8":scheduleOffset>0?"#4ade80":"#E8431A";}
+  const bc=document.getElementById("boo-card"),bm=document.getElementById("boo-msg");
+  const booData=getBooMsg();
+  if(bc&&bm){
+    if(booData&&!standbyActive&&!preLiveActive){
+      bc.style.display="block";
+      if(booData.name) bm.innerHTML=`<span class="boo-name-flash" id="boo-name-flash-el" style="color:#F5D03A;">${booData.name}</span>${booData.msg}`;
+      else bm.innerHTML=booData.msg;
+    } else bc.style.display="none";
+  }
+  const wb=document.getElementById("warn-banner"),wt=document.getElementById("warn-tag"),wm=document.getElementById("warn-msg");
+  if(wb&&wt&&wm){
+    const wmsg=warning==="over"?c.w2||c.w5:warning==="2"?c.w2:warning==="5"?c.w5:null;
+    if(warning&&wmsg){wb.style.display="block";wt.style.color=segColor();wt.textContent=warning==="over"?"⏱ WRAP UP":warning==="2"?"⚡ 2 MIN":"🔔 5 MIN";wm.textContent=wmsg;applyFlash();}
+    else wb.style.display="none";
+  }
+  const nextData=getNextActiveCue();
+  const un=document.getElementById("up-next");
+  if(un){
+    if(nextData){un.style.display="block";document.getElementById("un-scene").textContent=nextData.cue.scene;document.getElementById("un-cue").textContent=c.next||"";}
+    else un.style.display="none";
+  }
+  const nowTitle=document.getElementById("tech-now-title");if(nowTitle) nowTitle.textContent=`NOW — ${c.scene}`;
+  const nowLines=document.getElementById("tech-now-lines"),nextLines=document.getElementById("tech-next-lines"),nextLabel=document.getElementById("tech-next-label");
+  if(nowLines&&nextLines){
+    const nc=nextData?nextData.cue:null;let now=[],nxt=[];
+    if(techTab==="audio"){now=c.audio||[];nxt=nc?nc.audioNext||[]:[]; }
+    else if(techTab==="video"){now=c.video||[];nxt=nc?nc.videoNext||[]:[]; }
+    else if(techTab==="cameras"){now=c.cameras||[];nxt=nc?nc.camerasNext||[]:[]; }
+    else{now=c.lighting||[];nxt=nc?nc.lightingNext||[]:[]; }
+    nowLines.innerHTML=renderTechLines(now);nextLines.innerHTML=renderTechLines(nxt);
+    if(nextLabel) nextLabel.textContent=nc?`UP NEXT · ${nc.scene}`:"END OF SHOW";
+  }
+  const plbtn=document.getElementById("prelive-btn");if(plbtn) plbtn.style.display=cueIdx===0?"block":"none";
+  const stbtn=document.getElementById("standby-btn");
+  if(stbtn){const hasDef=STANDBY_DEFS[cueIdx]||currentInsertStandby;stbtn.style.display=hasDef?"block":"none";}
+  const leb=document.getElementById("live-edit-btn");if(leb) leb.style.display=showLive?"block":"none";
+  const apb=document.getElementById("applause-host-btn");if(apb) apb.style.display=showLive?"block":"none";
+  const bb=document.getElementById("back-btn"),nb=document.getElementById("next-btn");
+  if(bb){bb.style.opacity=cueIdx===0?"0.3":"1";bb.disabled=cueIdx===0;}
+  if(nb){nb.style.opacity=cueIdx===CUES.length-1?"0.3":"1";nb.disabled=cueIdx===CUES.length-1;}
+  const nh=document.getElementById("next-hint");
+  if(nh){
+    if(c.nextScene==="ALL CLEAR") nh.textContent="NEXT: ALL CLEAR";
+    else if(nextData) nh.textContent=`UP NEXT: ${nextData.cue.scene}`;
+    else nh.textContent="END OF SHOW";
+  }
+}
+
+function tick(){
+  segSecs--;
+  if(showTimerStarted) showSecs=Math.max(showSecs-1,0);
+  const c=CUES[cueIdx];
+  if(segSecs===300&&c?.w5) warning="5";
+  else if(segSecs===120&&c?.w2) warning="2";
+  else if(segSecs<=0) warning="over";
+  render();
+}
+
+function startShowCircle(){
+  showLive=true;cueIdx=0;segSecs=CUES[0]?.dur*60||0;showSecs=EPISODE.showMins*60;showTimerStarted=false;
+  showLiveUI();running=true;timerInt=setInterval(tick,1000);
+  sbSet({cue_idx:0,is_live:true,standby_active:false,prelive_active:false,ros_change_msg:""});
+  render();
+}
+
+function addTime(m){segSecs+=m*60;if(showTimerStarted) showSecs+=m*60;scheduleOffset-=m*60;if(warning==="over"||warning==="2") warning=null;render();}
+
+function goNext(){
+  if(cueIdx>=CUES.length-1){
+    ["view-tv","view-tech","view-host"].forEach(id=>{const el=document.getElementById(id);if(el) el.style.display="none";});
+    document.getElementById("view-allclear").style.display="flex";
+    sbSet({is_live:false,cue_idx:0,ros_change_msg:""});
+    return;
+  }
+  scheduleOffset+=segSecs;clearInterval(timerInt);warning=null;clearBanners();clearROSBanner();
+  let next=cueIdx+1;
+  while(next<CUES.length-1&&removedIndices.has(next)) next++;
+  cueIdx=next;segSecs=CUES[cueIdx].dur*60;
+  if(cueIdx===1&&!showTimerStarted){showTimerStarted=true;showSecs=90*60;}
+  if(CUES[cueIdx].scene==="APPLAUSE") fireApplause();
+  currentInsertStandby=null;
+  running=true;timerInt=setInterval(tick,1000);
+  sbSet({cue_idx:cueIdx,is_live:true,standby_active:false,prelive_active:false});
+  render();
+}
+
+function goPrev(){
+  if(cueIdx<=0) return;
+  clearInterval(timerInt);running=false;warning=null;scheduleOffset=0;clearBanners();
+  cueIdx--;segSecs=CUES[cueIdx].dur*60;render();
+}
+
+function clearBanners(){
+  if(standbyActive){standbyActive=false;const b=document.getElementById("standby-banner");if(b) b.style.display="none";const sb=document.getElementById("standby-btn");if(sb){sb.textContent="🎯 FIRE STAND BY";sb.style.borderColor="#F5D03A";sb.style.color="#F5D03A";}}
+  if(preLiveActive){preLiveActive=false;const b=document.getElementById("prelive-banner");if(b) b.style.display="none";const rb=document.getElementById("prelive-btn");if(rb){rb.textContent="🎯 FIRE: PRE-LIVE — 2 MIN WARNING";rb.style.borderColor="#F5D03A";rb.style.color="#F5D03A";}}
+}
+
+function resetShow(){
+  if(!confirm("Reset show to beginning? All screens return to welcome.")) return;
+  clearInterval(timerInt);running=false;warning=null;
+  cueIdx=0;segSecs=CUES[0]?.dur*60||0;showSecs=EPISODE.showMins*60;showTimerStarted=false;
+  showLive=false;standbyActive=false;preLiveActive=false;preLiveFired=false;
+  scheduleOffset=0;removedIndices=new Set();CUES=[...BASE_CUES];
+  currentInsertStandby=null;
+  clearBanners();
+  // Hide applause and allclear screens
+  const appl=document.getElementById("applause-banner");if(appl) appl.style.display="none";
+  const ac=document.getElementById("view-allclear");if(ac) ac.style.display="none";
+  sbSet({cue_idx:0,is_live:false,standby_active:false,prelive_active:false,ros_change_msg:""});
+  setView("host-welcome");
+}
+
+function openLiveEdit(){pendingInsert=null;document.getElementById("confirm-card").style.display="none";document.getElementById("insert-section").style.display="block";document.getElementById("custom-input-wrap").style.display="none";buildCueList();document.getElementById("live-edit-overlay").style.display="block";document.body.style.overflow="hidden";}
+function closeLiveEdit(){document.getElementById("live-edit-overlay").style.display="none";document.body.style.overflow="";pendingInsert=null;}
+
+function buildCueList(){
+  const list=document.getElementById("le-cue-list");list.innerHTML="";
+  const stageColors={pod:"#0097ae",music:"#c49a0a",kitchen:"#c96820",video:"#7744bb","":" #445566"};
+  const remaining=CUES.slice(cueIdx).filter((_,j)=>!removedIndices.has(cueIdx+j)).length;
+  const countEl=document.getElementById("le-remaining-count");
+  if(countEl) countEl.textContent=remaining+" remaining";
+  if(CUES.length===0){list.innerHTML='<div style="color:#888;font-size:12px;padding:10px 0;">No cues loaded — regenerate BSM from Boo Episode Builder.</div>';return;}
+  for(let i=cueIdx;i<CUES.length;i++){
+    const c=CUES[i],isCurrent=i===cueIdx,isRemoved=removedIndices.has(i);
+    const color=c.prelive?"#1d6b35":(stageColors[c.stageType||""]||"#445566");
+    const stageLabel=(c.stageType||"pre-show").toUpperCase();
+    const block=document.createElement("div");
+    block.className=`cue-block${isCurrent?" current":""}${isRemoved?" removed":""}`;
+    block.style.borderLeftColor=color;
+    block.innerHTML=`<div class="cue-block-info">${isCurrent?`<div class="cue-block-current-badge">▶ CURRENT SCENE</div>`:""}<div class="cue-block-name">${isRemoved?"[REMOVED] ":""}S${i+1} — ${c.scene}</div><div class="cue-block-time">${c.dur} min · ${stageLabel}</div></div>${!isCurrent&&!isRemoved?`<button class="cue-block-remove" onclick="removeCue(${i})">REMOVE</button>`:""}`;
+    list.appendChild(block);
+  }
+}
+
+function removeCue(idx){removedIndices.add(idx);buildCueList();render();}
+
+function proposeInsert(type){
+  let targetIdx=-1;for(let i=cueIdx+1;i<CUES.length;i++){if(removedIndices.has(i)){targetIdx=i;break;}}
+  if(targetIdx===-1) targetIdx=cueIdx+1;
+  if(type==="custom"){document.getElementById("custom-input-wrap").style.display="block";return;}
+  const seg=INSERT_DEFS[type];
+  pendingInsert={type,targetIdx,seg};
+  document.getElementById("confirm-detail").innerHTML=`Replace <strong style="color:#E8431A;">${removedIndices.has(targetIdx)?CUES[targetIdx].scene:"[insert after current]"}</strong><br>with <strong style="color:#4ade80;">${seg.scene}</strong> (${seg.dur} min)?`;
+  document.getElementById("confirm-card").style.display="flex";document.getElementById("insert-section").style.display="none";
+}
+
+function proposeCustom(){
+  const val=document.getElementById("custom-segment-input").value.trim();if(!val) return;
+  let targetIdx=-1;for(let i=cueIdx+1;i<CUES.length;i++){if(removedIndices.has(i)){targetIdx=i;break;}}
+  if(targetIdx===-1) targetIdx=cueIdx+1;
+  const seg={dur:4,scene:val.toUpperCase(),liveLabel:`NOW LIVE: ${val.toUpperCase()}`,booName:null,booTpl:`Please stand by — we are updating the run of show slightly. Next up is ${val}. Thank you! 😊`,audio:["GO host mic. TY!"],video:["CAM 3, 4 — Pod Stage"],cameras:["CAM 3: Wide","CAM 4: Mark"],lighting:["Hold current lighting"]};
+  pendingInsert={type:"custom",targetIdx,seg};
+  document.getElementById("confirm-detail").innerHTML=`Replace <strong style="color:#E8431A;">${removedIndices.has(targetIdx)?CUES[targetIdx].scene:"[insert after current]"}</strong><br>with <strong style="color:#4ade80;">${seg.scene}</strong> (${seg.dur} min)?`;
+  document.getElementById("confirm-card").style.display="flex";document.getElementById("insert-section").style.display="none";
+}
+
+function confirmInsert(){
+  if(!pendingInsert) return;
+  const{targetIdx,seg}=pendingInsert;
+  const newCue={...seg,next:`${seg.booName||seg.scene}`,nextScene:null,nextTime:null,w5:null,w2:null,audioNext:[],videoNext:[],camerasNext:[],lightingNext:[]};
+  if(removedIndices.has(targetIdx)){CUES[targetIdx]=newCue;removedIndices.delete(targetIdx);}
+  else{CUES.splice(targetIdx,0,newCue);}
+  currentInsertStandby={who:seg.booName||seg.scene,stage:seg.booName||"upcoming segment",isPod:false,isVideo:seg.scene.includes("VIDEO")};
+  fireROSChangeMessage(seg.booName||seg.scene);
+  pendingInsert=null;buildCueList();closeLiveEdit();render();
+}
+
+function cancelInsert(){pendingInsert=null;document.getElementById("confirm-card").style.display="none";document.getElementById("insert-section").style.display="block";document.getElementById("custom-input-wrap").style.display="none";}
+
+function goToClosing(){
+  let closingIdx=-1;for(let i=cueIdx+1;i<CUES.length;i++){if(CUES[i].scene.includes("CLOSING — Pod")){closingIdx=i;break;}}
+  if(closingIdx===-1) return;
+  for(let i=cueIdx+1;i<closingIdx;i++) removedIndices.add(i);
+  fireROSChangeMessage("Closing");buildCueList();closeLiveEdit();render();
+}
+
+function getNextActiveCue(){for(let i=cueIdx+1;i<CUES.length;i++){if(!removedIndices.has(i)) return{cue:CUES[i],idx:i};}return null;}
+
+function setTechTab(t){
+  techTab=t;
+  ["audio","video","cameras","lighting"].forEach(id=>{const el=document.getElementById(`tab-${id}`);if(el) el.classList.toggle("active",id===t);});
+  render();
+}
+
+function tryHost(){
+  if(view==="host"){showLive?setView("tv"):setView("tv-welcome");return;}
+  if(Date.now()<pinUnlockedUntil){showLive?setView("host"):setView("host-welcome");return;}
+  pinEntry="";updatePinDisplay();document.getElementById("pin-error").textContent="";
+  ["tv-welcome","tech-welcome","host-welcome","tv","tech","host"].forEach(id=>{const el=document.getElementById(`view-${id}`);if(el) el.style.display="none";});
+  document.getElementById("view-pin").style.display="flex";
+  view="pin";
+  ["btn-tv","btn-tech","btn-host"].forEach(id=>{const el=document.getElementById(id);if(el){el.style.background="#5a6270";el.style.color="#C4B9A8";}});
+}
+
+function pinPress(d){
+  if(pinEntry.length>=4) return;
+  pinEntry+=d;updatePinDisplay();
+  if(pinEntry.length===4){
+    if(pinEntry===PIN){pinUnlockedUntil=Date.now()+PIN_DURATION;document.getElementById("view-pin").style.display="none";showLive?setView("host"):setView("host-welcome");}
+    else{document.getElementById("pin-error").textContent="Incorrect PIN — please try again";pinEntry="";updatePinDisplay();}
+  }
+}
+function pinBack(){pinEntry=pinEntry.slice(0,-1);updatePinDisplay();}
+function pinClear(){pinEntry="";updatePinDisplay();}
+function updatePinDisplay(){const d=document.getElementById("pin-display");if(d) d.textContent=(pinEntry+"    ").slice(0,4).split("").map((c,i)=>i<pinEntry.length?"●":"_").join(" ");}
+
+function setView(v){
+  view=v;
+  const allViews=["tv-welcome","tech-welcome","host-welcome","tv","tech","host","pin","allclear"];
+  allViews.forEach(id=>{const el=document.getElementById(`view-${id}`);if(el) el.style.display="none";});
+  const target=document.getElementById(`view-${v}`);
+  if(target) target.style.display=(v==="host"||v==="host-welcome")?"flex":"block";
+  const tabMap={"tv":"tv","tv-welcome":"tv","tech":"tech","tech-welcome":"tech","host":"host","host-welcome":"host"};
+  ["tv","tech","host"].forEach(id=>{const btn=document.getElementById(`btn-${id}`);if(btn){btn.style.background=tabMap[v]===id?"#464d59":"#5a6270";btn.style.color=tabMap[v]===id?"#fff":"#C4B9A8";}});
+  if(v!=="pin"&&showLive) render();
+}
+</script>
+</body>
+</html>
