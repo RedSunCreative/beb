@@ -1011,8 +1011,22 @@ RESPOND WITH JSON — no markdown, no code fences, always valid JSON:
 
 CRITICAL: Only include fields in "updates" that actually changed. NEVER include "cues" or "guests" unless you are sending a new or updated array. Sending an empty array wipes the data. For cues and guests, always send the COMPLETE updated array — never partial.
 
+=== STANDBY MODE ===
+When Mark says he wants to work on standby cues (or "stand by"), go scene by scene. For each scene determine:
+  standbyWho — the name of the person who needs to physically move before this scene begins. Usually the NEXT guest who will appear on camera. Use their actual name from showData.guests — NEVER a placeholder. Leave "" if nobody needs to move.
+  standbyStage — where they go: "pod" (Pod Stage), "music" (Music Stage), or "kitchen" (Kitchen Disco).
+
+Rules:
+  • Kitchen Disco / Music scenes: outgoing pod guest exits during this scene — standbyWho is the NEXT pod guest, standbyStage "pod" (they're taking their seat while the buffer plays).
+  • Pod scenes: set during the PREVIOUS buffer scene — whoever is arriving at the pod.
+  • Countdown / Pre-recorded / Video scenes: usually no standby needed (leave "").
+  • NEVER double-book: if the same person is already on the same stage, no standby needed.
+
+When all scenes are confirmed, send the COMPLETE updated cues array in the JSON response.
+
 Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
-Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext }
+Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage }
+standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
 prelive:true means pre-show (Countdown) — excluded from runtime total.`;
 
   const res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
@@ -1363,6 +1377,9 @@ function editScene(i) {
         <div class="edit-field full"><div class="edit-lbl">BOO MESSAGE</div><textarea class="edit-ta" id="ef-booMsg">${esc(c.booMsg)}</textarea></div>
         <div class="edit-field"><div class="edit-lbl">5-MIN WARNING</div><textarea class="edit-ta" id="ef-w5">${esc(c.w5)}</textarea></div>
         <div class="edit-field"><div class="edit-lbl">2-MIN WARNING</div><textarea class="edit-ta" id="ef-w2">${esc(c.w2)}</textarea></div>
+        <div class="edit-section-head">STAND BY</div>
+        <div class="edit-field"><div class="edit-lbl">STAND BY — WHO</div><input class="edit-inp" id="ef-standbyWho" value="${esc(c.standbyWho||'')}" placeholder="Person's name (or leave blank)"></div>
+        <div class="edit-field"><div class="edit-lbl">STAND BY — STAGE</div><select class="edit-inp" id="ef-standbyStage"><option value=""${!c.standbyStage?' selected':''}>— none —</option><option value="pod"${c.standbyStage==='pod'?' selected':''}>Pod Stage</option><option value="music"${c.standbyStage==='music'?' selected':''}>Music Stage</option><option value="kitchen"${c.standbyStage==='kitchen'?' selected':''}>Kitchen Disco</option></select></div>
         <div class="edit-section-head">CREW — NOW</div>
         <div class="edit-field full"><div class="edit-lbl">AUDIO NOW</div><textarea class="edit-ta" id="ef-audioNow">${esc(c.audioNow)}</textarea></div>
         <div class="edit-field full"><div class="edit-lbl">VIDEO NOW</div><textarea class="edit-ta" id="ef-videoNow">${esc(c.videoNow)}</textarea></div>
@@ -1392,6 +1409,8 @@ function saveSceneEdit() {
   c.booMsg      = document.getElementById('ef-booMsg').value;
   c.w5          = document.getElementById('ef-w5').value;
   c.w2          = document.getElementById('ef-w2').value;
+  c.standbyWho  = document.getElementById('ef-standbyWho').value;
+  c.standbyStage= document.getElementById('ef-standbyStage').value;
   c.audioNow    = document.getElementById('ef-audioNow').value;
   c.videoNow    = document.getElementById('ef-videoNow').value;
   c.camerasNow  = document.getElementById('ef-camerasNow').value;
@@ -1456,6 +1475,11 @@ function generateROS() {
       ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>`
       : '';
 
+    const standbyStageLabel = c.standbyStage === 'pod' ? 'Pod Stage' : c.standbyStage === 'music' ? 'Music Stage' : c.standbyStage === 'kitchen' ? 'Kitchen Disco' : '';
+    const standbyLine = c.standbyWho
+      ? `<div class="note-row"><span class="note-lbl" style="color:var(--gold);">STBY</span><span class="note-val" style="color:var(--gold);">${c.standbyWho}${standbyStageLabel ? ' → ' + standbyStageLabel : ''}</span></div>`
+      : '';
+
     const timeStr = c.prelive
       ? `${dur}m`
       : `${dur}m &nbsp;·&nbsp; show: ${runAtStart}m`;
@@ -1469,7 +1493,7 @@ function generateROS() {
         <div class="s-name">${c.scene || '(untitled)'}</div>
         <div class="s-time">${timeStr}</div>
       </div>
-      <div class="col-notes">${crewLines}${booLine}</div>
+      <div class="col-notes">${crewLines}${booLine}${standbyLine}</div>
     </div>`;
   }).join('');
 
