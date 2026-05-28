@@ -1355,6 +1355,20 @@ function generateROSSimple() {
     return lines.slice(0, maxLines);
   };
 
+  // SVG icon paths centered at (0,0), ~±10 unit radius — scaled per wedge
+  const wedgeIcon = (stageType, prelive) => {
+    if (prelive) return `<circle r="8" fill="none" stroke="white" stroke-width="1.8"/><polyline points="0,-5 0,0 3.5,2.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+    switch (stageType) {
+      case 'music':   return `<ellipse cx="-2" cy="5" rx="4" ry="2.8" transform="rotate(-25,-2,5)" fill="white"/><line x1="1.8" y1="5" x2="1.8" y2="-8" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1.8" y1="-8" x2="8" y2="-6" stroke="white" stroke-width="2" stroke-linecap="round"/>`;
+      case 'kitchen': return `<polygon points="0,-11 2.5,-2.5 11,0 2.5,2.5 0,11 -2.5,2.5 -11,0 -2.5,-2.5" fill="white"/>`;
+      case 'video':   return `<polygon points="-7,-9 9,0 -7,9" fill="white"/>`;
+      case 'pod':     return `<rect x="-4" y="-9" width="8" height="11" rx="4" fill="white"/><path d="M-7,0 Q-7,9 0,9 Q7,9 7,0" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="0" y1="9" x2="0" y2="13" stroke="white" stroke-width="1.8" stroke-linecap="round"/>`;
+      default:        return `<circle r="6" fill="white" opacity="0.7"/>`;
+    }
+  };
+
+  const iconR = Math.round(innerR + (outerR - innerR) * 0.16); // ~175 — inner zone, clear of text
+
   let wedgeSVG = '';
   let curAngle = -Math.PI / 2;
 
@@ -1410,6 +1424,15 @@ function generateROSSimple() {
       }
       wedgeSVG += `<text transform="translate(${tx.toFixed(1)},${ty.toFixed(1)}) rotate(${textRot.toFixed(1)})" text-anchor="middle" fill="white" font-family="'Barlow Condensed',Arial,sans-serif">${textContent}</text>`;
     }
+
+    // Icon near inner ring — separate from text zone
+    if (sweep > 0.09) {
+      const iconScale = sweep > 0.50 ? 1.35 : sweep > 0.28 ? 1.08 : sweep > 0.14 ? 0.82 : 0.60;
+      const [icx, icy] = p(iconR, mid);
+      const iconRot = Math.sin(mid) > 0 ? midDeg - 90 : midDeg + 90;
+      wedgeSVG += `<g transform="translate(${icx.toFixed(1)},${icy.toFixed(1)}) rotate(${iconRot.toFixed(1)}) scale(${iconScale.toFixed(2)})" opacity="0.82">${wedgeIcon(c.stageType, c.prelive)}</g>`;
+    }
+
     curAngle += sweep;
   });
 
