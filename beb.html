@@ -1436,37 +1436,53 @@ function generateROSSimple() {
     curAngle += sweep;
   });
 
-  // Center disc: small logo in upper portion, E# + title below
-  const discR = innerR - 6;                      // 116
-  const logoSmR = Math.round(discR * 0.40);      // ~46
-  const logoCY  = cy - Math.round(discR * 0.30); // ~cy-35
+  // Center disc — ~50% bigger contents
+  const discR = innerR - 6;                       // 116
+  const logoSmR = Math.round(discR * 0.53);       // ~61 (was ~46)
+  const logoCY  = cy - Math.round(discR * 0.38);  // ~cy-44 (was cy-35)
   const centerEl = cfg.logoUrl
     ? `<defs><clipPath id="lcs"><circle cx="${cx}" cy="${logoCY}" r="${logoSmR}"/></clipPath></defs>
        <circle cx="${cx}" cy="${cy}" r="${discR}" fill="white"/>
        <circle cx="${cx}" cy="${logoCY}" r="${logoSmR}" fill="white"/>
        <image href="${cfg.logoUrl}" x="${cx-logoSmR}" y="${logoCY-logoSmR}" width="${logoSmR*2}" height="${logoSmR*2}" clip-path="url(#lcs)" preserveAspectRatio="xMidYMid meet"/>
-       <text x="${cx}" y="${cy+36}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="34">E${epNum}</text>
-       ${showData.epTitle ? `<text x="${cx}" y="${cy+56}" text-anchor="middle" fill="#555" font-family="'Barlow Condensed',Arial,sans-serif" font-size="10" font-weight="700">${showData.epTitle.substring(0, 24).toUpperCase()}</text>` : ''}
-       <text x="${cx}" y="${cy+72}" text-anchor="middle" fill="#aaa" font-family="'Barlow Condensed',Arial,sans-serif" font-size="9">${[showData.epDate, showRuntime + ' MIN'].filter(Boolean).join(' \xb7 ')}</text>`
+       <text x="${cx}" y="${cy+50}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="50">E${epNum}</text>
+       ${showData.epTitle ? `<text x="${cx}" y="${cy+70}" text-anchor="middle" fill="#555" font-family="'Barlow Condensed',Arial,sans-serif" font-size="15" font-weight="700">${showData.epTitle.substring(0, 20).toUpperCase()}</text>` : ''}
+       <text x="${cx}" y="${cy+88}" text-anchor="middle" fill="#aaa" font-family="'Barlow Condensed',Arial,sans-serif" font-size="13">${[showData.epDate, showRuntime + ' MIN'].filter(Boolean).join(' \xb7 ')}</text>`
     : `<circle cx="${cx}" cy="${cy}" r="${discR}" fill="#f0f4f8"/>
-       <text x="${cx}" y="${cy-10}" text-anchor="middle" fill="${cfg.brandColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="18">${cfg.showShortName}</text>
-       <text x="${cx}" y="${cy+34}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="38">E${epNum}</text>`;
+       <text x="${cx}" y="${cy-10}" text-anchor="middle" fill="${cfg.brandColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="22">${cfg.showShortName}</text>
+       <text x="${cx}" y="${cy+44}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="52">E${epNum}</text>`;
+
+  // "Start Here!" arrow pointing at 12 o'clock (S1 boundary)
+  const topPad = 68;
+  const arrowTip = cy - outerR; // 15
+  const startArrow = `
+    <text x="${cx}" y="${-topPad + 18}" text-anchor="middle" font-family="'Barlow Condensed',Arial,sans-serif" font-size="16" font-weight="900" fill="#444" letter-spacing="3">START HERE!</text>
+    <line x1="${cx}" y1="${-topPad + 28}" x2="${cx}" y2="${arrowTip - 10}" stroke="#444" stroke-width="2.5"/>
+    <polygon points="${cx},${arrowTip + 2} ${cx - 8},${arrowTip - 11} ${cx + 8},${arrowTip - 11}" fill="#444"/>
+  `;
 
   const vbSize = cx * 2;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${vbSize} ${vbSize}" style="max-width:100%;height:auto;display:block;margin:0 auto;"><rect width="${vbSize}" height="${vbSize}" fill="white"/>${wedgeSVG}${centerEl}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${-topPad} ${vbSize} ${vbSize + topPad}" style="max-width:100%;height:auto;display:block;margin:0 auto;"><rect x="0" y="${-topPad}" width="${vbSize}" height="${vbSize + topPad}" fill="white"/>${wedgeSVG}${centerEl}${startArrow}</svg>`;
 
   const bsmQrUrl = cfg.qrUrl || `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
 
   const legendEntries = [
-    {c:preliveColor, l:'PRE-SHOW'},
-    {c:typeColors.pod, l:'POD STAGE'},
-    {c:typeColors.music, l:'MUSIC STAGE'},
-    {c:typeColors.kitchen, l:'KITCHEN DISCO'},
-    {c:typeColors.video, l:'VIDEO'},
+    {c:preliveColor,        l:'PRE-SHOW',      type:null,      prelive:true},
+    {c:typeColors.pod,      l:'POD STAGE',     type:'pod',     prelive:false},
+    {c:typeColors.music,    l:'MUSIC STAGE',   type:'music',   prelive:false},
+    {c:typeColors.kitchen,  l:'KITCHEN DISCO', type:'kitchen', prelive:false},
+    {c:typeColors.video,    l:'VIDEO',         type:'video',   prelive:false},
   ];
-  const legendHTML = legendEntries.map(e =>
-    `<span style="display:inline-flex;align-items:center;gap:8px;margin:0 18px 8px 0;font-size:15px;color:#333;font-weight:700;letter-spacing:1px;"><span style="display:inline-block;width:18px;height:18px;border-radius:4px;background:${e.c};flex-shrink:0;"></span>${e.l}</span>`
-  ).join('');
+  const legendHTML = legendEntries.map(e => {
+    const iconSvg = wedgeIcon(e.type, e.prelive);
+    return `<span style="display:inline-flex;align-items:center;gap:9px;margin:0 20px 10px 0;">
+      <svg width="28" height="28" viewBox="-13 -13 26 26" style="flex-shrink:0;border-radius:5px;overflow:hidden;">
+        <rect x="-13" y="-13" width="26" height="26" fill="${e.c}"/>
+        <g opacity="0.9" transform="scale(0.83)">${iconSvg}</g>
+      </svg>
+      <span style="font-size:15px;color:#333;font-weight:700;letter-spacing:1px;">${e.l}</span>
+    </span>`;
+  }).join('');
 
   const html = `<!DOCTYPE html>
 <html>
