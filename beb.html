@@ -22,6 +22,14 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .header-sub{font-size:11px;color:var(--muted);letter-spacing:2px;margin-top:2px;}
 .header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
 .save-badge{font-size:10px;color:var(--teal);letter-spacing:2px;}
+.ep-switch-btn{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--gold);background:none;border:1px solid var(--border);border-radius:4px;padding:4px 10px;cursor:pointer;letter-spacing:1px;white-space:nowrap;}
+.ep-switch-btn:hover{background:var(--panel);}
+.ep-list-panel{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:170px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;}
+.ep-list-item{display:block;width:100%;text-align:left;background:none;border:none;padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--white);letter-spacing:1px;cursor:pointer;border-bottom:1px solid var(--border);}
+.ep-list-item:last-child{border-bottom:none;}
+.ep-list-item:hover{background:var(--panel);}
+.ep-list-item.ep-current{color:var(--gold);}
+.ep-list-item.ep-new{color:var(--teal);}
 
 .layout{display:grid;grid-template-columns:1fr 340px;min-height:calc(100vh - 60px);}
 @media(max-width:800px){.layout{grid-template-columns:1fr;}}
@@ -152,6 +160,10 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     <div class="header-sub">LITTLE BIG VOICES · VOICE-INTERACTIVE</div>
   </div>
   <div class="header-right">
+    <div style="position:relative;display:inline-block;" id="ep-switcher">
+      <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()">EP ▾</button>
+      <div class="ep-list-panel" id="ep-list-panel" style="display:none;"></div>
+    </div>
     <div class="save-badge" id="save-badge">● READY</div>
   </div>
 </div>
@@ -275,7 +287,8 @@ const SB_URL = "https://gogudwpuhmidngsbqfjg.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvZ3Vkd3B1aG1pZG5nc2JxZmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MTQ2NTMsImV4cCI6MjA5NDI5MDY1M30.O6n_tRQsMU29wFV_RArcN9n6gP8KSDWJQqM4P6cTq3s";
 const XI_KEY = "sk_f4454b2497089f51ea890462cb20984b9e9b9268ab20d961";
 const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
-const BUILDER_ROW = 99;
+const GLOBAL_MEM_ROW = 9000;
+let currentEpRow = parseInt(localStorage.getItem('beb_current_ep_row') || '99');
 
 // ─── CLIENT CONFIG ───────────────────────────────────────────────────────────
 // To adapt for a different show or client, edit this block only.
@@ -332,37 +345,128 @@ const { createClient } = supabase;
 const sb = createClient(SB_URL, SB_KEY);
 
 async function saveState() {
+  if (currentEpRow === 0) return; // no row assigned yet for this episode
   try {
     const dataToSave = { ...showData };
-    // Never overwrite Supabase cues with an empty array — cues may have been
-    // written externally (e.g. by Claude Code) while the browser had cues:[].
-    // The merge RPC does JSONB || so only keys present in dataToSave are updated.
+    delete dataToSave.booMemory; // booMemory is global, saved separately
     if (dataToSave.cues && dataToSave.cues.length === 0) delete dataToSave.cues;
-    if (dataToSave.booMemory && dataToSave.booMemory.length === 0) delete dataToSave.booMemory;
-    const { error } = await sb.rpc('merge_builder_state', {
-      p_id: BUILDER_ROW,
-      p_data: dataToSave,
-      p_history: conversationHistory
-    });
-    if (error) throw error;
+    const saves = [
+      sb.rpc('merge_builder_state', { p_id: currentEpRow, p_data: dataToSave, p_history: conversationHistory })
+    ];
+    if (showData.booMemory && showData.booMemory.length > 0) {
+      saves.push(sb.rpc('merge_builder_state', { p_id: GLOBAL_MEM_ROW, p_data: { booMemory: showData.booMemory }, p_history: [] }));
+    }
+    const results = await Promise.all(saves);
+    const err = results.find(r => r.error)?.error;
+    if (err) throw err;
     setSaveBadge("● SAVED", "var(--green)");
     setSavedTime(new Date().toISOString());
   } catch(e) { setSaveBadge("● SAVE ERR", "var(--orange)"); }
 }
 
-async function loadState() {
+async function loadState(rowId) {
+  const targetRow = (rowId !== undefined) ? rowId : currentEpRow;
   try {
-    const { data } = await sb.from('builder_state').select('*').eq('id', BUILDER_ROW).single();
-    if (data?.data) {
-      showData = { ...showData, ...data.data };
-      conversationHistory = data.history || [];
+    const [epRes, memRes] = await Promise.all([
+      sb.from('builder_state').select('*').eq('id', targetRow).single(),
+      sb.from('builder_state').select('data').eq('id', GLOBAL_MEM_ROW).maybeSingle()
+    ]);
+    if (epRes.data?.data) {
+      showData = { ...showData, ...epRes.data.data };
+      conversationHistory = epRes.data.history || [];
+      if (memRes.data?.data?.booMemory?.length > 0) {
+        showData.booMemory = memRes.data.data.booMemory;
+      }
+      currentEpRow = targetRow;
+      localStorage.setItem('beb_current_ep_row', targetRow);
       updateAllDisplays();
       setSaveBadge("● LOADED", "var(--green)");
-      if (data.updated_at) setSavedTime(data.updated_at);
+      if (epRes.data.updated_at) setSavedTime(epRes.data.updated_at);
       return true;
     }
   } catch(e) {}
   return false;
+}
+
+async function listEpisodes() {
+  const { data } = await sb.from('builder_state')
+    .select('id, data, updated_at')
+    .gt('id', 0).lt('id', GLOBAL_MEM_ROW)
+    .order('updated_at', { ascending: false });
+  return (data || []).filter(r => r.data && (r.data.epNum || r.id === currentEpRow));
+}
+
+async function renderEpList() {
+  const panel = document.getElementById('ep-list-panel');
+  if (!panel) return;
+  panel.innerHTML = '<div style="padding:10px 14px;font-size:11px;color:var(--muted);letter-spacing:2px;">LOADING...</div>';
+  const episodes = await listEpisodes();
+  let html = '';
+  if (episodes.length === 0) {
+    html += '<div style="padding:10px 14px;font-size:11px;color:var(--muted);">No saved episodes</div>';
+  } else {
+    episodes.forEach(ep => {
+      const isCurrent = ep.id === currentEpRow;
+      const epLabel = ep.data?.epNum ? `E${ep.data.epNum}` : `Row ${ep.id}`;
+      const title = ep.data?.epTitle ? `<div style="font-size:10px;color:var(--muted);font-weight:400;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">${ep.data.epTitle}</div>` : '';
+      const updated = ep.updated_at ? new Date(ep.updated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      html += `<button class="ep-list-item${isCurrent ? ' ep-current' : ''}" onclick="handleSwitchEpisode(${ep.id})">
+        <div>${epLabel}${isCurrent ? ' ✓' : ''}${updated ? `<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:8px;">${updated}</span>` : ''}</div>
+        ${title}
+      </button>`;
+    });
+  }
+  html += `<button class="ep-list-item ep-new" onclick="handleNewEpisode()">+ NEW EPISODE</button>`;
+  panel.innerHTML = html;
+}
+
+function toggleEpList() {
+  const panel = document.getElementById('ep-list-panel');
+  if (!panel) return;
+  if (panel.style.display !== 'none') {
+    panel.style.display = 'none';
+  } else {
+    panel.style.display = 'block';
+    renderEpList();
+  }
+}
+
+async function handleSwitchEpisode(rowId) {
+  document.getElementById('ep-list-panel').style.display = 'none';
+  if (rowId === currentEpRow) return;
+  await saveState();
+  const savedMemory = [...(showData.booMemory || [])];
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], cues:[], booMemory: savedMemory };
+  conversationHistory = [];
+  const loaded = await loadState(rowId);
+  if (loaded) {
+    updateEpSwitchBtn();
+    const ep = showData.epNum ? `E${showData.epNum}` : 'that episode';
+    const msg = `Switched to ${ep}. ${showData.epTitle ? showData.epTitle + ' — ' : ''}what do you want to work on?`;
+    addBooMessage(msg);
+    speakBoo(msg);
+  }
+}
+
+function handleNewEpisode() {
+  document.getElementById('ep-list-panel').style.display = 'none';
+  saveState();
+  const savedMemory = [...(showData.booMemory || [])];
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], cues:[], booMemory: savedMemory };
+  conversationHistory = [];
+  currentEpRow = 0;
+  localStorage.setItem('beb_current_ep_row', '0');
+  updateAllDisplays();
+  updateEpSwitchBtn();
+  const msg = "Fresh slate — memory stays. What's the episode number?";
+  addBooMessage(msg);
+  speakBoo(msg);
+}
+
+function updateEpSwitchBtn() {
+  const btn = document.getElementById('ep-switch-btn');
+  if (!btn) return;
+  btn.textContent = (showData.epNum ? `E${showData.epNum}` : 'EP') + ' ▾';
 }
 
 function setSavedTime(ts) {
@@ -862,7 +966,13 @@ document.getElementById('mic-btn').classList.remove('thinking');
 
     if (response.updates) {
       const u = response.updates;
-      if (u.epNum !== undefined) showData.epNum = u.epNum;
+      if (u.epNum !== undefined) {
+        showData.epNum = u.epNum;
+        if (currentEpRow === 0 && u.epNum) {
+          const newRow = parseInt(u.epNum);
+          if (newRow > 0) { currentEpRow = newRow; localStorage.setItem('beb_current_ep_row', newRow); }
+        }
+      }
       if (u.epTitle !== undefined) showData.epTitle = u.epTitle;
       if (u.epSubtitle !== undefined) showData.epSubtitle = u.epSubtitle;
       if (u.epDate !== undefined) showData.epDate = u.epDate;
@@ -908,6 +1018,7 @@ function setVal(id, val, fallback) {
 }
 
 function updateAllDisplays() {
+  updateEpSwitchBtn();
   setVal('d-epnum', showData.epNum);
   setVal('d-eptitle', showData.epTitle);
   const epBadge = document.getElementById('d-ep-badge');
@@ -1586,6 +1697,15 @@ function saveROSEditAll() {
   saveState();
   closeROSEditPanel();
 }
+
+// Close ep-list dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const sw = document.getElementById('ep-switcher');
+  if (sw && !sw.contains(e.target)) {
+    const panel = document.getElementById('ep-list-panel');
+    if (panel) panel.style.display = 'none';
+  }
+});
 
 // ─── INIT ───
 window.addEventListener('load', async () => {
