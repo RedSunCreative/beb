@@ -1318,11 +1318,12 @@ async function generateBSM() {
     if (localStorage.getItem('beb_github_pat') || CLIENT_CONFIG.githubPAT) {
       btn.textContent = '⬆️ UPLOADING TO GITHUB...';
       const ok = await uploadToGitHub(filename, output);
-      btn.textContent = ok ? '✓ LIVE ON GITHUB PAGES' : '⚠️ DOWNLOADED — UPLOAD FAILED';
+      const epDate = showData.epDate || new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      btn.textContent = ok ? `✓ RoS ${epDate} — LIVE!` : '⚠️ DOWNLOADED — UPLOAD FAILED';
     } else {
       btn.textContent = `✓ DOWNLOADED ${filename.toUpperCase()}`;
     }
-    setTimeout(() => { btn.textContent = '⚡ GENERATE BOO SHOW MANAGER'; btn.disabled = false; }, 3500);
+    setTimeout(() => { btn.textContent = '⚡ GENERATE BOO SHOW MANAGER'; btn.disabled = false; }, 8000);
   } catch(e) {
     console.error(e);
     btn.textContent = '✕ GENERATE FAILED — CHECK CONSOLE';
