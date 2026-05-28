@@ -291,7 +291,7 @@ const CLIENT_CONFIG = {
   defaultEpLen:      90,                           // Default episode length (minutes)
   defaultPin:        "5000",                       // Default BSM PIN
   qrUrl:             null,                         // URL for ROS QR code (e.g. BSM link or show page)
-  githubPAT:         '',                           // GitHub fine-grained PAT — Contents: read+write for RedSunCreative/beb
+  githubPAT:         '',                           // GitHub fine-grained PAT — set via Settings or localStorage.setItem('beb_github_pat','...')
   githubRepo:        'RedSunCreative/beb',         // owner/repo for BSM auto-upload
 };
 // ─────────────────────────────────────────────────────────────────────────────
@@ -399,7 +399,21 @@ function initMic() {
   recognition.onstart = () => setMicStatus("LISTENING...", "listening");
 
   recognition.onresult = (e) => {
-    if (isSpeaking || isThinking || micPaused) return;
+    // Always check for interrupt even while Boo is speaking
+    if (isSpeaking) {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          const n = e.results[i][0].transcript.toLowerCase();
+          if (n.includes('hang on') || n.includes('hold on') || n.includes('stop boo') || n.includes('quiet boo') || n.includes("that's enough")) {
+            stopBoo();
+            unmuteMicAfterSpeaking();
+            setMicStatus("LISTENING...", "listening");
+          }
+        }
+      }
+      return;
+    }
+    if (isThinking || micPaused) return;
     let finalChunk = '';
     let interimChunk = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -454,7 +468,8 @@ function initMic() {
   };
 
   recognition.onend = () => {
-    if (!isSpeaking && (!micPaused || booChillMode)) {
+    // Keep recognition alive during speech (needed to catch interrupt phrases)
+    if (isSpeaking || (!micPaused || booChillMode)) {
       setTimeout(() => { try { recognition.start(); } catch(e){} }, 200);
     }
   };
@@ -481,7 +496,7 @@ function muteMicWhileSpeaking() {
   clearTimeout(silenceTimer);
   pendingTranscript = '';
   document.getElementById('mic-text').value = '';
-  try { recognition?.stop(); } catch(e) {}
+  // Keep recognition running so interrupt phrases ("hang on", "hold on") are heard
   setMicStatus("BOO IS SPEAKING...", "speaking");
   document.getElementById('mic-btn').classList.add('speaking');
   document.getElementById('mic-btn').classList.remove('listening');
@@ -969,7 +984,7 @@ function toggleSection(id) {
 
 // ─── GITHUB UPLOAD ───────────────────────────────────────────────────────────
 async function uploadToGitHub(filename, content) {
-  const token = CLIENT_CONFIG.githubPAT;
+  const token = localStorage.getItem('beb_github_pat') || CLIENT_CONFIG.githubPAT;
   const [owner, repo] = (CLIENT_CONFIG.githubRepo || '').split('/');
   if (!token || !owner || !repo) return false;
 
@@ -1074,7 +1089,7 @@ async function generateBSM() {
     document.getElementById('bsm-qr-wrap').style.display = 'block';
 
     // Upload to GitHub if PAT is configured
-    if (CLIENT_CONFIG.githubPAT) {
+    if (localStorage.getItem('beb_github_pat') || CLIENT_CONFIG.githubPAT) {
       btn.textContent = '⬆️ UPLOADING TO GITHUB...';
       const ok = await uploadToGitHub(filename, output);
       btn.textContent = ok ? '✓ LIVE ON GITHUB PAGES' : '⚠️ DOWNLOADED — UPLOAD FAILED';
