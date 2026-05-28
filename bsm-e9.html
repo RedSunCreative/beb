@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Boo Show Manager · Little Big Voices</title>
+<title>%%BSM_TITLE%%</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -1264,6 +1264,42 @@ function setView(v){
   ["tv","tech","host"].forEach(id=>{const btn=document.getElementById(`btn-${id}`);if(btn){btn.style.background=tabMap[v]===id?"#464d59":"#5a6270";btn.style.color=tabMap[v]===id?"#fff":"#C4B9A8";}});
   if(v!=="pin"&&showLive) render();
 }
+
+// ─── KEEP SCREEN AWAKE ───────────────────────────────────────────────────────
+(async function keepAwake() {
+  // 1. Try the Wake Lock API (Chrome/Edge/Android, may work on Silk)
+  let lock = null;
+  async function requestWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        lock = await navigator.wakeLock.request('screen');
+        lock.addEventListener('release', () => { lock = null; });
+      }
+    } catch(e) {}
+  }
+  await requestWakeLock();
+  // Re-request if page becomes visible again (Fire TV can release it on tab switch)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !lock) requestWakeLock();
+  });
+
+  // 2. Invisible canvas animation — keeps the JS engine active even if Wake Lock
+  //    isn't supported. Draws a 1px color cycle so the browser never considers
+  //    the page idle.
+  const cv = document.createElement('canvas');
+  cv.width = 1; cv.height = 1;
+  cv.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;';
+  document.body.appendChild(cv);
+  const ctx = cv.getContext('2d');
+  let hue = 0;
+  function draw() {
+    hue = (hue + 1) % 360;
+    ctx.fillStyle = `hsl(${hue},100%,50%)`;
+    ctx.fillRect(0, 0, 1, 1);
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
 </script>
 </body>
 </html>
