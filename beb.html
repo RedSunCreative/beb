@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <title>Boo Episode Builder · Little Big Voices</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=Barlow:wght@400;500;600&display=swap');
 
@@ -233,6 +234,12 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     <button class="generate-btn ros" id="ros-simple-btn" onclick="generateROSSimple()" style="margin-top:4px;opacity:0.9;">⭕ ROS VISUAL (PRINT)</button>
     <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);">✏️ EDIT RUN OF SHOW</button>
     <button class="generate-btn" id="generate-btn" onclick="generateBSM()">⚡ GENERATE BOO SHOW MANAGER</button>
+
+    <div id="bsm-qr-wrap" style="display:none;margin-top:8px;padding:14px;background:rgba(0,196,74,0.05);border:1px solid rgba(0,196,74,0.18);border-radius:8px;text-align:center;">
+      <div style="font-size:9px;color:var(--green);letter-spacing:4px;font-weight:700;margin-bottom:10px;">SCAN TO OPEN BSM</div>
+      <div id="bsm-qr-code" style="background:white;padding:7px;border-radius:5px;display:inline-block;"></div>
+      <div id="bsm-qr-url" style="font-size:9px;color:var(--muted);letter-spacing:0.5px;margin-top:8px;word-break:break-all;line-height:1.4;"></div>
+    </div>
 
   </div>
 </div>
@@ -960,6 +967,14 @@ async function generateBSM() {
 
     btn.textContent = `✓ DOWNLOADED ${filename.toUpperCase()}`;
     setTimeout(() => { btn.textContent = '⚡ GENERATE BOO SHOW MANAGER'; btn.disabled = false; }, 3000);
+
+    // Show QR code linking to the GitHub Pages hosted BSM
+    const bsmUrl = `https://redsuncreative.github.io/beb/bsm-e${showData.epNum || 'X'}.html`;
+    const qrEl = document.getElementById('bsm-qr-code');
+    qrEl.innerHTML = '';
+    new QRCode(qrEl, { text: bsmUrl, width: 148, height: 148, colorDark: '#111', colorLight: '#fff' });
+    document.getElementById('bsm-qr-url').textContent = bsmUrl;
+    document.getElementById('bsm-qr-wrap').style.display = 'block';
   } catch(e) {
     console.error(e);
     btn.textContent = '✕ GENERATE FAILED — CHECK CONSOLE';
