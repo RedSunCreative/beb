@@ -69,6 +69,37 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .send-btn{padding:10px 18px;background:var(--teal);color:#003a40;border:none;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;}
 .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
 
+/* SETTINGS MODAL */
+.settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+.settings-modal{background:var(--card);border:1px solid var(--border);border-radius:12px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;}
+.settings-header{background:var(--panel);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+.settings-header-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;letter-spacing:2px;color:var(--gold);}
+.settings-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;}
+.settings-close:hover{color:var(--white);}
+.settings-section{padding:16px 20px;border-bottom:1px solid var(--border);}
+.settings-section:last-of-type{border-bottom:none;}
+.settings-section-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;color:var(--muted);margin-bottom:12px;}
+.settings-field{margin-bottom:12px;}
+.settings-field:last-child{margin-bottom:0;}
+.settings-field-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.settings-field-label{font-size:12px;color:var(--white);letter-spacing:1px;}
+.settings-status{font-size:10px;letter-spacing:1px;}
+.settings-status.set{color:var(--green);}
+.settings-status.unset{color:var(--muted);}
+.settings-input-row{display:flex;gap:6px;align-items:center;}
+.settings-input{flex:1;background:var(--dark);border:1px solid var(--border);color:var(--white);border-radius:6px;padding:8px 10px;font-size:12px;font-family:'Barlow',sans-serif;outline:none;transition:border-color 0.2s;}
+.settings-input:focus{border-color:var(--teal);}
+.settings-toggle{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);cursor:pointer;font-size:13px;padding:6px 8px;line-height:1;}
+.settings-toggle:hover{color:var(--white);border-color:var(--muted);}
+.settings-note{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:4px;}
+.settings-footer{padding:14px 20px;display:flex;gap:10px;justify-content:flex-end;border-top:1px solid var(--border);}
+.settings-btn{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;padding:8px 18px;border-radius:6px;cursor:pointer;}
+.settings-btn-cancel{background:none;border:1px solid var(--border);color:var(--muted);}
+.settings-btn-cancel:hover{color:var(--white);}
+.settings-btn-save{background:var(--teal);border:none;color:#003a40;}
+.settings-gear{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:15px;cursor:pointer;padding:4px 8px;line-height:1;}
+.settings-gear:hover{color:var(--white);border-color:var(--muted);}
+
 /* RIGHT — SHOW DATA */
 .data-panel{overflow-y:auto;height:calc(100vh - 60px);padding:20px;}
 .data-section{background:var(--card);border-radius:10px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden;}
@@ -164,7 +195,85 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()">EP ▾</button>
       <div class="ep-list-panel" id="ep-list-panel" style="display:none;"></div>
     </div>
+    <button class="settings-gear" onclick="openSettings()" title="Settings">⚙</button>
     <div class="save-badge" id="save-badge">● READY</div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="settings-overlay" id="settings-overlay" style="display:none;" onclick="settingsOverlayClick(event)">
+  <div class="settings-modal">
+    <div class="settings-header">
+      <div class="settings-header-title">⚙ SETTINGS</div>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-label">GITHUB</div>
+      <div class="settings-field">
+        <div class="settings-field-row">
+          <div class="settings-field-label">Personal Access Token</div>
+          <div class="settings-status" id="st-github-status">○ NOT SET</div>
+        </div>
+        <div class="settings-input-row">
+          <input type="password" class="settings-input" id="st-github-pat" placeholder="github_pat_...">
+          <button class="settings-toggle" onclick="toggleShow('st-github-pat',this)">👁</button>
+        </div>
+        <div class="settings-note">Required for BSM auto-upload to GitHub Pages</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-label">ELEVENLABS</div>
+      <div class="settings-field">
+        <div class="settings-field-row">
+          <div class="settings-field-label">API Key</div>
+          <div class="settings-status" id="st-xi-key-status">○ NOT SET</div>
+        </div>
+        <div class="settings-input-row">
+          <input type="password" class="settings-input" id="st-xi-key" placeholder="sk_...">
+          <button class="settings-toggle" onclick="toggleShow('st-xi-key',this)">👁</button>
+        </div>
+      </div>
+      <div class="settings-field">
+        <div class="settings-field-row">
+          <div class="settings-field-label">Voice ID</div>
+          <div class="settings-status" id="st-xi-voice-status">○ NOT SET</div>
+        </div>
+        <div class="settings-input-row">
+          <input type="text" class="settings-input" id="st-xi-voice" placeholder="Voice ID from ElevenLabs">
+        </div>
+        <div class="settings-note">Leave blank to use the default voice from CLIENT_CONFIG</div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-label">SUPABASE <span style="font-size:10px;color:var(--orange);margin-left:8px;">↺ REQUIRES PAGE RELOAD</span></div>
+      <div class="settings-field">
+        <div class="settings-field-row">
+          <div class="settings-field-label">Project URL</div>
+          <div class="settings-status" id="st-sb-url-status">○ NOT SET</div>
+        </div>
+        <div class="settings-input-row">
+          <input type="text" class="settings-input" id="st-sb-url" placeholder="https://xxxx.supabase.co">
+        </div>
+      </div>
+      <div class="settings-field">
+        <div class="settings-field-row">
+          <div class="settings-field-label">Anon Key</div>
+          <div class="settings-status" id="st-sb-key-status">○ NOT SET</div>
+        </div>
+        <div class="settings-input-row">
+          <input type="password" class="settings-input" id="st-sb-key" placeholder="eyJ...">
+          <button class="settings-toggle" onclick="toggleShow('st-sb-key',this)">👁</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-footer">
+      <button class="settings-btn settings-btn-cancel" onclick="closeSettings()">CANCEL</button>
+      <button class="settings-btn settings-btn-save" onclick="saveSettings()">SAVE SETTINGS</button>
+    </div>
   </div>
 </div>
 
@@ -283,8 +392,8 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
 <script>
 // ─── CONFIG ───
-const SB_URL = "https://gogudwpuhmidngsbqfjg.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvZ3Vkd3B1aG1pZG5nc2JxZmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MTQ2NTMsImV4cCI6MjA5NDI5MDY1M30.O6n_tRQsMU29wFV_RArcN9n6gP8KSDWJQqM4P6cTq3s";
+const SB_URL = localStorage.getItem('beb_sb_url') || "https://gogudwpuhmidngsbqfjg.supabase.co";
+const SB_KEY = localStorage.getItem('beb_sb_key') || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvZ3Vkd3B1aG1pZG5nc2JxZmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MTQ2NTMsImV4cCI6MjA5NDI5MDY1M30.O6n_tRQsMU29wFV_RArcN9n6gP8KSDWJQqM4P6cTq3s";
 const XI_KEY = "sk_f4454b2497089f51ea890462cb20984b9e9b9268ab20d961";
 const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
 const GLOBAL_MEM_ROW = 9000;
@@ -700,9 +809,11 @@ async function speakBoo(text) {
   muteMicWhileSpeaking();
   try {
     const clean = text.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, '');
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${XI_VOICE}`, {
+    const xiKey   = localStorage.getItem('beb_xi_key')   || XI_KEY;
+    const xiVoice = localStorage.getItem('beb_xi_voice') || CLIENT_CONFIG.elevenlabsVoiceId || XI_VOICE;
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${xiVoice}`, {
       method: 'POST',
-      headers: { 'xi-api-key': XI_KEY, 'Content-Type': 'application/json' },
+      headers: { 'xi-api-key': xiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: clean, model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.6, similarity_boost: 0.75, style: 0.15, use_speaker_boost: true } })
     });
     if (!res.ok) throw new Error('TTS failed');
@@ -1696,6 +1807,82 @@ function saveROSEditAll() {
   updateAllDisplays();
   saveState();
   closeROSEditPanel();
+}
+
+// ─── SETTINGS ───
+const SETTINGS_KEYS = {
+  'st-github-pat':  'beb_github_pat',
+  'st-xi-key':      'beb_xi_key',
+  'st-xi-voice':    'beb_xi_voice',
+  'st-sb-url':      'beb_sb_url',
+  'st-sb-key':      'beb_sb_key',
+};
+const SETTINGS_STATUS_IDS = {
+  'st-github-pat':  'st-github-status',
+  'st-xi-key':      'st-xi-key-status',
+  'st-xi-voice':    'st-xi-voice-status',
+  'st-sb-url':      'st-sb-url-status',
+  'st-sb-key':      'st-sb-key-status',
+};
+
+function openSettings() {
+  Object.entries(SETTINGS_KEYS).forEach(([fieldId, lsKey]) => {
+    const el = document.getElementById(fieldId);
+    if (el) el.value = localStorage.getItem(lsKey) || '';
+  });
+  updateSettingsStatuses();
+  document.getElementById('settings-overlay').style.display = 'flex';
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').style.display = 'none';
+}
+
+function settingsOverlayClick(e) {
+  if (e.target === document.getElementById('settings-overlay')) closeSettings();
+}
+
+function saveSettings() {
+  let needsReload = false;
+  Object.entries(SETTINGS_KEYS).forEach(([fieldId, lsKey]) => {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    const val = el.value.trim();
+    const sbKey = lsKey === 'beb_sb_url' || lsKey === 'beb_sb_key';
+    if (val) {
+      if (sbKey && localStorage.getItem(lsKey) !== val) needsReload = true;
+      localStorage.setItem(lsKey, val);
+    } else {
+      localStorage.removeItem(lsKey);
+    }
+  });
+  updateSettingsStatuses();
+  closeSettings();
+  setSaveBadge("● SETTINGS SAVED", "var(--green)");
+  setTimeout(() => setSaveBadge("● SAVED", "var(--green)"), 2000);
+  if (needsReload) {
+    setTimeout(() => {
+      if (confirm('Supabase credentials changed — reload now to connect?')) location.reload();
+    }, 300);
+  }
+}
+
+function updateSettingsStatuses() {
+  Object.entries(SETTINGS_KEYS).forEach(([fieldId, lsKey]) => {
+    const statusId = SETTINGS_STATUS_IDS[fieldId];
+    const el = document.getElementById(statusId);
+    if (!el) return;
+    const isSet = !!localStorage.getItem(lsKey);
+    el.textContent = isSet ? '● SET' : '○ NOT SET';
+    el.className = 'settings-status ' + (isSet ? 'set' : 'unset');
+  });
+}
+
+function toggleShow(inputId, btn) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁' : '🙈';
 }
 
 // Close ep-list dropdown when clicking outside
