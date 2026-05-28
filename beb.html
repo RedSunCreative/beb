@@ -370,6 +370,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       <div style="font-size:9px;color:var(--green);letter-spacing:4px;font-weight:700;margin-bottom:10px;">SCAN TO OPEN BSM</div>
       <div id="bsm-qr-code" style="background:white;padding:7px;border-radius:5px;display:inline-block;"></div>
       <div id="bsm-qr-url" style="font-size:9px;color:var(--muted);letter-spacing:0.5px;margin-top:8px;word-break:break-all;line-height:1.4;"></div>
+      <a id="bsm-open-link" href="#" target="_blank" style="display:inline-block;margin-top:10px;padding:7px 16px;background:rgba(0,196,74,0.12);border:1px solid rgba(0,196,74,0.35);border-radius:6px;color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-decoration:none;">⚡ OPEN BSM IN NEW TAB</a>
     </div>
 
   </div>
@@ -1313,6 +1314,7 @@ async function generateBSM() {
     qrEl.innerHTML = '';
     new QRCode(qrEl, { text: bsmUrl, width: 148, height: 148, colorDark: '#111', colorLight: '#fff' });
     document.getElementById('bsm-qr-url').textContent = bsmUrl;
+    document.getElementById('bsm-open-link').href = bsmUrl;
     document.getElementById('bsm-qr-wrap').style.display = 'block';
 
     // Upload to GitHub if PAT is configured
