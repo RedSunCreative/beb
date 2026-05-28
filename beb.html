@@ -1415,45 +1415,58 @@ function generateROS() {
 
   const cfg = CLIENT_CONFIG;
   const epNum = showData.epNum || 'X';
-  const totalDur = cues.reduce((a, c) => a + Math.max(1, parseInt(c.dur) || 0), 0);
   const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseInt(c.dur) || 0)), 0);
 
-  const typeColors = { pod:'#3BB8C9', music:'#F5D03A', kitchen:'#E8431A', video:'#7744bb', '':'#445566' };
-  const preliveColor = '#1d6b35';
-  const typeIcons = { pod:'🎙', music:'🎵', kitchen:'🪩', video:'📹', '':'◆' };
+  // App color palette
+  const C = { dark:'#1e2330', card:'#2a3040', panel:'#353d50', border:'#404858',
+               muted:'#8a96a8', white:'#f0f2f5', gold:'#F5D03A', teal:'#3BB8C9',
+               orange:'#E8431A', green:'#4ade80' };
+  const typeColors = { pod:C.teal, music:C.gold, kitchen:C.orange, video:'#9966dd', '':'#556677' };
+  const preliveColor = C.green;
   function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
-  function getIcon(c) { return c.prelive ? '⏱' : (typeIcons[c.stageType] || typeIcons['']); }
+  function getStageLabel(c) { return c.prelive ? 'PRE-SHOW' : ({ pod:'POD STAGE', music:'MUSIC STAGE', kitchen:'KITCHEN DISCO', video:'VIDEO' }[c.stageType] || (c.stageType||'').toUpperCase() || 'STAGE'); }
 
-  // ── SCENE LIST ───────────────────────────────────────────────────────────
-  const crewNowFields = ['audioNow','videoNow','camerasNow','lightingNow'];
-  const crewNextFields = ['audioNext','videoNext','camerasNext','lightingNext'];
-  const crewLabels = {audioNow:'AUDIO',videoNow:'VIDEO',camerasNow:'CAMERAS',lightingNow:'LIGHTING',
-                      audioNext:'AUDIO',videoNext:'VIDEO',camerasNext:'CAMERAS',lightingNext:'LIGHTING'};
+  // Build scene rows with running time accumulator
+  let runMins = 0;
+  const crewDefs = [
+    { key:'camerasNow', lbl:'CAMERAS' },
+    { key:'audioNow',   lbl:'AUDIO' },
+    { key:'lightingNow',lbl:'LIGHTING' },
+    { key:'videoNow',   lbl:'VIDEO' },
+  ];
 
   const sceneRows = cues.map((c, i) => {
     const color = getColor(c);
-    const icon = getIcon(c);
-    const stageLabel = c.prelive ? 'PRE-SHOW' : (c.stageType || '').toUpperCase();
-    const crewNow = crewNowFields.filter(f => c[f]).map(f =>
-      `<div class="crew-item"><span class="crew-lbl">${crewLabels[f]}</span>${c[f].split('\n').map(l => l.trim()).filter(Boolean).join('; ')}</div>`
-    ).join('');
-    const crewNext = crewNextFields.filter(f => c[f]).map(f =>
-      `<div class="crew-item"><span class="crew-lbl">${crewLabels[f]}</span>${c[f].split('\n').map(l => l.trim()).filter(Boolean).join('; ')}</div>`
-    ).join('');
-    return `<div class="srow">
-      <div class="snum" style="color:${color}">S${i + 1}</div>
-      <div class="sicon">${icon}</div>
-      <div class="sinfo">
-        <div class="sname">${c.scene || '(untitled)'}</div>
-        <div class="smeta">${stageLabel}${c.dur ? ' · ' + c.dur + 'm' : ''}</div>
-        ${c.booMsg ? `<div class="sboo">\u{1F916} ${c.booMsg}</div>` : ''}
-        ${crewNow ? `<div class="crew-block"><div class="crew-head">NOW</div>${crewNow}</div>` : ''}
-        ${crewNext ? `<div class="crew-block"><div class="crew-head">NEXT SCENE PREP</div>${crewNext}</div>` : ''}
+    const dur = Math.max(1, parseInt(c.dur) || 0);
+    const runAtStart = runMins;
+    if (!c.prelive) runMins += dur;
+
+    const crewLines = crewDefs.filter(d => c[d.key]).map(d => {
+      const lines = c[d.key].split('\n').map(l => l.trim()).filter(Boolean).join('<br>');
+      return `<div class="note-row"><span class="note-lbl">${d.lbl}</span><span class="note-val">${lines}</span></div>`;
+    }).join('');
+
+    const booLine = c.booMsg
+      ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>`
+      : '';
+
+    const timeStr = c.prelive
+      ? `${dur}m`
+      : `${dur}m &nbsp;·&nbsp; show: ${runAtStart}m`;
+
+    return `<div class="srow" style="border-left:4px solid ${color};">
+      <div class="col-num">
+        <div class="s-num" style="color:${color}">S${i+1}</div>
+        <div class="s-stage" style="color:${color}">${getStageLabel(c)}</div>
       </div>
+      <div class="col-name">
+        <div class="s-name">${c.scene || '(untitled)'}</div>
+        <div class="s-time">${timeStr}</div>
+      </div>
+      <div class="col-notes">${crewLines}${booLine}</div>
     </div>`;
   }).join('');
 
-  // ── FULL HTML (print-ready PDF, no circle) ────────────────────────────────
   const bsmQrUrl = cfg.qrUrl || `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
 
   const html = `<!DOCTYPE html>
@@ -1465,71 +1478,82 @@ function generateROS() {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:white;color:#111;font-family:'Barlow Condensed',sans-serif;}
-.page{max-width:720px;margin:0 auto;padding:26px 22px;}
-.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #111;margin-bottom:18px;gap:20px;}
-.hdr-show{font-size:11px;color:${cfg.brandColor};letter-spacing:8px;text-transform:uppercase;margin-bottom:2px;}
-.hdr-epnum{font-size:72px;font-weight:900;color:#111;line-height:0.88;letter-spacing:-3px;}
-.hdr-title{font-size:20px;font-weight:700;letter-spacing:2px;margin-top:6px;text-transform:uppercase;}
-.hdr-sub{font-size:11px;color:#666;letter-spacing:3px;margin-top:4px;}
-.hdr-qr{text-align:center;flex-shrink:0;}
-.qr-box{padding:4px;border:1px solid #ddd;border-radius:4px;display:inline-block;}
-.qr-lbl{font-size:9px;color:#aaa;letter-spacing:1px;margin-top:4px;text-align:center;}
-.srow{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid #e5e5e5;}
-.snum{font-size:13px;font-weight:700;letter-spacing:1px;width:38px;flex-shrink:0;padding-top:2px;}
-.sicon{font-size:17px;width:24px;text-align:center;flex-shrink:0;padding-top:1px;}
-.sinfo{flex:1;min-width:0;}
-.sname{font-size:16px;font-weight:700;line-height:1.2;color:#111;}
-.smeta{font-size:10px;color:#888;letter-spacing:1.5px;margin-top:2px;text-transform:uppercase;}
-.sboo{font-size:12px;color:#555;margin-top:6px;font-style:italic;line-height:1.45;border-left:3px solid ${cfg.brandColor};padding-left:8px;}
-.crew-block{margin-top:7px;padding:6px 10px;background:#f7f7f7;border-radius:4px;border-left:3px solid #ddd;}
-.crew-head{font-size:8px;color:#aaa;letter-spacing:4px;font-weight:700;margin-bottom:4px;text-transform:uppercase;}
-.crew-item{font-size:11px;color:#444;margin-bottom:3px;line-height:1.4;}
-.crew-lbl{font-size:9px;color:#999;letter-spacing:2px;font-weight:700;margin-right:6px;text-transform:uppercase;}
-.foot{margin-top:22px;padding-top:14px;border-top:3px solid #111;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;}
-.legend{display:flex;flex-wrap:wrap;gap:6px 18px;}
-.leg{display:flex;align-items:center;gap:7px;font-size:12px;color:#444;letter-spacing:0.5px;font-weight:700;}
-.leg-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0;}
-.print-btn{position:fixed;top:14px;right:14px;background:#111;color:#fff;border:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;}
+body{background:${C.dark};color:${C.white};font-family:'Barlow Condensed',sans-serif;font-size:12pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.page{max-width:780px;margin:0 auto;padding:28px 24px;}
+
+/* HEADER */
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid ${C.gold};margin-bottom:20px;gap:20px;}
+.hdr-left{}
+.hdr-show{font-size:10pt;color:${C.teal};letter-spacing:6px;text-transform:uppercase;margin-bottom:4px;}
+.hdr-epnum{font-size:64pt;font-weight:900;color:${C.gold};line-height:0.88;letter-spacing:-3px;}
+.hdr-title{font-size:14pt;font-weight:700;letter-spacing:2px;margin-top:8px;text-transform:uppercase;color:${C.white};}
+.hdr-sub{font-size:10pt;color:${C.muted};letter-spacing:2px;margin-top:4px;}
+.hdr-right{text-align:center;flex-shrink:0;}
+.qr-box{padding:5px;background:${C.white};border-radius:4px;display:inline-block;}
+.qr-lbl{font-size:8pt;color:${C.muted};letter-spacing:2px;margin-top:5px;text-transform:uppercase;}
+
+/* TABLE HEADER */
+.col-head{display:grid;grid-template-columns:72px 200px 1fr;gap:0;border-bottom:1px solid ${C.gold};padding:6px 0 6px 8px;margin-bottom:4px;}
+.col-head-cell{font-size:9pt;font-weight:700;letter-spacing:3px;color:${C.gold};text-transform:uppercase;}
+
+/* SCENE ROWS */
+.srow{display:grid;grid-template-columns:72px 200px 1fr;gap:0;border-bottom:1px solid ${C.border};padding:10px 0 10px 8px;align-items:start;}
+.srow:nth-child(even){background:${C.card};}
+
+.col-num{padding-right:10px;}
+.s-num{font-size:14pt;font-weight:700;letter-spacing:1px;line-height:1;}
+.s-stage{font-size:8pt;color:${C.muted};letter-spacing:1px;margin-top:3px;text-transform:uppercase;line-height:1.2;}
+
+.col-name{padding-right:14px;}
+.s-name{font-size:14pt;font-weight:700;line-height:1.2;color:${C.white};}
+.s-time{font-size:10pt;color:${C.muted};letter-spacing:1px;margin-top:4px;}
+
+.col-notes{}
+.note-row{display:flex;gap:8px;margin-bottom:5px;align-items:baseline;}
+.note-row:last-child{margin-bottom:0;}
+.note-lbl{font-size:8pt;color:${C.muted};letter-spacing:2px;font-weight:700;text-transform:uppercase;flex-shrink:0;width:62px;}
+.note-val{font-size:12pt;color:${C.white};line-height:1.4;}
+.note-boo{color:${C.teal};font-style:italic;}
+
+/* FOOTER */
+.foot{margin-top:24px;padding-top:14px;border-top:1px solid ${C.border};display:flex;justify-content:flex-end;}
+.foot-text{font-size:9pt;color:${C.muted};letter-spacing:2px;}
+
+.print-btn{position:fixed;top:14px;right:14px;background:${C.teal};color:${C.dark};border:none;padding:10px 20px;border-radius:6px;font-size:12pt;font-weight:700;cursor:pointer;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;}
 @media print{
-  @page{size:letter portrait;margin:0.5in;}
+  @page{size:letter portrait;margin:0.45in;}
   .print-btn{display:none;}
   .srow{page-break-inside:avoid;}
 }
 </style>
 </head>
 <body>
-<button class="print-btn" onclick="window.print()">🖨 PRINT / SAVE PDF</button>
+<button class="print-btn" onclick="window.print()">PRINT / SAVE PDF</button>
 <div class="page">
   <div class="hdr">
-    <div>
+    <div class="hdr-left">
       <div class="hdr-show">${cfg.showName}</div>
       <div class="hdr-epnum">E${epNum}</div>
       ${showData.epTitle ? `<div class="hdr-title">${showData.epTitle}</div>` : ''}
-      <div class="hdr-sub">${[showData.epDate, showRuntime + ' MIN', cues.length + ' SCENES'].filter(Boolean).join(' \xb7 ')}</div>
+      <div class="hdr-sub">${[showData.epDate, showRuntime + ' MIN', cues.length + ' SCENES'].filter(Boolean).join(' · ')}</div>
     </div>
-    <div class="hdr-qr">
+    <div class="hdr-right">
       <div class="qr-box" id="qr-ros"></div>
       <div class="qr-lbl">LIVE SHOW MANAGER</div>
     </div>
   </div>
+  <div class="col-head">
+    <div class="col-head-cell">SCENE</div>
+    <div class="col-head-cell">NAME / TIME</div>
+    <div class="col-head-cell">STAGE &amp; TECH NOTES</div>
+  </div>
   ${sceneRows}
   <div class="foot">
-    <div>
-      <div style="font-size:9px;color:#aaa;letter-spacing:4px;font-weight:700;margin-bottom:8px;">STAGE LEGEND</div>
-      <div class="legend">
-        <div class="leg"><div class="leg-dot" style="background:${preliveColor}"></div>PRE-SHOW</div>
-        <div class="leg"><div class="leg-dot" style="background:${typeColors.pod}"></div>POD STAGE</div>
-        <div class="leg"><div class="leg-dot" style="background:${typeColors.music}"></div>MUSIC STAGE</div>
-        <div class="leg"><div class="leg-dot" style="background:${typeColors.kitchen}"></div>KITCHEN DISCO</div>
-        <div class="leg"><div class="leg-dot" style="background:${typeColors.video}"></div>VIDEO</div>
-      </div>
-    </div>
-    <div style="font-size:10px;color:#aaa;letter-spacing:2px;text-align:right;">${cfg.showName} · E${epNum} · ${new Date().toLocaleDateString()}</div>
+    <div class="foot-text">${cfg.showName} · E${epNum} · ${new Date().toLocaleDateString()}</div>
   </div>
 </div>
 <script>
-  new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(bsmQrUrl)},width:88,height:88,colorDark:"#111",colorLight:"#fff"});
+  new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(bsmQrUrl)},width:88,height:88,colorDark:"${C.dark}",colorLight:"${C.white}"});
   setTimeout(()=>window.print(), 700);
 <\/script>
 </body>
