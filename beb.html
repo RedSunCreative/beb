@@ -1444,9 +1444,9 @@ function generateROS() {
   const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseInt(c.dur) || 0)), 0);
 
   // App color palette
-  const C = { dark:'#1e2330', card:'#2a3040', panel:'#353d50', border:'#404858',
-               muted:'#8a96a8', white:'#f0f2f5', gold:'#F5D03A', teal:'#3BB8C9',
-               orange:'#E8431A', green:'#4ade80' };
+  const C = { dark:'#ffffff', card:'#f5f5f5', panel:'#eeeeee', border:'#cccccc',
+               muted:'#333333', white:'#000000', gold:'#B8960A', teal:'#1a7a8a',
+               orange:'#E8431A', green:'#1a7a40' };
   const typeColors = { pod:C.teal, music:C.gold, kitchen:C.orange, video:'#9966dd', '':'#556677' };
   const preliveColor = C.green;
   function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
@@ -1520,7 +1520,7 @@ body{background:${C.dark};color:${C.white};font-family:'Barlow Condensed',sans-s
 .hdr-title{font-size:14pt;font-weight:700;letter-spacing:2px;margin-top:8px;text-transform:uppercase;color:${C.white};}
 .hdr-sub{font-size:10pt;color:${C.muted};letter-spacing:2px;margin-top:4px;}
 .hdr-right{text-align:center;flex-shrink:0;}
-.qr-box{padding:5px;background:${C.white};border-radius:4px;display:inline-block;}
+.qr-box{padding:5px;background:#ffffff;border-radius:4px;display:inline-block;border:1px solid #ccc;}
 .qr-lbl{font-size:8pt;color:${C.muted};letter-spacing:2px;margin-top:5px;text-transform:uppercase;}
 
 /* TABLE HEADER */
@@ -1583,7 +1583,7 @@ body{background:${C.dark};color:${C.white};font-family:'Barlow Condensed',sans-s
   </div>
 </div>
 <script>
-  new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(bsmQrUrl)},width:88,height:88,colorDark:"${C.dark}",colorLight:"${C.white}"});
+  new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(bsmQrUrl)},width:88,height:88,colorDark:"#000000",colorLight:"#ffffff"});
   setTimeout(()=>window.print(), 700);
 <\/script>
 </body>
