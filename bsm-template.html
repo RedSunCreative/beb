@@ -531,7 +531,7 @@ let CUES=[...BASE_CUES];
 let removedIndices=new Set();
 let pendingInsert=null;
 let cueIdx=0,segSecs=CUES[0]?.dur*60||0,showSecs=EPISODE.showMins*60;
-let running=false,timerInt=null,warning=null,flashOn=true;
+let running=false,timerInt=null,warning=null,flashOn=true,flashInt=null;
 let view="tv",techTab="audio";
 let scheduleOffset=0,showLive=false,standbyActive=false,preLiveActive=false,preLiveFired=false;
 let showTimerStarted=false;
@@ -582,8 +582,7 @@ window.addEventListener('load',async()=>{
   }
 });
 
-setInterval(()=>{
-  flashOn=!flashOn;
+function doFlash(){
   ['tv-now-live-bar','tech-now-live-bar','host-now-live-bar'].forEach(id=>{
     const el=document.getElementById(id);if(el) el.style.boxShadow=flashOn?"0 0 18px #ff000066":"0 0 4px #ff000022";
   });
@@ -607,7 +606,9 @@ setInterval(()=>{
   const rc=document.getElementById("ros-change-banner");
   if(rc&&rc.style.display!=="none"){rc.style.borderColor=flashOn?"#E8431A":"#7a1a00";}
   if(warning) applyFlash();
-},700);
+}
+function setFlashRate(ms){clearInterval(flashInt);flashInt=setInterval(()=>{flashOn=!flashOn;doFlash();},ms);}
+setFlashRate(700);
 
 function applyFlash(){
   const b=document.getElementById("warn-banner");if(!b||!warning) return;
@@ -618,7 +619,7 @@ function applyFlash(){
 
 function fmt(s){const neg=s<0,a=Math.abs(Math.round(s)),m=Math.floor(a/60),r=a%60;return `${neg?"-":""}${m}:${r.toString().padStart(2,"0")}`;}
 function fmtOffset(s){if(Math.abs(s)<5) return "ON SCHEDULE";const neg=s<0,a=Math.abs(Math.round(s)),m=Math.floor(a/60),r=a%60;return neg?`▼ ${m}m${r?` ${r}s`:""} BEHIND`:`▲ ${m}m${r?` ${r}s`:""} AHEAD`;}
-function segColor(){if(warning==="over") return "#E8431A";if(warning==="2") return "#F5D03A";if(warning==="5") return "#3BB8C9";return "#F5D03A";}
+function segColor(){if(warning==="over"||warning==="2") return "#E8431A";if(warning==="5") return "#3BB8C9";return "#F5D03A";}
 
 function getBooMsg(){
   const c=CUES[cueIdx];
@@ -733,7 +734,7 @@ function applyRemoteState(state){
   showLive=!!state.is_live;
 
   if(wasLive&&!showLive){
-    clearInterval(timerInt);running=false;warning=null;
+    clearInterval(timerInt);running=false;warning=null;setFlashRate(700);
     cueIdx=0;segSecs=CUES[0].dur*60;showSecs=90*60;
     standbyActive=false;preLiveActive=false;preLiveFired=false;
     clearBanners();
@@ -746,7 +747,7 @@ function applyRemoteState(state){
     showLiveUI();running=true;timerInt=setInterval(tick,1000);
   } else if(showLive&&newIdx!==cueIdx){
     cueIdx=newIdx;segSecs=CUES[newIdx]?.dur*60||0;
-    warning=null;clearInterval(timerInt);running=true;timerInt=setInterval(tick,1000);
+    warning=null;setFlashRate(700);clearInterval(timerInt);running=true;timerInt=setInterval(tick,1000);
   }
   const newStandby=!!state.standby_active;
   if(newStandby!==standbyActive){
@@ -856,8 +857,8 @@ function tick(){
   if(showTimerStarted) showSecs=Math.max(showSecs-1,0);
   const c=CUES[cueIdx];
   if(segSecs===300&&c?.w5) warning="5";
-  else if(segSecs===120&&c?.w2) warning="2";
-  else if(segSecs<=0) warning="over";
+  else if(segSecs===120&&c?.w2){warning="2";setFlashRate(300);}
+  else if(segSecs<=0){warning="over";setFlashRate(300);}
   render();
 }
 
@@ -868,7 +869,7 @@ function startShowCircle(){
   render();
 }
 
-function addTime(m){segSecs+=m*60;if(showTimerStarted) showSecs+=m*60;scheduleOffset-=m*60;if(warning==="over"||warning==="2") warning=null;render();}
+function addTime(m){segSecs+=m*60;if(showTimerStarted) showSecs+=m*60;scheduleOffset-=m*60;if(warning==="over"||warning==="2"){warning=null;setFlashRate(700);}render();}
 
 function goNext(){
   if(cueIdx>=CUES.length-1){
@@ -877,7 +878,7 @@ function goNext(){
     sbSet({is_live:false,cue_idx:0,ros_change_msg:""});
     return;
   }
-  scheduleOffset+=segSecs;clearInterval(timerInt);warning=null;clearBanners();clearROSBanner();
+  scheduleOffset+=segSecs;clearInterval(timerInt);warning=null;setFlashRate(700);clearBanners();clearROSBanner();
   let next=cueIdx+1;
   while(next<CUES.length-1&&removedIndices.has(next)) next++;
   cueIdx=next;segSecs=CUES[cueIdx].dur*60;
@@ -891,7 +892,7 @@ function goNext(){
 
 function goPrev(){
   if(cueIdx<=0) return;
-  clearInterval(timerInt);running=false;warning=null;scheduleOffset=0;clearBanners();
+  clearInterval(timerInt);running=false;warning=null;setFlashRate(700);scheduleOffset=0;clearBanners();
   cueIdx--;segSecs=CUES[cueIdx].dur*60;render();
 }
 
@@ -902,7 +903,7 @@ function clearBanners(){
 
 function resetShow(){
   if(!confirm("Reset show to beginning? All screens return to welcome.")) return;
-  clearInterval(timerInt);running=false;warning=null;
+  clearInterval(timerInt);running=false;warning=null;setFlashRate(700);
   cueIdx=0;segSecs=CUES[0]?.dur*60||0;showSecs=EPISODE.showMins*60;showTimerStarted=false;
   showLive=false;standbyActive=false;preLiveActive=false;preLiveFired=false;
   scheduleOffset=0;removedIndices=new Set();CUES=[...BASE_CUES];
