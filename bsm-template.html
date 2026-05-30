@@ -130,6 +130,14 @@ body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:r
 .qr-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:#fff;border-radius:8px;}
 .qr-label{font-size:9px;color:#3a3f4a;letter-spacing:1px;font-weight:bold;text-align:center;}
 .footer{text-align:center;font-size:10px;color:rgba(255,255,255,0.12);letter-spacing:2px;}
+.cue-card-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.96);z-index:150;display:none;flex-direction:column;padding:24px 20px;overflow-y:auto;}
+.cue-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-shrink:0;}
+.cue-card-title{font-size:11px;color:#9966dd;letter-spacing:4px;font-weight:900;}
+.cue-card-scene{font-size:22px;color:#fff;font-weight:900;margin-top:4px;line-height:1.2;}
+.cue-card-close{background:none;border:1px solid #555;color:#888;padding:10px 18px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:bold;letter-spacing:2px;}
+.cue-card-body{font-size:22px;color:#fff;line-height:1.9;white-space:pre-wrap;flex:1;}
+.cue-card-body .cc-bullet{display:block;padding:4px 0;}
+.cue-card-body .cc-research{color:#E8431A;font-weight:bold;}
 </style>
 </head>
 <body>
@@ -391,6 +399,7 @@ body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:r
       <button class="add-btn" onclick="addTime(5)" style="background:#1a3a2a;color:#3BB8C9;border:1px solid #3BB8C9;">+ 5 MIN</button>
       <button class="add-btn" onclick="addTime(3)" style="background:#1a2a3a;color:#7ab8c9;border:1px solid #7ab8c9;">+ 3 MIN</button>
     </div>
+    <button class="host-btn" id="cue-card-btn" onclick="openCueCard()" style="background:#1a0a2a;border-color:#9966dd;color:#9966dd;display:none;">📋 CUE CARD</button>
     <button class="host-btn" id="prelive-btn" onclick="firePreLive()" style="background:#1a1400;border-color:#F5D03A;color:#F5D03A;display:none;">🎯 FIRE: PRE-LIVE — 2 MIN WARNING</button>
     <button class="host-btn" id="standby-btn" onclick="fireStandby()" style="background:#2a2000;border-color:#F5D03A;color:#F5D03A;display:none;">🎯 FIRE STAND BY</button>
     <button class="host-btn" id="applause-host-btn" onclick="fireApplause()" style="background:#1a0a00;border-color:#F5D03A;color:#F5D03A;display:none;">👏 FIRE APPLAUSE</button>
@@ -839,6 +848,8 @@ function render(){
   const plbtn=document.getElementById("prelive-btn");if(plbtn) plbtn.style.display=cueIdx===0?"block":"none";
   const stbtn=document.getElementById("standby-btn");
   if(stbtn){const hasDef=STANDBY_DEFS[cueIdx]||currentInsertStandby;stbtn.style.display=hasDef?"block":"none";}
+  const ccbtn=document.getElementById("cue-card-btn");
+  if(ccbtn){ccbtn.style.display=(CUES[cueIdx]?.cueCard)?"block":"none";}
   const leb=document.getElementById("live-edit-btn");if(leb) leb.style.display=showLive?"block":"none";
   const apb=document.getElementById("applause-host-btn");if(apb) apb.style.display=showLive?"block":"none";
   const bb=document.getElementById("back-btn"),nb=document.getElementById("next-btn");
@@ -1056,6 +1067,32 @@ function setView(v){
   }
   draw();
 })();
+
+function openCueCard(){
+  const c=CUES[cueIdx];
+  if(!c?.cueCard) return;
+  const overlay=document.getElementById('cue-card-overlay');
+  document.getElementById('cc-scene-name').textContent=c.scene||'';
+  const body=document.getElementById('cc-body');
+  body.innerHTML=c.cueCard.split('\n').map(line=>{
+    if(!line.trim()) return '<span class="cc-bullet">&nbsp;</span>';
+    const cls=line.includes('[RESEARCH NEEDED')?'cc-bullet cc-research':'cc-bullet';
+    return `<span class="${cls}">${line}</span>`;
+  }).join('');
+  overlay.style.display='flex';
+}
+function closeCueCard(){document.getElementById('cue-card-overlay').style.display='none';}
 </script>
+
+<div class="cue-card-overlay" id="cue-card-overlay">
+  <div class="cue-card-header">
+    <div>
+      <div class="cue-card-title">📋 CUE CARD</div>
+      <div class="cue-card-scene" id="cc-scene-name"></div>
+    </div>
+    <button class="cue-card-close" onclick="closeCueCard()">✕ CLOSE</button>
+  </div>
+  <div class="cue-card-body" id="cc-body"></div>
+</div>
 </body>
 </html>

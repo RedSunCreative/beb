@@ -837,7 +837,7 @@ async function speakBoo(text) {
 }
 
 // ─── CLAUDE ───
-async function callClaude(userMessage) {
+async function callClaude(userMessage, opts = {}) {
   const memoryBlock = (showData.booMemory && showData.booMemory.length > 0)
     ? `\n=== WHAT BOO KNOWS ABOUT MARK & LBV ===\n${showData.booMemory.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
     : '';
@@ -1025,24 +1025,63 @@ Logic:
   • Countdown / Pre-recorded intro: standbyWho = "", standbyStage = "".
   • NEVER double-book: if the same person is already on the correct stage, leave blank.
 
+=== CUE CARD MODE ===
+When Mark asks to work on cue cards (or says "cue cards", "write my intros", "research the guests"), go scene by scene. For each scene auto-populate the cueCard field without being asked — use web search to find current info on guests you don't know, draft everything you do know automatically.
+
+For each scene type, draft cueCard as plain bullet lines (•), tight enough to read at a glance:
+
+SHOW OPENER / POD OPEN:
+  • Welcome energy line for Mark to riff from
+  • Subscribe reminder: "Subscribe to [show name] wherever you listen"
+  • Patreon / membership CTA if applicable
+  • CREW SHOUTOUT — list every crew member by name (from showData) with their role
+
+POD INTERVIEW (each guest):
+  • INTRO: 3-4 punchy bullets — who they are, what they do, one surprising fact
+    → Search "[guest name] [segment context]" to get current bio, projects, social
+  • PITCH: upcoming shows, book, podcast, seminar, website — search for current info
+  • Subscribe/Patreon reminder if 2+ scenes since the last one
+
+MUSIC PERFORMANCE:
+  • Brief artist intro and song context
+  • PITCH: upcoming shows, releases — search "[artist name] upcoming 2026"
+
+CLOSING:
+  • CREW THANKS — list every crew member by name with role
+  • Final subscribe / follow / Patreon CTA
+  • Next episode tease if known
+
+KITCHEN DISCO / VIDEO / PRE-RECORDED / COUNTDOWN: set cueCard to "" — no prompter needed.
+
+CRITICAL: Never write placeholders. Real names only. If you can't find info on a guest after searching, write "• [RESEARCH NEEDED: {name}]" as the first bullet.
+Format: plain text bullet lines only, no markdown. Tight — prompter card, not script.
+When all scenes are done, send the COMPLETE updated cues array.
+
 Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
-Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage }
+Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage, cueCard }
+cueCard: freeform prompter text for host — bullet lines, real names only. "" if not applicable.
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
 prelive:true means pre-show (Countdown) — excluded from runtime total.`;
+
+  const reqBody = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8192,
+    system: systemPrompt,
+    messages: [...conversationHistory, { role: 'user', content: userMessage }]
+  };
+  if (opts.webSearch) {
+    reqBody.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }];
+  }
 
   const res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SB_KEY}` },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: [...conversationHistory, { role: 'user', content: userMessage }]
-    })
+    body: JSON.stringify(reqBody)
   });
 
   const data = await res.json();
-  const text = data.content?.[0]?.text || '{"speech":"Sorry, I had a little hiccup. Try again?","display":"Sorry, I had a little hiccup. Try again?","updates":{}}';
+  const text = data.content?.filter(b => b.type === 'text').pop()?.text
+    || '{"speech":"Sorry, I had a little hiccup. Try again?","display":"Sorry, I had a little hiccup. Try again?","updates":{}}';
 
   let parsed;
   try { parsed = JSON.parse(text); }
@@ -1071,7 +1110,8 @@ async function processUserInput(text) {
   conversationHistory.push({ role: 'user', content: text });
 
   try {
-    const response = await callClaude(text);
+    const wantsWebSearch = /cue.?card|research.*guest|guest.*research|intro.*bullet|guest.*bio/i.test(text);
+    const response = await callClaude(text, { webSearch: wantsWebSearch });
     hideThinking();
 document.getElementById('mic-btn').classList.remove('thinking');
 
@@ -1291,7 +1331,8 @@ async function generateBSM() {
     audioNext: [${split(c.audioNext).map(q).join(', ')}],
     videoNext: [${split(c.videoNext).map(q).join(', ')}],
     camerasNext: [${split(c.camerasNext).map(q).join(', ')}],
-    lightingNext: [${split(c.lightingNext).map(q).join(', ')}]
+    lightingNext: [${split(c.lightingNext).map(q).join(', ')}],
+    cueCard: ${q(c.cueCard || '')}
   }`).join(',\n');
 
   const standbyLines = showData.cues.map(c => {
@@ -1378,6 +1419,8 @@ function editScene(i) {
         <div class="edit-field full"><div class="edit-lbl">BOO MESSAGE</div><textarea class="edit-ta" id="ef-booMsg">${esc(c.booMsg)}</textarea></div>
         <div class="edit-field"><div class="edit-lbl">5-MIN WARNING</div><textarea class="edit-ta" id="ef-w5">${esc(c.w5)}</textarea></div>
         <div class="edit-field"><div class="edit-lbl">2-MIN WARNING</div><textarea class="edit-ta" id="ef-w2">${esc(c.w2)}</textarea></div>
+        <div class="edit-section-head">CUE CARD</div>
+        <div class="edit-field full"><div class="edit-lbl">HOST PROMPTER</div><textarea class="edit-ta" id="ef-cueCard" style="height:120px;font-size:13px;">${esc(c.cueCard||'')}</textarea></div>
         <div class="edit-section-head">STAND BY</div>
         <div class="edit-field"><div class="edit-lbl">STAND BY — WHO</div><input class="edit-inp" id="ef-standbyWho" value="${esc(c.standbyWho||'')}" placeholder="Person's name (or leave blank)"></div>
         <div class="edit-field"><div class="edit-lbl">STAND BY — STAGE</div><select class="edit-inp" id="ef-standbyStage"><option value=""${!c.standbyStage?' selected':''}>— none —</option><option value="pod"${c.standbyStage==='pod'?' selected':''}>Pod Stage</option><option value="music"${c.standbyStage==='music'?' selected':''}>Music Stage</option><option value="kitchen"${c.standbyStage==='kitchen'?' selected':''}>Kitchen Disco</option></select></div>
@@ -1410,6 +1453,7 @@ function saveSceneEdit() {
   c.booMsg      = document.getElementById('ef-booMsg').value;
   c.w5          = document.getElementById('ef-w5').value;
   c.w2          = document.getElementById('ef-w2').value;
+  c.cueCard     = document.getElementById('ef-cueCard').value;
   c.standbyWho  = document.getElementById('ef-standbyWho').value;
   c.standbyStage= document.getElementById('ef-standbyStage').value;
   c.audioNow    = document.getElementById('ef-audioNow').value;
@@ -1480,6 +1524,9 @@ function generateROS() {
     const standbyLine = c.standbyWho
       ? `<div class="note-row"><span class="note-lbl" style="color:var(--gold);">STBY</span><span class="note-val" style="color:var(--gold);">${c.standbyWho}${standbyStageLabel ? ' → ' + standbyStageLabel : ''}</span></div>`
       : '';
+    const cueCardPreview = c.cueCard
+      ? `<div class="note-row"><span class="note-lbl" style="color:#9966dd;">CUE</span><span class="note-val" style="color:#9966dd;font-style:italic;">${c.cueCard.split('\n')[0].slice(0,80)}${c.cueCard.length > 80 ? '…' : ''}</span></div>`
+      : '';
 
     const timeStr = c.prelive
       ? `${dur}m`
@@ -1494,7 +1541,7 @@ function generateROS() {
         <div class="s-name">${c.scene || '(untitled)'}</div>
         <div class="s-time">${timeStr}</div>
       </div>
-      <div class="col-notes">${crewLines}${booLine}${standbyLine}</div>
+      <div class="col-notes">${crewLines}${booLine}${standbyLine}${cueCardPreview}</div>
     </div>`;
   }).join('');
 
