@@ -130,6 +130,9 @@ body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:r
 .qr-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:#fff;border-radius:8px;}
 .qr-label{font-size:9px;color:#3a3f4a;letter-spacing:1px;font-weight:bold;text-align:center;}
 .footer{text-align:center;font-size:10px;color:rgba(255,255,255,0.12);letter-spacing:2px;}
+#cue-flash{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:999;opacity:0;}
+@keyframes cue-flash-anim{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+#cue-flash.firing{animation:cue-flash-anim 0.6s ease-out forwards;}
 .cue-card-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.96);z-index:150;display:none;flex-direction:column;padding:24px 20px;overflow-y:auto;}
 .cue-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-shrink:0;}
 .cue-card-title{font-size:11px;color:#9966dd;letter-spacing:4px;font-weight:900;}
@@ -757,6 +760,7 @@ function applyRemoteState(state){
   } else if(showLive&&newIdx!==cueIdx){
     cueIdx=newIdx;segSecs=CUES[newIdx]?.dur*60||0;
     warning=null;setFlashRate(700);clearInterval(timerInt);running=true;timerInt=setInterval(tick,1000);
+    fireFlash();
   }
   const newStandby=!!state.standby_active;
   if(newStandby!==standbyActive){
@@ -893,6 +897,7 @@ function goNext(){
   let next=cueIdx+1;
   while(next<CUES.length-1&&removedIndices.has(next)) next++;
   cueIdx=next;segSecs=CUES[cueIdx].dur*60;
+  fireFlash();
   if(cueIdx===1&&!showTimerStarted){showTimerStarted=true;showSecs=90*60;}
   if(CUES[cueIdx].scene==="APPLAUSE") fireApplause();
   currentInsertStandby=null;
@@ -1068,6 +1073,15 @@ function setView(v){
   draw();
 })();
 
+function fireFlash(){
+  const el=document.getElementById('cue-flash');
+  if(!el) return;
+  el.classList.remove('firing');
+  void el.offsetWidth;
+  el.classList.add('firing');
+  setTimeout(()=>el.classList.remove('firing'),700);
+}
+
 function openCueCard(){
   const c=CUES[cueIdx];
   if(!c?.cueCard) return;
@@ -1084,6 +1098,7 @@ function openCueCard(){
 function closeCueCard(){document.getElementById('cue-card-overlay').style.display='none';}
 </script>
 
+<div id="cue-flash" style="background:#ffffff;"></div>
 <div class="cue-card-overlay" id="cue-card-overlay">
   <div class="cue-card-header">
     <div>
