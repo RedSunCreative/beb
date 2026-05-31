@@ -130,6 +130,11 @@ body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:r
 .qr-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;background:#fff;border-radius:8px;}
 .qr-label{font-size:9px;color:#3a3f4a;letter-spacing:1px;font-weight:bold;text-align:center;}
 .footer{text-align:center;font-size:10px;color:rgba(255,255,255,0.12);letter-spacing:2px;}
+.fixed-controls{position:fixed;bottom:env(safe-area-inset-bottom,16px);left:50%;transform:translateX(-50%);z-index:9999;display:flex;gap:8px;padding-bottom:8px;opacity:0.5;transition:opacity 0.3s;}
+.fixed-controls:hover{opacity:1;}
+.fixed-ctrl-btn{padding:12px 20px;border-radius:10px;background:rgba(70,77,89,0.95);color:#F5D03A;font-size:22px;cursor:pointer;font-weight:bold;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,0.5);border:2px solid #5a6270;}
+.fixed-ctrl-btn:hover{background:#5a6270;color:#fff;}
+.fixed-ctrl-btn.active{background:#383f4d;color:#F5D03A;}
 #cue-flash{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:999;opacity:0;}
 @keyframes cue-flash-anim{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
 #cue-flash.firing{animation:cue-flash-anim 0.6s ease-out forwards;}
@@ -544,6 +549,7 @@ let removedIndices=new Set();
 let pendingInsert=null;
 let cueIdx=0,segSecs=CUES[0]?.dur*60||0,showSecs=EPISODE.showMins*60;
 let running=false,timerInt=null,warning=null,flashOn=true,flashInt=null;
+let tvRotation=0,zoomLevel=100;
 let view="tv",techTab="audio";
 let scheduleOffset=0,showLive=false,standbyActive=false,preLiveActive=false,preLiveFired=false;
 let showTimerStarted=false;
@@ -1073,6 +1079,55 @@ function setView(v){
   draw();
 })();
 
+function applyRotationToOverlays(deg){
+  ['applause-banner','live-edit-overlay','cue-card-overlay'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(deg===0){el.style.transform='';el.style.transformOrigin='';el.style.width='';el.style.height='';}
+    else if(deg===90){el.style.transformOrigin='top left';el.style.transform='rotate(90deg) translateY(-100%)';el.style.width='100vh';el.style.height='100vw';el.style.top='0';el.style.left='0';}
+    else if(deg===180){el.style.transformOrigin='center center';el.style.transform='rotate(180deg)';}
+    else if(deg===270){el.style.transformOrigin='top left';el.style.transform='rotate(270deg) translateX(-100%)';el.style.width='100vh';el.style.height='100vw';el.style.top='0';el.style.left='0';}
+  });
+}
+function cycleRotation(){
+  tvRotation=(tvRotation+90)%360;
+  const wrap=document.querySelector('.wrap');
+  const btn=document.getElementById('btn-rotate');
+  wrap.style.cssText='';
+  if(tvRotation===0){
+    document.body.style.overflow='';document.body.style.height='';
+    wrap.style.maxWidth='560px';wrap.style.margin='0 auto';
+    if(btn)btn.classList.remove('active');
+  } else if(tvRotation===90){
+    document.body.style.overflow='hidden';document.body.style.height='100vh';
+    wrap.style.position='absolute';wrap.style.top='0';wrap.style.left='0';
+    wrap.style.width='100vh';wrap.style.height='100vw';
+    wrap.style.transformOrigin='top left';wrap.style.transform='rotate(90deg) translateY(-100%)';
+    wrap.style.overflowY='auto';if(btn)btn.classList.add('active');
+  } else if(tvRotation===180){
+    document.body.style.overflow='hidden';document.body.style.height='100vh';
+    wrap.style.position='absolute';wrap.style.top='0';wrap.style.left='0';
+    wrap.style.width='100vw';wrap.style.height='100vh';
+    wrap.style.transformOrigin='center center';wrap.style.transform='rotate(180deg)';
+    wrap.style.overflowY='auto';if(btn)btn.classList.add('active');
+  } else if(tvRotation===270){
+    document.body.style.overflow='hidden';document.body.style.height='100vh';
+    wrap.style.position='absolute';wrap.style.top='0';wrap.style.left='0';
+    wrap.style.width='100vh';wrap.style.height='100vw';
+    wrap.style.transformOrigin='top left';wrap.style.transform='rotate(270deg) translateX(-100%)';
+    wrap.style.overflowY='auto';if(btn)btn.classList.add('active');
+  }
+  applyRotationToOverlays(tvRotation);
+}
+function adjustZoom(dir){
+  zoomLevel=Math.min(150,Math.max(60,zoomLevel+(dir*10)));
+  const wrap=document.querySelector('.wrap');if(!wrap)return;
+  const s=zoomLevel/100;
+  if(tvRotation===0){wrap.style.transform='scale('+s+')';wrap.style.transformOrigin='top center';}
+  else if(tvRotation===90){wrap.style.transform='rotate(90deg) translateY(-100%) scale('+s+')';wrap.style.transformOrigin='top left';}
+  else if(tvRotation===180){wrap.style.transform='rotate(180deg) scale('+s+')';wrap.style.transformOrigin='center center';}
+  else if(tvRotation===270){wrap.style.transform='rotate(270deg) translateX(-100%) scale('+s+')';wrap.style.transformOrigin='top left';}
+}
+
 function fireFlash(){
   const el=document.getElementById('cue-flash');
   if(!el) return;
@@ -1098,6 +1153,11 @@ function openCueCard(){
 function closeCueCard(){document.getElementById('cue-card-overlay').style.display='none';}
 </script>
 
+<div class="fixed-controls">
+  <button class="fixed-ctrl-btn" id="btn-zoom-out" onclick="adjustZoom(-1)" title="Zoom out">－</button>
+  <button class="fixed-ctrl-btn" id="btn-zoom-in" onclick="adjustZoom(1)" title="Zoom in">＋</button>
+  <button class="fixed-ctrl-btn" id="btn-rotate" onclick="cycleRotation()" title="Rotate screen">⟳</button>
+</div>
 <div id="cue-flash" style="background:#ffffff;"></div>
 <div class="cue-card-overlay" id="cue-card-overlay">
   <div class="cue-card-header">
