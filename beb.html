@@ -1382,7 +1382,7 @@ function initCueDrag() {
       const [moved] = showData.cues.splice(_dragSrcIdx, 1);
       showData.cues.splice(targetIdx, 0, moved);
       _dragSrcIdx = null;
-      renderData();
+      updateAllDisplays();
       saveState();
     });
   });
