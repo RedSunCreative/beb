@@ -501,6 +501,36 @@ function deriveStandby(cues, i) {
   return { standbyWho: '', standbyStage: '' };
 }
 
+function deriveWarnings(cues, i) {
+  const nxt = cues[i + 1];
+  function guestFrom(scene) {
+    const m = (scene || '').match(/—\s*(.+)$/);
+    return m ? m[1].trim() : (scene || '');
+  }
+  if (!nxt) return { w5: "5 minutes — finishing the show!", w2: "2 minutes left — almost done!" };
+  const label = nxt.booName || nxt.scene || 'next scene';
+  const type  = nxt.stageType;
+  let w5, w2;
+  if (type === 'pod') {
+    const guest = guestFrom(nxt.scene);
+    w5 = `5 minutes — ${guest}, please head to the Pod Stage.`;
+    w2 = `2 minutes — ${guest}, to the Pod Stage now.`;
+  } else if (type === 'kitchen') {
+    w5 = `5 minutes — wrapping up, Kitchen Disco is next.`;
+    w2 = `2 minutes — heading to Kitchen Disco.`;
+  } else if (type === 'music') {
+    w5 = `5 minutes — ${label} performance coming up.`;
+    w2 = `2 minutes — ${label} up next.`;
+  } else if (type === 'video' || nxt.prelive) {
+    w5 = `5 minutes remaining in this segment.`;
+    w2 = `2 minutes remaining.`;
+  } else {
+    w5 = `5 minutes — ${label} up next.`;
+    w2 = `2 minutes — ${label}.`;
+  }
+  return { w5, w2 };
+}
+
 async function saveState() {
   if (currentEpRow === 0) return; // no row assigned yet for this episode
   try {
@@ -519,7 +549,8 @@ async function saveState() {
           videoNext:    next?.videoNow    ?? '',
           camerasNext:  next?.camerasNow  ?? '',
           lightingNext: next?.lightingNow ?? '',
-          ...deriveStandby(arr, i)
+          ...deriveStandby(arr, i),
+          ...deriveWarnings(arr, i)
         };
       });
     }
@@ -1442,12 +1473,12 @@ async function generateBSM() {
 
   const cueLines = showData.cues.map((c, i, arr) => {
     const nxt = arr[i + 1];
-    const sb = deriveStandby(arr, i);
+    const warn = deriveWarnings(arr, i);
     return `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
     prelive: ${c.prelive ? 'true' : 'false'},
     booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
-    w5: ${q(c.w5)}, w2: ${q(c.w2)},
+    w5: ${q(warn.w5)}, w2: ${q(warn.w2)},
     next: ${q(nxt?.booName ?? nxt?.scene ?? '')}, nextScene: ${q(nxt?.scene ?? '')},
     audio: [${split(c.audioNow).map(q).join(', ')}],
     video: [${split(c.videoNow).map(q).join(', ')}],
@@ -1606,7 +1637,7 @@ function generateROS() {
   // Auto-derive structural fields so PDF always matches current ROS order
   const cues = showData.cues.map((c, i, arr) => {
     const next = arr[i + 1];
-    return { ...c, nextScene: next?.scene ?? '', nextHint: next?.booName ?? next?.scene ?? '', audioNext: next?.audioNow ?? '', videoNext: next?.videoNow ?? '', camerasNext: next?.camerasNow ?? '', lightingNext: next?.lightingNow ?? '', ...deriveStandby(arr, i) };
+    return { ...c, nextScene: next?.scene ?? '', nextHint: next?.booName ?? next?.scene ?? '', audioNext: next?.audioNow ?? '', videoNext: next?.videoNow ?? '', camerasNext: next?.camerasNow ?? '', lightingNext: next?.lightingNow ?? '', ...deriveStandby(arr, i), ...deriveWarnings(arr, i) };
   });
   if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
 
