@@ -1347,12 +1347,12 @@ async function generateBSM() {
   prelivePerformer: ${q(showData.prelivePerformer)}
 };`;
 
-  const cueLines = showData.cues.map(c => `  {
+  const cueLines = showData.cues.map((c, i, arr) => `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
     prelive: ${c.prelive ? 'true' : 'false'},
     booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
     w5: ${q(c.w5)}, w2: ${q(c.w2)},
-    next: ${q(c.nextHint)}, nextScene: ${q(c.nextScene)},
+    next: ${q(c.nextHint)}, nextScene: ${q(arr[i + 1]?.scene ?? '')},
     audio: [${split(c.audioNow).map(q).join(', ')}],
     video: [${split(c.videoNow).map(q).join(', ')}],
     cameras: [${split(c.camerasNow).map(q).join(', ')}],
@@ -1505,7 +1505,8 @@ function closeSceneEdit() {
 
 // ─── GENERATE RUN OF SHOW ───
 function generateROS() {
-  const cues = showData.cues;
+  // Auto-derive nextScene so PDF always matches current ROS order
+  const cues = showData.cues.map((c, i, arr) => ({ ...c, nextScene: arr[i + 1]?.scene ?? '' }));
   if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
 
   const btn = document.getElementById('ros-btn');
