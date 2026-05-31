@@ -458,6 +458,49 @@ function playSosumi() {
 const { createClient } = supabase;
 const sb = createClient(SB_URL, SB_KEY);
 
+function deriveStandby(cues, i) {
+  const c = cues[i];
+  // Pre-show / video / countdown: no standby needed
+  if (c.prelive || c.stageType === 'video' || !c.stageType) return { standbyWho: '', standbyStage: '' };
+
+  // Extract guest name from "SCENE NAME — Guest Name" pattern
+  function guestFrom(scene) {
+    const m = (scene || '').match(/—\s*(.+)$/);
+    return m ? m[1].trim() : '';
+  }
+
+  // Find the next pod cue after index j
+  function nextPodAfter(j) {
+    for (let k = j + 1; k < cues.length; k++) {
+      if (cues[k].stageType === 'pod') return cues[k];
+    }
+    return null;
+  }
+
+  if (c.stageType === 'kitchen' || c.stageType === 'music') {
+    // Buffer scene: who needs to be at the pod for the next pod scene?
+    const nextPod = nextPodAfter(i);
+    const who = nextPod ? guestFrom(nextPod.scene) : '';
+    return { standbyWho: who, standbyStage: who ? 'pod' : '' };
+  }
+
+  if (c.stageType === 'pod') {
+    // During a pod scene: the guest coming up after the NEXT buffer
+    let pastBuffer = false;
+    for (let k = i + 1; k < cues.length; k++) {
+      if (!pastBuffer && (cues[k].stageType === 'kitchen' || cues[k].stageType === 'music')) {
+        pastBuffer = true;
+      } else if (pastBuffer && cues[k].stageType === 'pod') {
+        const who = guestFrom(cues[k].scene);
+        return { standbyWho: who, standbyStage: who ? 'pod' : '' };
+      }
+    }
+    return { standbyWho: '', standbyStage: '' };
+  }
+
+  return { standbyWho: '', standbyStage: '' };
+}
+
 async function saveState() {
   if (currentEpRow === 0) return; // no row assigned yet for this episode
   try {
@@ -471,10 +514,12 @@ async function saveState() {
         return {
           ...c,
           nextScene:    next?.scene       ?? '',
+          nextHint:     next?.booName     ?? next?.scene ?? '',
           audioNext:    next?.audioNow    ?? '',
           videoNext:    next?.videoNow    ?? '',
           camerasNext:  next?.camerasNow  ?? '',
-          lightingNext: next?.lightingNow ?? ''
+          lightingNext: next?.lightingNow ?? '',
+          ...deriveStandby(arr, i)
         };
       });
     }
@@ -1397,12 +1442,13 @@ async function generateBSM() {
 
   const cueLines = showData.cues.map((c, i, arr) => {
     const nxt = arr[i + 1];
+    const sb = deriveStandby(arr, i);
     return `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
     prelive: ${c.prelive ? 'true' : 'false'},
     booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
     w5: ${q(c.w5)}, w2: ${q(c.w2)},
-    next: ${q(c.nextHint)}, nextScene: ${q(nxt?.scene ?? '')},
+    next: ${q(nxt?.booName ?? nxt?.scene ?? '')}, nextScene: ${q(nxt?.scene ?? '')},
     audio: [${split(c.audioNow).map(q).join(', ')}],
     video: [${split(c.videoNow).map(q).join(', ')}],
     cameras: [${split(c.camerasNow).map(q).join(', ')}],
@@ -1415,10 +1461,11 @@ async function generateBSM() {
   }`;
   }).join(',\n');
 
-  const standbyLines = showData.cues.map(c => {
-    if (!c.standbyWho) return 'null';
-    const isPod = c.standbyStage === 'pod';
-    return `{who: ${q(c.standbyWho)}, stage: "${isPod ? 'Pod Stage' : c.standbyStage === 'music' ? 'Music Stage' : 'Kitchen Disco'}", isPod: ${isPod}}`;
+  const standbyLines = showData.cues.map((c, i, arr) => {
+    const sb = deriveStandby(arr, i);
+    if (!sb.standbyWho) return 'null';
+    const isPod = sb.standbyStage === 'pod';
+    return `{who: ${q(sb.standbyWho)}, stage: "${isPod ? 'Pod Stage' : sb.standbyStage === 'music' ? 'Music Stage' : 'Kitchen Disco'}", isPod: ${isPod}}`;
   }).join(', ');
 
   const configBlock =
@@ -1559,7 +1606,7 @@ function generateROS() {
   // Auto-derive structural fields so PDF always matches current ROS order
   const cues = showData.cues.map((c, i, arr) => {
     const next = arr[i + 1];
-    return { ...c, nextScene: next?.scene ?? '', audioNext: next?.audioNow ?? '', videoNext: next?.videoNow ?? '', camerasNext: next?.camerasNow ?? '', lightingNext: next?.lightingNow ?? '' };
+    return { ...c, nextScene: next?.scene ?? '', nextHint: next?.booName ?? next?.scene ?? '', audioNext: next?.audioNow ?? '', videoNext: next?.videoNow ?? '', camerasNext: next?.camerasNow ?? '', lightingNext: next?.lightingNow ?? '', ...deriveStandby(arr, i) };
   });
   if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
 
