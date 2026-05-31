@@ -1016,6 +1016,14 @@ CRITICAL: Only include fields in "updates" that actually changed. NEVER include 
 
 CRITICAL — CUE CHANGES: Any time you move, reorder, insert, remove, rename, or edit any scene — you MUST send the full updated cues array in updates.cues. The UI cannot update from your speech alone. If you say you changed something and don't send the array, Mark's screen shows nothing. No exceptions: verbal confirmation without the array means the change did not happen.
 
+CRITICAL — CONSISTENCY: Any change to one field must cascade through every field it affects across ALL cues. Before sending the updated array, review the full sequence and fix everything:
+  • Scene renamed → update nextScene on the PREVIOUS cue
+  • Scene moved or reordered → recalculate standbyWho/standbyStage for affected cues; update nextScene/nextHint on surrounding cues; update audioNext/videoNext/camerasNext/lightingNext on the cue before it
+  • Guest changed → update booMsg, w5, w2, cueCard, standbyWho on any cue that references that guest by name
+  • Scene added or removed → recheck the full standby sequence and all nextScene references
+  • Duration changed → recheck runtime math and flag if total is now off target
+Never make a surgical one-field change in isolation. Treat the cues array as a linked chain — pull one link and check every adjacent link.
+
 === STANDBY RULES (apply automatically when building or updating any cues) ===
 Every cue must have standbyWho and standbyStage set whenever someone needs to physically move before that scene starts. Fill these automatically — do not wait to be asked.
 
