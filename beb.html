@@ -460,6 +460,13 @@ async function saveState() {
     const dataToSave = { ...showData };
     delete dataToSave.booMemory; // booMemory is global, saved separately
     if (dataToSave.cues && dataToSave.cues.length === 0) delete dataToSave.cues;
+    // Auto-derive nextScene from the following cue so BSM always stays consistent
+    if (dataToSave.cues) {
+      dataToSave.cues = dataToSave.cues.map((c, i, arr) => ({
+        ...c,
+        nextScene: arr[i + 1]?.scene ?? ''
+      }));
+    }
     const saves = [
       sb.rpc('merge_builder_state', { p_id: currentEpRow, p_data: dataToSave, p_history: conversationHistory })
     ];
