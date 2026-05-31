@@ -1181,10 +1181,10 @@ document.getElementById('mic-btn').classList.remove('thinking');
   } catch(e) {
     hideThinking();
     document.getElementById('mic-btn').classList.remove('thinking');
-    console.error(e);
-    const msg = "Sorry, I had a little hiccup there. Try saying that again?";
+    console.error('[Boo processUserInput error]', e);
+    const msg = `Error: ${e?.message || e}`;
     addBooMessage(msg);
-    await speakBoo(msg);
+    await speakBoo("Something went wrong — check the console.");
   }
 
   isThinking = false;
