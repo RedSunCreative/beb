@@ -173,6 +173,9 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 .boo-avatar-sm{width:32px;height:32px;flex-shrink:0;}
+.tip-q{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);font-size:9px;font-weight:700;cursor:help;margin-left:6px;flex-shrink:0;opacity:0.55;vertical-align:middle;line-height:1;font-family:sans-serif;}
+.tip-q:hover{opacity:1;border-color:var(--gold);color:var(--gold);}
+#boo-tip{position:fixed;background:#1a1e26;color:#c4b9a8;font-size:11px;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.5px;padding:8px 12px;border-radius:7px;border:1px solid rgba(245,208,58,0.3);max-width:220px;line-height:1.45;text-align:center;pointer-events:none;display:none;z-index:2000;box-shadow:0 4px 16px rgba(0,0,0,0.6);}
 </style>
 </head>
 <body>
@@ -203,10 +206,10 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
   </div>
   <div class="header-right">
     <div style="position:relative;display:inline-block;" id="ep-switcher">
-      <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()">EP ▾</button>
+      <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()" data-tip="Switch between saved episodes or start a new one">EP ▾</button>
       <div class="ep-list-panel" id="ep-list-panel" style="display:none;"></div>
     </div>
-    <button class="settings-gear" onclick="openSettings()" title="Settings">⚙</button>
+    <button class="settings-gear" onclick="openSettings()" data-tip="Configure API keys, ElevenLabs voice, GitHub credentials, and app settings">⚙</button>
     <div class="save-badge" id="save-badge">● READY</div>
   </div>
 </div>
@@ -295,13 +298,13 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     <div class="mic-area">
       <div class="mic-status" id="mic-status">SPEAKABOO OFF...</div>
       <div class="mic-row">
-        <button class="mic-btn" id="mic-btn" onclick="toggleMicPause()">
+        <button class="mic-btn" id="mic-btn" onclick="toggleMicPause()" data-tip="SpeakaBoo — Boo's voice mode. Tap to toggle on/off. When on, speak naturally and Boo listens hands-free.">
           <svg class="mic-icon" viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm-7 8a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.94V22h-2v-2.06A9 9 0 0 1 3 11h2z"/></svg>
         </button>
         <div class="mic-text-wrap">
           <textarea class="mic-text" id="mic-text" placeholder="Listening... or type here" onkeydown="handleKey(event)"></textarea>
         </div>
-        <button class="send-btn" id="send-btn" onclick="sendText()">SEND</button>
+        <button class="send-btn" id="send-btn" onclick="sendText()" data-tip="Send your typed message to Boo">SEND</button>
       </div>
     </div>
   </div>
@@ -310,7 +313,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('ep-body')">
-        <div class="data-section-title">EPISODE INFO <span id="d-ep-badge" style="color:var(--teal);font-weight:900;"></span></div>
+        <div class="data-section-title">EPISODE INFO <span id="d-ep-badge" style="color:var(--teal);font-weight:900;"></span><span class="tip-q" data-tip="Basic episode details — number, title, date, and runtime. Boo fills this in automatically as you plan." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="ep-complete">—</div>
       </div>
       <div class="data-section-body" id="ep-body">
@@ -328,7 +331,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('runtime-body')">
-        <div class="data-section-title">RUNTIME</div>
+        <div class="data-section-title">RUNTIME <span class="tip-q" data-tip="Live scene count vs. your target runtime. Green = on track, orange = over, gold = under." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="runtime-status">0 min</div>
       </div>
       <div class="data-section-body" id="runtime-body">
@@ -343,7 +346,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('guests-body')">
-        <div class="data-section-title">GUESTS</div>
+        <div class="data-section-title">GUESTS <span class="tip-q" data-tip="Pod guests and performers Boo has recorded for this episode. Tell Boo their names and segments." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="guest-count">0</div>
       </div>
       <div class="data-section-body" id="guests-body">
@@ -353,7 +356,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('crew-body')">
-        <div class="data-section-title">CREW</div>
+        <div class="data-section-title">CREW <span class="tip-q" data-tip="Your production crew — name, role, and mobile number. Used in SHOUTOUT scenes and the Static RoS." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="crew-count">0</div>
       </div>
       <div class="data-section-body" id="crew-body">
@@ -363,7 +366,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('cues-body')">
-        <div class="data-section-title">CUE LIST</div>
+        <div class="data-section-title">CUE LIST <span class="tip-q" data-tip="Your run-of-show scene list. Drag scenes to reorder. Click EDIT on any scene to change its details." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="cue-count-badge">0 cues</div>
       </div>
       <div class="data-section-body" id="cues-body">
@@ -374,7 +377,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('memory-body')">
-        <div class="data-section-title">BOO'S MEMORY</div>
+        <div class="data-section-title">BOO'S MEMORY <span class="tip-q" data-tip="Notes Boo keeps about your preferences and show rules. He references these automatically — no need to repeat yourself." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="memory-count">0</div>
       </div>
       <div class="data-section-body" id="memory-body" style="display:none;">
@@ -383,7 +386,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     </div>
 
     <div class="ros-dropdown-wrap" id="ros-dropdown-wrap">
-      <button class="generate-btn ros" id="ros-toggle-btn" onclick="toggleRosMenu()" style="margin-top:0;">📄 RoS &nbsp;▾</button>
+      <button class="generate-btn ros" id="ros-toggle-btn" onclick="toggleRosMenu()" style="margin-top:0;" data-tip="Generate and share your Run of Show — choose Static, Graphic, or Live">📄 RoS &nbsp;▾</button>
       <div class="ros-dropdown-menu" id="ros-dropdown-menu">
         <div class="ros-menu-item" onclick="generateROS()">
           <div class="ros-item-name">📄 Static RoS</div>
@@ -400,8 +403,8 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
     <div id="ros-share-panel" style="display:none;margin-top:8px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
-    <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);">✏️ EDIT RUN OF SHOW</button>
-    <button class="generate-btn" id="generate-btn" onclick="generateBSM()">⚡ GENERATE BOO SHOW MANAGER</button>
+    <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);" data-tip="Manually review and edit scene names, timings, and crew notes before generating">✏️ EDIT RUN OF SHOW</button>
+    <button class="generate-btn" id="generate-btn" onclick="generateBSM()" data-tip="Build the live Boo Show Manager and publish it to GitHub Pages — this is what runs on set during the show">⚡ GENERATE BOO SHOW MANAGER</button>
 
     <div id="bsm-qr-wrap" style="display:none;margin-top:8px;padding:14px;background:rgba(0,196,74,0.05);border:1px solid rgba(0,196,74,0.18);border-radius:8px;text-align:center;">
       <div style="font-size:9px;color:var(--green);letter-spacing:4px;font-weight:700;margin-bottom:10px;">SCAN TO OPEN BSM</div>
@@ -2300,6 +2303,38 @@ window.addEventListener('load', async () => {
     await speakBoo(msg);
   }
 });
+
+// ─── TOOLTIP SYSTEM ──────────────────────────────────────────────────────────
+(function() {
+  const tip = document.createElement('div');
+  tip.id = 'boo-tip';
+  document.body.appendChild(tip);
+  let active = null;
+  function position() {
+    if (!active) return;
+    const r = active.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = r.left + r.width / 2 - tw / 2;
+    let top  = r.top - th - 10;
+    if (top < 4) top = r.bottom + 8;
+    tip.style.left = Math.max(6, Math.min(left, window.innerWidth - tw - 6)) + 'px';
+    tip.style.top  = top + 'px';
+  }
+  document.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-tip]');
+    if (!el || el === active) return;
+    active = el;
+    tip.textContent = el.dataset.tip;
+    tip.style.display = 'block';
+    position();
+  });
+  document.addEventListener('mousemove', position);
+  document.addEventListener('mouseout', e => {
+    if (e.target.closest('[data-tip]')) return;
+    tip.style.display = 'none';
+    active = null;
+  });
+})();
 </script>
 </body>
 </html>
