@@ -365,7 +365,8 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
 
-    <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">📄 GENERATE RoS PDF</button>
+    <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">📄 GENERATE &amp; SHARE RoS</button>
+    <div id="ros-share-panel" style="display:none;margin-top:8px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
     <button class="generate-btn ros" id="ros-simple-btn" onclick="generateROSSimple()" style="margin-top:4px;opacity:0.9;">⭕ ROS VISUAL (PRINT)</button>
     <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);">✏️ EDIT RUN OF SHOW</button>
     <button class="generate-btn" id="generate-btn" onclick="generateBSM()">⚡ GENERATE BOO SHOW MANAGER</button>
@@ -1633,8 +1634,7 @@ function closeSceneEdit() {
 }
 
 // ─── GENERATE RUN OF SHOW ───
-function generateROS() {
-  // Auto-derive structural fields so PDF always matches current ROS order
+async function generateROS() {
   const cues = showData.cues.map((c, i, arr) => {
     const next = arr[i + 1];
     return { ...c, nextScene: next?.scene ?? '', nextHint: next?.booName ?? next?.scene ?? '', audioNext: next?.audioNow ?? '', videoNext: next?.videoNow ?? '', camerasNext: next?.camerasNow ?? '', lightingNext: next?.lightingNow ?? '', ...deriveStandby(arr, i), ...deriveWarnings(arr, i) };
@@ -1642,23 +1642,22 @@ function generateROS() {
   if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
 
   const btn = document.getElementById('ros-btn');
+  const sharePanel = document.getElementById('ros-share-panel');
   btn.textContent = '⏳ BUILDING...';
   btn.disabled = true;
+  sharePanel.style.display = 'none';
 
   const cfg = CLIENT_CONFIG;
   const epNum = showData.epNum || 'X';
   const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseInt(c.dur) || 0)), 0);
 
-  // App color palette
-  const C = { dark:'#ffffff', card:'#f5f5f5', panel:'#eeeeee', border:'#cccccc',
-               muted:'#333333', white:'#000000', gold:'#B8960A', teal:'#1a7a8a',
-               orange:'#E8431A', green:'#1a7a40' };
+  const C = { dark:'#ffffff', card:'#f5f5f5', border:'#cccccc', muted:'#555555',
+               white:'#000000', gold:'#B8960A', teal:'#1a7a8a', orange:'#E8431A', green:'#1a7a40' };
   const typeColors = { pod:C.teal, music:C.gold, kitchen:C.orange, video:'#9966dd', '':'#556677' };
   const preliveColor = C.green;
   function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
   function getStageLabel(c) { return c.prelive ? 'PRE-SHOW' : ({ pod:'POD STAGE', music:'MUSIC STAGE', kitchen:'KITCHEN DISCO', video:'VIDEO' }[c.stageType] || (c.stageType||'').toUpperCase() || 'STAGE'); }
 
-  // Build scene rows with running time accumulator
   let runMins = 0;
   const crewDefs = [
     { key:'camerasNow', lbl:'CAMERAS' },
@@ -1672,105 +1671,93 @@ function generateROS() {
     const dur = Math.max(1, parseInt(c.dur) || 0);
     const runAtStart = runMins;
     if (!c.prelive) runMins += dur;
-
     const crewLines = crewDefs.filter(d => c[d.key]).map(d => {
       const lines = c[d.key].split('\n').map(l => l.trim()).filter(Boolean).join('<br>');
       return `<div class="note-row"><span class="note-lbl">${d.lbl}</span><span class="note-val">${lines}</span></div>`;
     }).join('');
-
-    const booLine = c.booMsg
-      ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>`
-      : '';
-
+    const booLine = c.booMsg ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>` : '';
     const standbyStageLabel = c.standbyStage === 'pod' ? 'Pod Stage' : c.standbyStage === 'music' ? 'Music Stage' : c.standbyStage === 'kitchen' ? 'Kitchen Disco' : '';
-    const standbyLine = c.standbyWho
-      ? `<div class="note-row"><span class="note-lbl" style="color:var(--gold);">STBY</span><span class="note-val" style="color:var(--gold);">${c.standbyWho}${standbyStageLabel ? ' → ' + standbyStageLabel : ''}</span></div>`
-      : '';
-    const cueCardPreview = c.cueCard
-      ? `<div class="note-row"><span class="note-lbl" style="color:#9966dd;">CUE</span><span class="note-val" style="color:#9966dd;font-style:italic;">${c.cueCard.split('\n')[0].slice(0,80)}${c.cueCard.length > 80 ? '…' : ''}</span></div>`
-      : '';
-
-    const timeStr = c.prelive
-      ? `${dur}m`
-      : `${dur}m &nbsp;·&nbsp; show: ${runAtStart}m`;
-
+    const standbyLine = c.standbyWho ? `<div class="note-row"><span class="note-lbl stby">STBY</span><span class="note-val stby-val">${c.standbyWho}${standbyStageLabel ? ' → ' + standbyStageLabel : ''}</span></div>` : '';
+    const timeStr = c.prelive ? `${dur}m` : `${dur}m &nbsp;·&nbsp; <span class="runtime">show: ${runAtStart}m</span>`;
     return `<div class="srow" style="border-left:4px solid ${color};">
-      <div class="col-num">
-        <div class="s-num" style="color:${color}">S${i+1}</div>
-        <div class="s-stage" style="color:${color}">${getStageLabel(c)}</div>
-      </div>
-      <div class="col-name">
-        <div class="s-name">${c.scene || '(untitled)'}</div>
-        <div class="s-time">${timeStr}</div>
-      </div>
-      <div class="col-notes">${crewLines}${booLine}${standbyLine}${cueCardPreview}</div>
+      <div class="col-num"><div class="s-num" style="color:${color}">S${i+1}</div><div class="s-stage" style="color:${color}">${getStageLabel(c)}</div></div>
+      <div class="col-name"><div class="s-name">${c.scene || '(untitled)'}</div><div class="s-time">${timeStr}</div></div>
+      <div class="col-notes">${crewLines}${booLine}${standbyLine}</div>
     </div>`;
   }).join('');
 
-  const bsmQrUrl = cfg.qrUrl || `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
+  const bsmUrl = cfg.qrUrl || `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
+  const rosUrl = `https://redsuncreative.github.io/beb/ros-e${epNum}.html`;
 
   const html = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${cfg.showName} E${epNum} — Run of Show</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:${C.dark};color:${C.white};font-family:'Barlow Condensed',sans-serif;font-size:12pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.page{max-width:780px;margin:0 auto;padding:28px 24px;}
-
-/* HEADER */
-.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid ${C.gold};margin-bottom:20px;gap:20px;}
-.hdr-left{}
-.hdr-show{font-size:10pt;color:${C.teal};letter-spacing:6px;text-transform:uppercase;margin-bottom:4px;}
-.hdr-epnum{font-size:64pt;font-weight:900;color:${C.gold};line-height:0.88;letter-spacing:-3px;}
-.hdr-title{font-size:14pt;font-weight:700;letter-spacing:2px;margin-top:8px;text-transform:uppercase;color:${C.white};}
-.hdr-sub{font-size:10pt;color:${C.muted};letter-spacing:2px;margin-top:4px;}
+:root{--gold:${C.gold};--teal:${C.teal};--border:${C.border};--muted:${C.muted};}
+body{background:#fff;color:#000;font-family:'Barlow Condensed',sans-serif;font-size:13pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.page{max-width:800px;margin:0 auto;padding:24px 20px 40px;}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid var(--gold);margin-bottom:18px;gap:16px;}
+.hdr-show{font-size:10pt;color:var(--teal);letter-spacing:5px;text-transform:uppercase;margin-bottom:2px;}
+.hdr-epnum{font-size:56pt;font-weight:900;color:var(--gold);line-height:0.88;letter-spacing:-2px;}
+.hdr-title{font-size:14pt;font-weight:700;letter-spacing:2px;margin-top:6px;text-transform:uppercase;}
+.hdr-sub{font-size:10pt;color:var(--muted);letter-spacing:2px;margin-top:4px;}
 .hdr-right{text-align:center;flex-shrink:0;}
-.qr-box{padding:5px;background:#ffffff;border-radius:4px;display:inline-block;border:1px solid #ccc;}
-.qr-lbl{font-size:8pt;color:${C.muted};letter-spacing:2px;margin-top:5px;text-transform:uppercase;}
-
-/* TABLE HEADER */
-.col-head{display:grid;grid-template-columns:72px 200px 1fr;gap:0;border-bottom:1px solid ${C.gold};padding:6px 0 6px 8px;margin-bottom:4px;}
-.col-head-cell{font-size:9pt;font-weight:700;letter-spacing:3px;color:${C.gold};text-transform:uppercase;}
-
-/* SCENE ROWS */
-.srow{display:grid;grid-template-columns:72px 200px 1fr;gap:0;border-bottom:1px solid ${C.border};padding:10px 0 10px 8px;align-items:start;}
-
-.col-num{padding-right:10px;}
-.s-num{font-size:14pt;font-weight:700;letter-spacing:1px;line-height:1;}
-.s-stage{font-size:8pt;color:${C.muted};letter-spacing:1px;margin-top:3px;text-transform:uppercase;line-height:1.2;}
-
-.col-name{padding-right:14px;}
-.s-name{font-size:14pt;font-weight:700;line-height:1.2;color:${C.white};}
-.s-time{font-size:10pt;color:${C.muted};letter-spacing:1px;margin-top:4px;}
-
-.col-notes{}
-.note-row{display:flex;gap:8px;margin-bottom:5px;align-items:baseline;}
-.note-row:last-child{margin-bottom:0;}
-.note-lbl{font-size:8pt;color:${C.muted};letter-spacing:2px;font-weight:700;text-transform:uppercase;flex-shrink:0;width:62px;}
-.note-val{font-size:12pt;color:${C.white};line-height:1.4;}
-.note-boo{color:${C.teal};font-style:italic;}
-
-/* FOOTER */
-.foot{margin-top:24px;padding-top:14px;border-top:1px solid ${C.border};display:flex;justify-content:flex-end;}
-.foot-text{font-size:9pt;color:${C.muted};letter-spacing:2px;}
-
-.print-btn{position:fixed;top:14px;right:14px;background:${C.teal};color:${C.dark};border:none;padding:10px 20px;border-radius:6px;font-size:12pt;font-weight:700;cursor:pointer;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;}
+.qr-box{padding:4px;background:#fff;border-radius:4px;display:inline-block;border:1px solid #ccc;}
+.qr-lbl{font-size:7pt;color:var(--muted);letter-spacing:2px;margin-top:4px;text-transform:uppercase;}
+.col-head{display:grid;grid-template-columns:70px 1fr 1.4fr;border-bottom:1px solid var(--gold);padding:5px 0 5px 10px;margin-bottom:2px;}
+.col-head-cell{font-size:8pt;font-weight:700;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
+.srow{display:grid;grid-template-columns:70px 1fr 1.4fr;border-bottom:1px solid var(--border);padding:10px 0 10px 10px;align-items:start;page-break-inside:avoid;}
+.col-num{padding-right:8px;}
+.s-num{font-size:15pt;font-weight:900;line-height:1;}
+.s-stage{font-size:7pt;color:var(--muted);letter-spacing:1px;margin-top:2px;text-transform:uppercase;}
+.col-name{padding-right:12px;}
+.s-name{font-size:13pt;font-weight:700;line-height:1.2;}
+.s-time{font-size:9pt;color:var(--muted);margin-top:3px;}
+.runtime{color:var(--teal);}
+.note-row{display:flex;gap:6px;margin-bottom:4px;align-items:baseline;}
+.note-lbl{font-size:7pt;color:var(--muted);letter-spacing:2px;font-weight:700;text-transform:uppercase;flex-shrink:0;width:58px;}
+.stby{color:#8a6a00;}
+.stby-val{color:#8a6a00;}
+.note-val{font-size:11pt;line-height:1.3;}
+.note-boo{color:var(--teal);font-style:italic;}
+.foot{margin-top:20px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.foot-text{font-size:8pt;color:var(--muted);letter-spacing:2px;}
+.print-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--gold);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:999;}
+.print-bar-label{font-size:10pt;color:var(--muted);letter-spacing:1px;}
+.print-btn{background:var(--teal);color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:12pt;font-weight:700;cursor:pointer;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;}
+@media (max-width:600px){
+  .hdr{flex-direction:column;gap:10px;}
+  .hdr-right{display:none;}
+  .col-head{display:none;}
+  .srow{display:block;padding:12px 10px;}
+  .col-num{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .s-stage{display:inline;margin-left:4px;}
+  .col-name{margin-bottom:8px;}
+  .col-notes{border-top:1px solid var(--border);padding-top:8px;}
+  .print-bar-label{display:none;}
+}
 @media print{
   @page{size:letter portrait;margin:0.45in;}
-  .print-btn{display:none;}
+  .print-bar{display:none;}
   .srow{page-break-inside:avoid;}
+  body{font-size:11pt;}
 }
 </style>
 </head>
 <body>
-<button class="print-btn" onclick="window.print()">PRINT / SAVE PDF</button>
+<div class="print-bar">
+  <span class="print-bar-label">${cfg.showName} · E${epNum} RUN OF SHOW</span>
+  <button class="print-btn" onclick="window.print()">🖨️ PRINT / SAVE PDF</button>
+</div>
 <div class="page">
   <div class="hdr">
-    <div class="hdr-left">
+    <div>
       <div class="hdr-show">${cfg.showName}</div>
       <div class="hdr-epnum">E${epNum}</div>
       ${showData.epTitle ? `<div class="hdr-title">${showData.epTitle}</div>` : ''}
@@ -1788,21 +1775,34 @@ body{background:${C.dark};color:${C.white};font-family:'Barlow Condensed',sans-s
   </div>
   ${sceneRows}
   <div class="foot">
-    <div class="foot-text">${cfg.showName} · E${epNum} · ${new Date().toLocaleDateString()}</div>
+    <div class="foot-text">${cfg.showName} · E${epNum} · Generated ${new Date().toLocaleDateString()}</div>
+    <div class="foot-text" style="color:var(--teal)">LITTLE BIG VOICES PRODUCTION</div>
   </div>
 </div>
-<script>
-  new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(bsmQrUrl)},width:88,height:88,colorDark:"#000000",colorLight:"#ffffff"});
-  setTimeout(()=>window.print(), 700);
-<\/script>
+<script>new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(bsmUrl)},width:80,height:80,colorDark:"#000000",colorLight:"#ffffff"});<\/script>
 </body>
 </html>`;
 
-  const blob = new Blob([html], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-  btn.textContent = '✓ OPENED IN NEW TAB';
-  setTimeout(() => { btn.textContent = '📄 GENERATE RoS PDF'; btn.disabled = false; }, 2500);
+  const filename = `ros-e${epNum}.html`;
+  const uploaded = await uploadToGitHub(filename, html);
+
+  if (uploaded) {
+    const smsMsg = encodeURIComponent(`Here's the most recent Run of Show Script for Episode ${epNum}. See you on the set! Peace, Boo, Little Big Voices Show Manager.\n\n${rosUrl}`);
+    sharePanel.innerHTML = `
+      <div style="color:var(--teal);font-size:11px;letter-spacing:2px;font-weight:bold;margin-bottom:8px;">✓ RUN OF SHOW PUBLISHED</div>
+      <div style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:10px;">${rosUrl}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="sms:?body=${smsMsg}" style="background:var(--green);color:#fff;padding:8px 14px;border-radius:6px;font-size:11px;font-weight:bold;letter-spacing:1px;text-decoration:none;">📱 TEXT TO CREW</a>
+        <a href="${rosUrl}" target="_blank" style="background:var(--teal);color:#fff;padding:8px 14px;border-radius:6px;font-size:11px;font-weight:bold;letter-spacing:1px;text-decoration:none;">🌐 OPEN</a>
+        <button onclick="navigator.clipboard.writeText('${rosUrl}')" style="background:var(--border);color:var(--dark-text);padding:8px 14px;border-radius:6px;font-size:11px;font-weight:bold;letter-spacing:1px;border:none;cursor:pointer;">📋 COPY LINK</button>
+      </div>`;
+    sharePanel.style.display = 'block';
+    btn.textContent = '✓ PUBLISHED';
+    setTimeout(() => { btn.textContent = '📄 GENERATE & SHARE RoS'; btn.disabled = false; }, 3000);
+  } else {
+    btn.textContent = '⚠️ UPLOAD FAILED — check GitHub PAT';
+    btn.disabled = false;
+  }
 }
 
 // ─── GENERATE ROS SIMPLE ─────────────────────────────────────────────────────
