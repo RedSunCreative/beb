@@ -345,6 +345,16 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     </div>
 
     <div class="data-section">
+      <div class="data-section-header" onclick="toggleSection('crew-body')">
+        <div class="data-section-title">CREW</div>
+        <div class="data-section-count" id="crew-count">0</div>
+      </div>
+      <div class="data-section-body" id="crew-body">
+        <div id="crew-list"><div style="font-size:12px;color:var(--muted)">Tell Boo your crew members...</div></div>
+      </div>
+    </div>
+
+    <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('cues-body')">
         <div class="data-section-title">CUE LIST</div>
         <div class="data-section-count" id="cue-count-badge">0 cues</div>
@@ -365,7 +375,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
 
-    <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">📄 GENERATE &amp; SHARE RoS</button>
+    <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">📄 STATIC RoS</button>
     <div id="ros-share-panel" style="display:none;margin-top:8px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
     <button class="generate-btn ros" id="ros-simple-btn" onclick="generateROSSimple()" style="margin-top:4px;opacity:0.9;">⭕ ROS VISUAL (PRINT)</button>
     <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);">✏️ EDIT RUN OF SHOW</button>
@@ -428,7 +438,7 @@ const CLIENT_CONFIG = {
 let showData = {
   epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:90, pin:"5000",
   prelivePerformer:"", preliveMsg:"",
-  guests:[], cues:[], booMemory:[]
+  guests:[], crew:[], cues:[], booMemory:[]
 };
 let conversationHistory = [];
 let isThinking = false;
@@ -641,7 +651,7 @@ async function handleSwitchEpisode(rowId) {
   if (rowId === currentEpRow) return;
   await saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], cues:[], booMemory: savedMemory };
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory };
   conversationHistory = [];
   const loaded = await loadState(rowId);
   if (loaded) {
@@ -657,7 +667,7 @@ function handleNewEpisode() {
   document.getElementById('ep-list-panel').style.display = 'none';
   saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], cues:[], booMemory: savedMemory };
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory };
   conversationHistory = [];
   currentEpRow = 0;
   localStorage.setItem('beb_current_ep_row', '0');
@@ -1004,10 +1014,19 @@ Each song is its own separate scene with its own name and duration. NEVER combin
 2. Confirm Closing Song (name + duration) — ask early so you know the bookends
 3. Collect any middle songs and their durations one at a time
 4. Collect pod guests and their order
-5. For each pod guest transition, decide what buffer to use
-6. Build the full scene sequence: Countdown → Cold Open → Pre-recorded Intro → Show Opener → Kitchen Disco #1 → [interview + buffer + interview...] → Closing Song
-7. Do the runtime math (exclude Countdown — it's prelive). Flag if total is off target by more than 8 min and suggest a specific fix.
-8. Populate standbyWho and standbyStage for every cue automatically (see STANDBY RULES below).
+5. If showData.crew is empty, ask Mark for crew before building scenes: "Who's on crew for this one? Give me name, role, and their mobile number."
+6. For each pod guest transition, decide what buffer to use
+7. Build the full scene sequence: Countdown → Cold Open → Pre-recorded Intro → Show Opener → Kitchen Disco #1 → [interview + buffer + interview...] → Closing Song
+8. Do the runtime math (exclude Countdown — it's prelive). Flag if total is off target by more than 8 min and suggest a specific fix.
+9. Populate standbyWho and standbyStage for every cue automatically (see STANDBY RULES below).
+
+=== CREW ===
+showData.crew is an array of crew members: { name, role, mobile }. Roles include: Audio, Video, Camera, Lighting, Stage Manager, Director, etc.
+- Collect crew at the start of episode planning if the list is empty (see step 5 above).
+- On login, if showData.crew is empty, prompt Mark: "I don't have crew info for this episode — who's on crew?"
+- In CREW SHOUTOUT and CREW THANKS scenes, list every crew member by name and role from showData.crew.
+- When generating crew instructions, use showData.crew to address people by name rather than role alone.
+- When updating crew, send the full updated array in updates.crew.
 
 === BRAINSTORM MODE ===
 When Mark wants to think out loud, explore ideas, or problem-solve — go there with him. Suggest creative buffer ideas, flag potential timing issues, pitch guest angles, think about show flow. You know this show inside out. Be a real creative partner, not just a form-filler.
@@ -1265,6 +1284,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
       if (u.prelivePerformer !== undefined) showData.prelivePerformer = u.prelivePerformer;
       if (u.preliveMsg !== undefined) showData.preliveMsg = u.preliveMsg;
       if (u.guests?.length > 0) showData.guests = u.guests;
+      if (u.crew?.length > 0) showData.crew = u.crew;
       if (u.cues?.length > 0) showData.cues = u.cues;
     }
 
@@ -1325,6 +1345,7 @@ function updateAllDisplays() {
   document.getElementById('runtime-status').textContent = totalMins + ' min';
   document.getElementById('cue-count-badge').textContent = showData.cues.length + ' cues';
   document.getElementById('guest-count').textContent = showData.guests.length;
+  document.getElementById('crew-count').textContent = (showData.crew||[]).length;
 
   const gl = document.getElementById('guest-list');
   gl.innerHTML = showData.guests.length === 0
@@ -1333,6 +1354,18 @@ function updateAllDisplays() {
       <div class="guest-item">
         <div><div class="guest-name">${g.name}</div><div style="font-size:11px;color:var(--muted)">${g.segment||''}</div></div>
         <div class="guest-type">${(g.stageType||'').toUpperCase()}</div>
+      </div>`).join('');
+
+  const crewList = document.getElementById('crew-list');
+  crewList.innerHTML = (showData.crew||[]).length === 0
+    ? '<div style="font-size:12px;color:var(--muted)">Tell Boo your crew members...</div>'
+    : (showData.crew||[]).map(m => `
+      <div class="guest-item">
+        <div>
+          <div class="guest-name">${m.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${m.mobile||''}</div>
+        </div>
+        <div class="guest-type">${(m.role||'').toUpperCase()}</div>
       </div>`).join('');
 
   renderMemory();
@@ -1731,6 +1764,7 @@ body{background:#fff;color:#000;font-family:'Barlow Condensed',sans-serif;font-s
 .print-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--gold);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:999;}
 .print-bar-label{font-size:10pt;color:var(--muted);letter-spacing:1px;}
 .print-btn{background:var(--teal);color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:12pt;font-weight:700;cursor:pointer;letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;}
+.live-ros-link{background:var(--gold);color:#000;padding:10px 18px;border-radius:6px;font-size:11pt;font-weight:700;letter-spacing:2px;text-decoration:none;white-space:nowrap;}
 @media (max-width:600px){
   .hdr{flex-direction:column;gap:10px;}
   .hdr-right{display:none;}
@@ -1745,6 +1779,7 @@ body{background:#fff;color:#000;font-family:'Barlow Condensed',sans-serif;font-s
 @media print{
   @page{size:letter portrait;margin:0.45in;}
   .print-bar{display:none;}
+  .live-ros-link{display:none;}
   .srow{page-break-inside:avoid;}
   body{font-size:11pt;}
 }
@@ -1752,7 +1787,8 @@ body{background:#fff;color:#000;font-family:'Barlow Condensed',sans-serif;font-s
 </head>
 <body>
 <div class="print-bar">
-  <span class="print-bar-label">${cfg.showName} · E${epNum} RUN OF SHOW</span>
+  <span class="print-bar-label">${cfg.showName} · E${epNum} STATIC RoS</span>
+  <a href="${bsmUrl}" target="_blank" class="live-ros-link">▶ Live RoS</a>
   <button class="print-btn" onclick="window.print()">🖨️ PRINT / SAVE PDF</button>
 </div>
 <div class="page">
@@ -1787,9 +1823,9 @@ body{background:#fff;color:#000;font-family:'Barlow Condensed',sans-serif;font-s
   const uploaded = await uploadToGitHub(filename, html);
 
   if (uploaded) {
-    const smsMsg = encodeURIComponent(`Here's the most recent Run of Show Script for Episode ${epNum}. See you on the set! Peace, Boo, Little Big Voices Show Manager.\n\n${rosUrl}`);
+    const smsMsg = encodeURIComponent(`Here's the Static RoS for Episode ${epNum}. See you on the set! Peace, Boo, Little Big Voices Show Manager.\n\n${rosUrl}`);
     sharePanel.innerHTML = `
-      <div style="color:var(--teal);font-size:11px;letter-spacing:2px;font-weight:bold;margin-bottom:8px;">✓ RUN OF SHOW PUBLISHED</div>
+      <div style="color:var(--teal);font-size:11px;letter-spacing:2px;font-weight:bold;margin-bottom:8px;">✓ STATIC RoS PUBLISHED</div>
       <div style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:10px;">${rosUrl}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a href="sms:?body=${smsMsg}" style="background:var(--green);color:#fff;padding:8px 14px;border-radius:6px;font-size:11px;font-weight:bold;letter-spacing:1px;text-decoration:none;">📱 TEXT TO CREW</a>
@@ -2169,6 +2205,8 @@ window.addEventListener('load', async () => {
   initMic();
   const loaded = await loadState();
 
+  const crewMissing = !(showData.crew?.length > 0);
+
   if (loaded && conversationHistory.length > 0) {
     conversationHistory.slice(-6).forEach(m => {
       if (m.role === 'user') addUserMessage(m.content);
@@ -2181,10 +2219,20 @@ window.addEventListener('load', async () => {
     const msg = "Hey Mark! Welcome back — I've got everything we worked on. Just pick up wherever you left off. What do you want to add or change?";
     addBooMessage(msg);
     await speakBoo(msg);
+    if (crewMissing) {
+      const crewMsg = "One thing — I don't have crew info for this episode. Who's on crew? Give me name, role, and mobile number for each person.";
+      addBooMessage(crewMsg);
+      await speakBoo(crewMsg);
+    }
   } else if (loaded && showData.epNum) {
     const msg = "Hey Mark! Welcome back — I've got all your show data loaded. History got cleared somewhere along the way, but I can see the episode, guests, and cues. What do you want to work on?";
     addBooMessage(msg);
     await speakBoo(msg);
+    if (crewMissing) {
+      const crewMsg = "Also — no crew info on file. Who's working this episode? Name, role, and mobile for each person.";
+      addBooMessage(crewMsg);
+      await speakBoo(crewMsg);
+    }
   } else {
     const msg = "Hey Mark! I'm Boo, your Little Big Voices show builder. Let's start with the music — what songs do you have lined up, and how long is each one?";
     addBooMessage(msg);
