@@ -819,7 +819,7 @@ function initMic() {
     }
   };
 
-  try { recognition.start(); } catch(e) {}
+  // Don't auto-start — mic begins OFF; user enables it manually
 }
 
 function toggleMicPause() {
@@ -938,6 +938,7 @@ function hideThinking() {
 
 // ─── TTS ───
 async function speakBoo(text) {
+  if (micPaused) return; // mic is off — text only until user enables voice
   muteMicWhileSpeaking();
   try {
     const clean = text.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, '');
@@ -2250,6 +2251,19 @@ window.addEventListener('load', async () => {
     })
     .catch(() => {});
   initMic();
+
+  // Mic starts OFF — user enables voice when ready
+  micPaused = true;
+  const micBtnEl = document.getElementById('mic-btn');
+  micBtnEl.classList.add('paused');
+  setMicStatus("MIC OFF — TAP TO ENABLE VOICE", "");
+
+  // All data sections start expanded
+  ['ep-body','runtime-body','guests-body','crew-body','cues-body','memory-body'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'block';
+  });
+
   const loaded = await loadState();
 
   const crewMissing = !(showData.crew?.length > 0);
