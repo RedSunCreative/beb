@@ -146,6 +146,13 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .generate-btn:hover{background:#0f3a20;}
 .generate-btn.ros{background:#0a1a2a;border-color:#1a4a6a;color:var(--teal);}
 .generate-btn.ros:hover{background:#0f2a3a;}
+.ros-dropdown-wrap{position:relative;margin-top:6px;}
+.ros-dropdown-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1a1e26;border:1px solid var(--teal);border-radius:8px;overflow:hidden;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.6);}
+.ros-menu-item{padding:11px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.07);}
+.ros-menu-item:last-child{border-bottom:none;}
+.ros-menu-item:hover{background:rgba(0,196,74,0.12);}
+.ros-item-name{font-size:13px;font-weight:700;letter-spacing:1px;color:var(--white);}
+.ros-item-desc{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:0.5px;line-height:1.4;}
 .cue-edit-btn{font-size:9px;color:var(--muted);letter-spacing:1px;background:none;border:1px solid var(--border);border-radius:3px;padding:2px 6px;cursor:pointer;float:right;margin-top:2px;font-family:'Barlow Condensed',sans-serif;}
 .cue-edit-btn:hover{color:var(--teal);border-color:var(--teal);}
 .scene-edit-panel{background:var(--panel);border-radius:8px;padding:14px;margin-top:10px;border:1px solid var(--teal);}
@@ -375,9 +382,24 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
 
-    <button class="generate-btn ros" id="ros-btn" onclick="generateROS()">📄 STATIC RoS</button>
+    <div class="ros-dropdown-wrap" id="ros-dropdown-wrap">
+      <button class="generate-btn ros" id="ros-toggle-btn" onclick="toggleRosMenu()" style="margin-top:0;">📄 RoS &nbsp;▾</button>
+      <div class="ros-dropdown-menu" id="ros-dropdown-menu">
+        <div class="ros-menu-item" onclick="generateROS()">
+          <div class="ros-item-name">📄 Static RoS</div>
+          <div class="ros-item-desc">Formatted doc — text to crew or print to PDF</div>
+        </div>
+        <div class="ros-menu-item" onclick="generateROSSimple()">
+          <div class="ros-item-name">⭕ RoS Graphic</div>
+          <div class="ros-item-desc">Visual wheel — great for the studio wall or call sheet</div>
+        </div>
+        <div class="ros-menu-item" onclick="openLiveRoS()">
+          <div class="ros-item-name">▶ Live RoS</div>
+          <div class="ros-item-desc">Open the live show manager — real-time timers &amp; sync</div>
+        </div>
+      </div>
+    </div>
     <div id="ros-share-panel" style="display:none;margin-top:8px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
-    <button class="generate-btn ros" id="ros-simple-btn" onclick="generateROSSimple()" style="margin-top:4px;opacity:0.9;">⭕ ROS VISUAL (PRINT)</button>
     <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);">✏️ EDIT RUN OF SHOW</button>
     <button class="generate-btn" id="generate-btn" onclick="generateBSM()">⚡ GENERATE BOO SHOW MANAGER</button>
 
@@ -588,6 +610,10 @@ async function loadState(rowId) {
     ]);
     if (epRes.data?.data) {
       showData = { ...showData, ...epRes.data.data };
+      if (showData.cues) {
+        const fix = s => typeof s === 'string' ? s.replace(/Sun Set Stage/gi, 'Sunset Stage').replace(/SUN SET STAGE/g, 'SUNSET STAGE') : s;
+        showData.cues = showData.cues.map(c => { const n = {}; for (const k of Object.keys(c)) n[k] = fix(c[k]); return n; });
+      }
       conversationHistory = epRes.data.history || [];
       if (memRes.data?.data?.booMemory?.length > 0) {
         showData.booMemory = memRes.data.data.booMemory;
@@ -1451,6 +1477,24 @@ function toggleSection(id) {
   if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
+// ─── ROS DROPDOWN ────────────────────────────────────────────────────────────
+function toggleRosMenu() {
+  const m = document.getElementById('ros-dropdown-menu');
+  if (m) m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+function closeRosMenu() {
+  const m = document.getElementById('ros-dropdown-menu');
+  if (m) m.style.display = 'none';
+}
+function openLiveRoS() {
+  closeRosMenu();
+  const epNum = showData.epNum || 'X';
+  window.open(`https://redsuncreative.github.io/beb/bsm-e${epNum}.html`, '_blank');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#ros-dropdown-wrap')) closeRosMenu();
+});
+
 // ─── GITHUB UPLOAD ───────────────────────────────────────────────────────────
 async function uploadToGitHub(filename, content) {
   const token = localStorage.getItem('beb_github_pat') || CLIENT_CONFIG.githubPAT;
@@ -1674,7 +1718,8 @@ async function generateROS() {
   });
   if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
 
-  const btn = document.getElementById('ros-btn');
+  closeRosMenu();
+  const btn = document.getElementById('ros-toggle-btn');
   const sharePanel = document.getElementById('ros-share-panel');
   btn.textContent = '⏳ BUILDING...';
   btn.disabled = true;
@@ -1834,9 +1879,10 @@ body{background:#fff;color:#000;font-family:'Barlow Condensed',sans-serif;font-s
       </div>`;
     sharePanel.style.display = 'block';
     btn.textContent = '✓ PUBLISHED';
-    setTimeout(() => { btn.textContent = '📄 GENERATE & SHARE RoS'; btn.disabled = false; }, 3000);
+    setTimeout(() => { btn.textContent = '📄 RoS  ▾'; btn.disabled = false; }, 3000);
   } else {
     btn.textContent = '⚠️ UPLOAD FAILED — check GitHub PAT';
+    setTimeout(() => { btn.textContent = '📄 RoS  ▾'; btn.disabled = false; }, 4000);
     btn.disabled = false;
   }
 }
@@ -1846,7 +1892,8 @@ function generateROSSimple() {
   const cues = showData.cues;
   if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
 
-  const btn = document.getElementById('ros-simple-btn');
+  closeRosMenu();
+  const btn = document.getElementById('ros-toggle-btn');
   btn.textContent = '⏳ BUILDING...';
   btn.disabled = true;
 
@@ -2054,7 +2101,7 @@ body{background:white;font-family:'Barlow Condensed',Arial,sans-serif;}
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank');
   btn.textContent = '✓ OPENED';
-  setTimeout(() => { btn.textContent = '⭕ ROS VISUAL (PRINT)'; btn.disabled = false; }, 2500);
+  setTimeout(() => { btn.textContent = '📄 RoS  ▾'; btn.disabled = false; }, 2500);
 }
 
 // ─── ROS EDIT PANEL ──────────────────────────────────────────────────────────
