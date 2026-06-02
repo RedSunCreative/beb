@@ -293,7 +293,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
   <div class="boo-panel">
     <div class="boo-chat-area" id="chat-area"></div>
     <div class="mic-area">
-      <div class="mic-status" id="mic-status">INITIALIZING MIC...</div>
+      <div class="mic-status" id="mic-status">SPEAKABOO OFF...</div>
       <div class="mic-row">
         <button class="mic-btn" id="mic-btn" onclick="toggleMicPause()">
           <svg class="mic-icon" viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm-7 8a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.94V22h-2v-2.06A9 9 0 0 1 3 11h2z"/></svg>
@@ -733,7 +733,7 @@ let pendingTranscript = '';
 function initMic() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
-    setMicStatus("MIC NOT SUPPORTED — USE TEXT", "");
+    setMicStatus("SPEAKABOO NOT SUPPORTED — USE TEXT", "");
     return;
   }
   recognition = new SR();
@@ -741,7 +741,7 @@ function initMic() {
   recognition.interimResults = true;
   recognition.lang = 'en-US';
 
-  recognition.onstart = () => setMicStatus("LISTENING...", "listening");
+  recognition.onstart = () => setMicStatus("SPEAKABOO LISTENING...", "listening");
 
   recognition.onresult = (e) => {
     // Always check for interrupt even while Boo is speaking
@@ -752,7 +752,7 @@ function initMic() {
           if (n.includes('hang on') || n.includes('hold on') || n.includes('stop boo') || n.includes('quiet boo') || n.includes("that's enough")) {
             stopBoo();
             unmuteMicAfterSpeaking();
-            setMicStatus("LISTENING...", "listening");
+            setMicStatus("SPEAKABOO LISTENING...", "listening");
           }
         }
       }
@@ -774,7 +774,7 @@ function initMic() {
         clearTimeout(silenceTimer);
         document.getElementById('mic-text').value = '';
         addBooMessage("Chilling. Say \"I'm ready\" whenever you need me back.");
-        setMicStatus("BOO IS CHILLING... (say \"I'm ready\")", "");
+        setMicStatus("SPEAKABOO CHILLING... (say \"I'm ready\")", "");
         const btn = document.getElementById('mic-btn');
         btn.classList.remove('listening');
         btn.classList.add('paused');
@@ -809,7 +809,7 @@ function initMic() {
 
   recognition.onerror = (e) => {
     if (e.error === 'no-speech') return;
-    setMicStatus("MIC ERROR — TAP TO RETRY", "");
+    setMicStatus("SPEAKABOO ERROR — TAP TO RETRY", "");
   };
 
   recognition.onend = () => {
@@ -829,7 +829,7 @@ function toggleMicPause() {
     try { recognition?.stop(); } catch(e) {}
     btn.classList.remove('listening');
     btn.classList.add('paused');
-    setMicStatus("MIC PAUSED — TAP TO RESUME", "");
+    setMicStatus("SPEAKABOO OFF — TAP TO ENABLE", "");
   } else {
     btn.classList.remove('paused');
     try { recognition?.start(); } catch(e) {}
@@ -842,7 +842,7 @@ function muteMicWhileSpeaking() {
   pendingTranscript = '';
   document.getElementById('mic-text').value = '';
   // Keep recognition running so interrupt phrases ("hang on", "hold on") are heard
-  setMicStatus("BOO IS SPEAKING...", "speaking");
+  setMicStatus("SPEAKABOO SPEAKING...", "speaking");
   document.getElementById('mic-btn').classList.add('speaking');
   document.getElementById('mic-btn').classList.remove('listening');
 }
@@ -958,13 +958,13 @@ async function speakBoo(text) {
     currentAudio.onended = () => {
       URL.revokeObjectURL(url);
       unmuteMicAfterSpeaking();
-      setMicStatus("LISTENING...", "listening");
+      setMicStatus("SPEAKABOO LISTENING...", "listening");
     };
     await currentAudio.play();
   } catch(e) {
     console.error('TTS error:', e);
     unmuteMicAfterSpeaking();
-    setMicStatus("LISTENING...", "listening");
+    setMicStatus("SPEAKABOO LISTENING...", "listening");
   }
 }
 
@@ -1265,7 +1265,7 @@ async function processUserInput(text) {
   document.getElementById('mic-text').value = '';
   document.getElementById('send-btn').disabled = true;
   addUserMessage(text);
-  setMicStatus("BOO IS THINKING...", "thinking");
+  setMicStatus("SPEAKABOO THINKING...", "thinking");
   document.getElementById('mic-btn').classList.add('thinking');
   showThinking();
 
@@ -2256,7 +2256,7 @@ window.addEventListener('load', async () => {
   micPaused = true;
   const micBtnEl = document.getElementById('mic-btn');
   micBtnEl.classList.add('paused');
-  setMicStatus("MIC OFF — TAP TO ENABLE VOICE", "");
+  setMicStatus("SPEAKABOO OFF — TAP TO ENABLE", "");
 
   // All data sections start expanded
   ['ep-body','runtime-body','guests-body','crew-body','cues-body','memory-body'].forEach(id => {
