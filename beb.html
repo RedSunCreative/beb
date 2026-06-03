@@ -875,7 +875,7 @@ function unmuteMicAfterSpeaking() {
   setTimeout(() => {
     echoGuard = false;
     pendingTranscript = '';
-    if (!micPaused && !booChillMode) {
+    if (!micPaused && !booChillMode && !isThinking) {
       try { recognition?.start(); } catch(e) {}
       setMicStatus("SPEAKABOO LISTENING...", "listening");
     }
