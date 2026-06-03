@@ -1241,13 +1241,13 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
   if (data.error || !res.ok) {
     const errMsg = data.error?.message || data.error?.type || `HTTP ${res.status}`;
     console.error('[Boo API error]', errMsg, data);
-    return { speech: `API error: ${errMsg}`, display: `<em>API error: ${errMsg}</em>`, updates: {} };
+    return { speech: "Didn't get a clean response — give it a moment and try again.", display: "<em>Didn't get a clean response. Give it a moment and try again.</em>", updates: {} };
   }
 
   const text = data.content?.filter(b => b.type === 'text').pop()?.text;
   if (!text) {
     console.error('[Boo] No text block in response', JSON.stringify(data).slice(0, 400));
-    return { speech: 'No response from Claude — check console.', display: 'No response from Claude — check console.', updates: {} };
+    return { speech: "Nothing came back — give it a moment and try again.", display: "<em>Nothing came back. Give it a moment and try again.</em>", updates: {} };
   }
 
   let parsed;
@@ -1336,9 +1336,8 @@ document.getElementById('mic-btn').classList.remove('thinking');
     hideThinking();
     document.getElementById('mic-btn').classList.remove('thinking');
     console.error('[Boo processUserInput error]', e);
-    const msg = `Error: ${e?.message || e}`;
-    addBooMessage(msg);
-    await speakBoo("Something went wrong — check the console.");
+    addBooMessage("<em>Ran into something — try that again.</em>");
+    await speakBoo("Ran into something. Try that again.");
   }
 
   isThinking = false;
