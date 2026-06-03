@@ -1061,9 +1061,7 @@ function setView(v){
     if (document.visibilityState === 'visible' && !lock) requestWakeLock();
   });
 
-  // 2. Invisible canvas animation — keeps the JS engine active even if Wake Lock
-  //    isn't supported. Draws a 1px color cycle so the browser never considers
-  //    the page idle.
+  // 2. Invisible canvas animation — keeps JS engine active
   const cv = document.createElement('canvas');
   cv.width = 1; cv.height = 1;
   cv.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;';
@@ -1077,6 +1075,36 @@ function setView(v){
     requestAnimationFrame(draw);
   }
   draw();
+
+  // 3. Capture canvas as a live video stream — Fire TV treats active video
+  //    playback as the strongest signal to keep the display on.
+  try {
+    const stream = cv.captureStream ? cv.captureStream(1) : null;
+    if (stream) {
+      const vid = document.createElement('video');
+      vid.srcObject = stream;
+      vid.muted = true;
+      vid.loop = true;
+      vid.playsInline = true;
+      vid.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;';
+      document.body.appendChild(vid);
+      vid.play().catch(() => {});
+    }
+  } catch(e) {}
+
+  // 4. Silent AudioContext — keeps the audio subsystem active as a secondary
+  //    signal. Zero gain so nothing is audible.
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    gain.gain.value = 0;
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start();
+    // Resume if suspended (browser autoplay policy)
+    document.addEventListener('click', () => { if (ac.state === 'suspended') ac.resume(); }, { once: true });
+  } catch(e) {}
 })();
 
 function applyRotationToOverlays(deg){
