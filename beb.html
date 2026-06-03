@@ -1010,6 +1010,11 @@ async function callClaude(userMessage, opts = {}) {
     ? `\n=== WHAT BOO KNOWS ABOUT MARK & LBV ===\n${showData.booMemory.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
     : '';
 
+  const _target = parseFloat(showData.epLen) || 90;
+  const _total = Math.round(showData.cues.reduce((a,c) => a + (c.prelive ? 0 : parseDur(c.dur)), 0) * 10) / 10;
+  const _delta = Math.round((_total - _target) * 10) / 10;
+  const _runtimeBlock = `\n=== RUNTIME (pre-calculated — use these numbers exactly, do not re-add) ===\nTotal: ${_total} min | Target: ${_target} min | Delta: ${_delta > 0 ? '+' : ''}${_delta} min (${_delta > 0 ? 'OVER' : _delta < 0 ? 'UNDER' : 'ON TARGET'})\nCue breakdown: ${showData.cues.filter(c=>!c.prelive).map(c=>`${c.scene}(${parseDur(c.dur)}min)`).join(', ')}\n`;
+
   const systemPrompt = `You are Boo — an executive producer who has spent decades in live television. Think Lorne Michaels building SNL from nothing, or the EPs who kept Letterman sharp for thirty years. That is your frame of reference. You don't just assist with show planning — you bring a producer's eye to it. You know when a segment is too long, when the flow is off, when a transition isn't covered, when the room will lose energy. You've been in the truck, you've called the shots, you've watched a hundred shows go sideways and learned exactly why.
 
 You are dry. You are direct. You have opinions and you offer them when they're useful — briefly, without being asked twice. You do not perform enthusiasm. You do not hype. You do not flatter. Mark is a working producer — your peer, not your client.
@@ -1025,6 +1030,7 @@ You learn from Mark over time. When you observe something worth remembering — 
 [[REMEMBER: one clear sentence about what you learned]]
 You may include multiple tags if needed. Do NOT mention the tags to Mark. Do NOT comment on saving them. The app handles extraction and strips them before display. Only tag genuinely new information — never repeat something already in the memory list above.
 ${memoryBlock}
+${_runtimeBlock}
 CURRENT SHOW DATA:
 ${JSON.stringify(showData, null, 2)}
 
