@@ -309,7 +309,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
           <img id="mic-img" class="mic-img" src="speakaboo-off.png" alt="SpeakaBoo">
         </button>
         <div class="mic-text-wrap">
-          <textarea class="mic-text" id="mic-text" placeholder="Listening... or type here" onkeydown="handleKey(event)"></textarea>
+          <textarea class="mic-text" id="mic-text" placeholder="Type here..." onkeydown="handleKey(event)"></textarea>
         </div>
         <button class="send-btn" id="send-btn" onclick="sendText()" data-tip="Send your message — or just press Enter.">SEND</button>
       </div>
@@ -479,6 +479,7 @@ let showData = {
   prelivePerformer:"", preliveMsg:"",
   guests:[], crew:[], cues:[], booMemory:[], crewReminderMsg:''
 };
+const parseDur = d => { if (!d) return 0; const s = String(d); if (s.includes(':')) { const [m,sec] = s.split(':'); return parseInt(m||0)+(parseInt(sec||0)/60); } return parseFloat(s)||0; };
 let conversationHistory = [];
 let isThinking = false;
 let isSpeaking = false;
@@ -895,13 +896,14 @@ function setMicStatus(text, cls) {
   const bar = document.getElementById('mic-status');
   const btn = document.getElementById('mic-btn');
   const img = document.getElementById('mic-img');
+  const textarea = document.getElementById('mic-text');
   const isError = text.includes('ERROR') || text.includes('NOT SUPPORTED');
   bar.textContent = isError ? text : '';
   bar.className = 'mic-status' + (isError ? ' show' : '');
   btn.className = 'mic-btn' + (cls ? ' ' + cls : '');
-  if (cls === 'listening') img.src = 'speakaboo-on.png';
-  else if (cls === 'speaking' || cls === 'thinking') img.src = 'speakaboo-waiting.png';
-  else img.src = 'speakaboo-off.png';
+  if (cls === 'listening') { img.src = 'speakaboo-on.png'; textarea.placeholder = 'Listening... or type here'; }
+  else if (cls === 'speaking' || cls === 'thinking') { img.src = 'speakaboo-waiting.png'; textarea.placeholder = 'Boo is thinking...'; }
+  else { img.src = 'speakaboo-off.png'; textarea.placeholder = 'Type here — or tap the button to speak'; }
 }
 
 function handleKey(e) {
@@ -1391,8 +1393,8 @@ function updateAllDisplays() {
   setVal('d-eplen', showData.epLen ? showData.epLen + ' min' : '');
   setVal('d-eppin', showData.pin);
 
-  const totalMins = showData.cues.reduce((a, c) => a + (c.prelive ? 0 : (parseInt(c.dur) || 0)), 0);
-  const target = parseInt(showData.epLen) || 90;
+  const totalMins = Math.round(showData.cues.reduce((a, c) => a + (c.prelive ? 0 : parseDur(c.dur)), 0) * 10) / 10;
+  const target = parseFloat(showData.epLen) || 90;
   const delta = totalMins - target;
   document.getElementById('rt-cues').textContent = showData.cues.length;
   document.getElementById('rt-total').textContent = totalMins + 'm';
@@ -1822,7 +1824,7 @@ async function generateROS() {
 
   const cfg = CLIENT_CONFIG;
   const epNum = showData.epNum || 'X';
-  const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseInt(c.dur) || 0)), 0);
+  const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseDur(c.dur) || 0)), 0);
 
   const C = { dark:'#ffffff', card:'#f5f5f5', border:'#cccccc', muted:'#555555',
                white:'#000000', gold:'#B8960A', teal:'#1a7a8a', orange:'#E8431A', green:'#1a7a40' };
@@ -1841,7 +1843,7 @@ async function generateROS() {
 
   const sceneRows = cues.map((c, i) => {
     const color = getColor(c);
-    const dur = Math.max(1, parseInt(c.dur) || 0);
+    const dur = Math.max(1, parseDur(c.dur) || 0);
     const runAtStart = runMins;
     if (!c.prelive) runMins += dur;
     const crewLines = crewDefs.filter(d => c[d.key]).map(d => {
@@ -1994,8 +1996,8 @@ function generateROSSimple() {
 
   const cfg = CLIENT_CONFIG;
   const epNum = showData.epNum || 'X';
-  const totalDur = cues.reduce((a, c) => a + Math.max(1, parseInt(c.dur) || 0), 0);
-  const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseInt(c.dur) || 0)), 0);
+  const totalDur = cues.reduce((a, c) => a + Math.max(1, parseDur(c.dur) || 0), 0);
+  const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseDur(c.dur) || 0)), 0);
 
   const typeColors = { pod:'#3BB8C9', music:'#F5D03A', kitchen:'#E8431A', video:'#7744bb', '':'#445566' };
   const preliveColor = '#1d6b35';
@@ -2033,13 +2035,13 @@ function generateROSSimple() {
   };
 
   // Center S1 at 12 o'clock instead of starting its edge there
-  const s1Sweep = (Math.max(1, parseInt(cues[0]?.dur) || 0) / totalDur) * 2 * Math.PI;
+  const s1Sweep = (Math.max(1, parseDur(cues[0]?.dur) || 0) / totalDur) * 2 * Math.PI;
 
   let wedgeSVG = '';
   let curAngle = -Math.PI / 2 - s1Sweep / 2;
 
   cues.forEach((c, i) => {
-    const dur = Math.max(1, parseInt(c.dur) || 0);
+    const dur = Math.max(1, parseDur(c.dur) || 0);
     const sweep = (dur / totalDur) * 2 * Math.PI;
     const sa = curAngle + GAP / 2;
     const ea = curAngle + sweep - GAP / 2;
