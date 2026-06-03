@@ -646,8 +646,9 @@ function getBooMsg(){
   if(standbyActive&&currentInsertStandby) return null;
   const m=Math.max(1,Math.ceil(segSecs/60));
   const min=m===1?"minute":"minutes";
-  if(c.booName&&c.booTpl) return {name:c.booName,msg:c.booTpl.replace("{M}",`${m} ${min}`)};
-  if(c.booTpl&&!c.booName) return {name:null,msg:c.booTpl.replace("{M}",`${m} ${min}`)};
+  const mSpan=`<span style="color:#F5D03A;font-weight:900;">${m} ${min}</span>`;
+  if(c.booName&&c.booTpl) return {name:c.booName,msg:c.booTpl.replace("{M}",mSpan)};
+  if(c.booTpl&&!c.booName) return {name:null,msg:c.booTpl.replace("{M}",mSpan)};
   return null;
 }
 
