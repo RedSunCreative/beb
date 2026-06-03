@@ -131,6 +131,21 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .guest-item:last-child{border-bottom:none;}
 .guest-name{color:var(--white);font-weight:600;}
 .guest-type{font-size:10px;color:var(--teal);letter-spacing:2px;}
+.crew-item{padding:8px 0;border-bottom:1px solid var(--border);}
+.crew-item:last-child{border-bottom:none;}
+.crew-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:5px;}
+.crew-inp{background:var(--dark);border:1px solid var(--border);border-radius:4px;padding:4px 6px;color:var(--white);font-size:11px;font-family:'Barlow',sans-serif;width:100%;box-sizing:border-box;}
+.crew-inp:focus{outline:none;border-color:var(--teal);}
+.crew-inp::placeholder{color:var(--muted);}
+.crew-actions{display:flex;gap:6px;align-items:center;}
+.crew-sms{font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--green);color:#fff;text-decoration:none;font-weight:700;}
+.crew-sms:hover{opacity:0.85;}
+.crew-remove{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 4px;line-height:1;}
+.crew-remove:hover{color:var(--white);}
+.crew-footer{display:flex;gap:8px;margin-top:10px;}
+.crew-add-btn{font-size:10px;letter-spacing:1px;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;}
+.crew-add-btn:hover{border-color:var(--teal);color:var(--teal);}
+.crew-textall-btn{font-size:10px;letter-spacing:1px;padding:5px 10px;border-radius:4px;background:var(--green);color:#fff;text-decoration:none;font-weight:700;font-family:'Barlow Condensed',sans-serif;}
 
 .runtime-bar{background:var(--dark);border-radius:6px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
 .runtime-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:500;}
@@ -361,6 +376,10 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
       <div class="data-section-body" id="crew-body">
         <div id="crew-list"><div style="font-size:12px;color:var(--muted)">Tell Boo your crew members...</div></div>
+        <div class="crew-footer">
+          <button class="crew-add-btn" onclick="addCrewMember()">+ ADD MEMBER</button>
+          <span id="crew-textall-wrap"></span>
+        </div>
       </div>
     </div>
 
@@ -1386,17 +1405,7 @@ function updateAllDisplays() {
         <div class="guest-type">${(g.stageType||'').toUpperCase()}</div>
       </div>`).join('');
 
-  const crewList = document.getElementById('crew-list');
-  crewList.innerHTML = (showData.crew||[]).length === 0
-    ? '<div style="font-size:12px;color:var(--muted)">Tell Boo your crew members...</div>'
-    : (showData.crew||[]).map(m => `
-      <div class="guest-item">
-        <div>
-          <div class="guest-name">${m.name}</div>
-          <div style="font-size:11px;color:var(--muted)">${m.mobile||''}</div>
-        </div>
-        <div class="guest-type">${(m.role||'').toUpperCase()}</div>
-      </div>`).join('');
+  renderCrewList();
 
   renderMemory();
 
@@ -1450,6 +1459,84 @@ function initCueDrag() {
       saveState();
     });
   });
+}
+
+function renderCrewList() {
+  const crew = showData.crew || [];
+  const list = document.getElementById('crew-list');
+  const epNum = showData.epNum || '';
+  const epTitle = showData.epTitle || '';
+  const epDate = showData.epDate || '';
+  const msgBody = encodeURIComponent(`Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}. See you on set.`);
+
+  list.innerHTML = crew.length === 0
+    ? '<div style="font-size:12px;color:var(--muted)">Tell Boo your crew members, or add one below.</div>'
+    : crew.map((m, i) => {
+        const smsHref = m.mobile ? `sms:${m.mobile}?body=${msgBody}` : '';
+        return `<div class="crew-item">
+          <div class="crew-fields">
+            <input class="crew-inp" placeholder="Name" value="${esc(m.name||'')}" onchange="updateCrew(${i},'name',this.value)">
+            <input class="crew-inp" placeholder="Role" value="${esc(m.role||'')}" onchange="updateCrew(${i},'role',this.value)">
+            <input class="crew-inp" placeholder="Mobile" value="${esc(m.mobile||'')}" onchange="updateCrew(${i},'mobile',this.value)">
+          </div>
+          <div class="crew-actions">
+            ${smsHref ? `<a class="crew-sms" href="${smsHref}">TEXT</a>` : '<span style="font-size:10px;color:var(--muted)">no mobile</span>'}
+            <button class="crew-remove" onclick="removeCrew(${i})" title="Remove">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+
+  const withMobile = crew.filter(m => m.mobile);
+  const wrap = document.getElementById('crew-textall-wrap');
+  if (withMobile.length > 1) {
+    const allNums = withMobile.map(m => m.mobile).join(',');
+    wrap.innerHTML = `<a class="crew-textall-btn" href="sms:${allNums}?body=${msgBody}">TEXT ALL</a>`;
+  } else {
+    wrap.innerHTML = '';
+  }
+}
+
+function updateCrew(idx, field, value) {
+  if (!showData.crew[idx]) return;
+  showData.crew[idx][field] = value;
+  saveState();
+  const epNum = showData.epNum || '';
+  const epTitle = showData.epTitle || '';
+  const epDate = showData.epDate || '';
+  const msgBody = encodeURIComponent(`Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}. See you on set.`);
+  const m = showData.crew[idx];
+  const row = document.querySelectorAll('.crew-item')[idx];
+  if (row) {
+    const smsEl = row.querySelector('.crew-actions');
+    const smsHref = m.mobile ? `sms:${m.mobile}?body=${msgBody}` : '';
+    smsEl.innerHTML = (smsHref ? `<a class="crew-sms" href="${smsHref}">TEXT</a>` : '<span style="font-size:10px;color:var(--muted)">no mobile</span>')
+      + `<button class="crew-remove" onclick="removeCrew(${idx})" title="Remove">✕</button>`;
+  }
+  const withMobile = showData.crew.filter(m => m.mobile);
+  const wrap = document.getElementById('crew-textall-wrap');
+  if (withMobile.length > 1) {
+    const allNums = withMobile.map(m => m.mobile).join(',');
+    wrap.innerHTML = `<a class="crew-textall-btn" href="sms:${allNums}?body=${msgBody}">TEXT ALL</a>`;
+  } else {
+    wrap.innerHTML = '';
+  }
+}
+
+function removeCrew(idx) {
+  showData.crew.splice(idx, 1);
+  document.getElementById('crew-count').textContent = showData.crew.length;
+  saveState();
+  renderCrewList();
+}
+
+function addCrewMember() {
+  if (!showData.crew) showData.crew = [];
+  showData.crew.push({ name: '', role: '', mobile: '' });
+  document.getElementById('crew-count').textContent = showData.crew.length;
+  saveState();
+  renderCrewList();
+  const inputs = document.querySelectorAll('.crew-inp');
+  if (inputs.length) inputs[inputs.length - 3].focus();
 }
 
 function renderMemory() {
