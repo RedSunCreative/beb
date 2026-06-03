@@ -296,6 +296,27 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
 
+    <div class="settings-section">
+      <div class="settings-section-label">FIRE TVS <span style="font-size:10px;color:var(--muted);margin-left:8px;">IP addresses for ADB push</span></div>
+      <div class="settings-note" style="margin-bottom:10px;">Enter the IP of each Fire TV (Settings → My Fire TV → About → Network). Run <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;">npm run adb-server</code> on your Mac to enable one-tap push.</div>
+      <div class="settings-field">
+        <div class="settings-field-label">Fire TV 1</div>
+        <input type="text" class="settings-input" id="st-tv-1" placeholder="192.168.1.x">
+      </div>
+      <div class="settings-field">
+        <div class="settings-field-label">Fire TV 2</div>
+        <input type="text" class="settings-input" id="st-tv-2" placeholder="192.168.1.x">
+      </div>
+      <div class="settings-field">
+        <div class="settings-field-label">Fire TV 3</div>
+        <input type="text" class="settings-input" id="st-tv-3" placeholder="192.168.1.x">
+      </div>
+      <div class="settings-field">
+        <div class="settings-field-label">Fire TV 4</div>
+        <input type="text" class="settings-input" id="st-tv-4" placeholder="192.168.1.x">
+      </div>
+    </div>
+
     <div class="settings-footer">
       <button class="settings-btn settings-btn-cancel" onclick="closeSettings()">CANCEL</button>
       <button class="settings-btn settings-btn-save" onclick="saveSettings()">SAVE SETTINGS</button>
@@ -2058,15 +2079,54 @@ function crewTextButtons(msg) {
     '</div>';
 }
 
+function getFireTVs() {
+  return [1,2,3,4].map(n => localStorage.getItem(`beb_firetv_${n}`)).filter(Boolean);
+}
+
+async function pushToFireTVs(url, btnEl) {
+  const tvs = getFireTVs();
+  if (!tvs.length) {
+    btnEl.textContent = 'No Fire TVs configured — add IPs in ⚙ Settings';
+    setTimeout(() => { btnEl.textContent = '📺 PUSH TO FIRE TVs'; }, 3000);
+    return;
+  }
+  btnEl.textContent = '⏳ Pushing...';
+  btnEl.disabled = true;
+  const results = await Promise.all(tvs.map(async ip => {
+    try {
+      const r = await fetch('http://localhost:3001/adb/open-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip, url }),
+        signal: AbortSignal.timeout(12000)
+      });
+      const d = await r.json();
+      return { ip, ok: d.ok, error: d.error };
+    } catch(e) {
+      return { ip, ok: false, error: 'Server not running — start with: npm run adb-server' };
+    }
+  }));
+  const success = results.filter(r => r.ok);
+  const fail = results.filter(r => !r.ok);
+  let summary = success.length ? `✓ Pushed to ${success.map(r=>r.ip).join(', ')}` : '';
+  if (fail.length) summary += (summary ? ' · ' : '') + `✕ ${fail[0].error}`;
+  btnEl.textContent = summary || 'Done';
+  btnEl.disabled = false;
+  setTimeout(() => { btnEl.textContent = '📺 PUSH TO FIRE TVs'; }, 5000);
+}
+
 function showScriptsSharePanel(label, url, hasLink) {
   const panel = document.getElementById('scripts-share-panel');
   const epNum = showData.epNum || 'X';
   const epTitle = showData.epTitle || 'Little Big Voices';
   const epDate = showData.epDate || '';
   const msg = `${epTitle} — Episode ${epNum}${epDate ? ', ' + epDate : ''}. ${url}`;
+  const tvs = getFireTVs();
+  const tvBtn = hasLink ? `<button onclick="pushToFireTVs('${url}',this)" style="background:#1a3a5a;color:var(--teal);border:1px solid var(--teal);padding:6px 12px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;">📺 PUSH TO FIRE TVs${tvs.length ? ' ('+tvs.length+')' : ''}</button>` : '';
   const linkButtons = hasLink ? `
     <a href="${url}" target="_blank" style="background:var(--teal);color:#fff;padding:6px 12px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-decoration:none;">OPEN ↗</a>
-    <button onclick="navigator.clipboard.writeText('${url.replace(/'/g, "\\'")}');this.textContent='COPIED ✓';setTimeout(()=>this.textContent='COPY LINK',2000)" style="background:var(--border);color:var(--white);padding:6px 12px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;border:none;cursor:pointer;">COPY LINK</button>` : '';
+    <button onclick="navigator.clipboard.writeText('${url.replace(/'/g, "\\'")}');this.textContent='COPIED ✓';setTimeout(()=>this.textContent='COPY LINK',2000)" style="background:var(--border);color:var(--white);padding:6px 12px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;border:none;cursor:pointer;">COPY LINK</button>
+    ${tvBtn}` : '';
   panel.innerHTML = `
     <div style="color:var(--teal);font-size:10px;letter-spacing:2px;font-weight:bold;margin-bottom:8px;">${label}</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">${linkButtons}</div>
@@ -2202,6 +2262,10 @@ const SETTINGS_KEYS = {
   'st-xi-voice':    'beb_xi_voice',
   'st-sb-url':      'beb_sb_url',
   'st-sb-key':      'beb_sb_key',
+  'st-tv-1':        'beb_firetv_1',
+  'st-tv-2':        'beb_firetv_2',
+  'st-tv-3':        'beb_firetv_3',
+  'st-tv-4':        'beb_firetv_4',
 };
 const SETTINGS_STATUS_IDS = {
   'st-github-pat':  'st-github-status',

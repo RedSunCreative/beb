@@ -4,7 +4,8 @@
   "description": "Voice-interactive show planning app for Little Big Voices",
   "scripts": {
     "start": "serve . -p 3000",
-    "dev": "serve . -p 3000"
+    "dev": "serve . -p 3000",
+    "adb-server": "node server.js"
   },
   "devDependencies": {
     "playwright": "^1.60.0",
