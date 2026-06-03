@@ -145,8 +145,6 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .crew-footer{display:flex;gap:8px;margin-top:10px;}
 .crew-add-btn{font-size:10px;letter-spacing:1px;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;}
 .crew-add-btn:hover{border-color:var(--teal);color:var(--teal);}
-.crew-textall-btn{font-size:10px;letter-spacing:1px;padding:5px 10px;border-radius:4px;background:var(--green);color:#fff;text-decoration:none;font-weight:700;font-family:'Barlow Condensed',sans-serif;}
-
 .runtime-bar{background:var(--dark);border-radius:6px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
 .runtime-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:500;}
 .runtime-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
@@ -375,10 +373,13 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
         <div class="data-section-count" id="crew-count">0</div>
       </div>
       <div class="data-section-body" id="crew-body">
-        <div id="crew-list"><div style="font-size:12px;color:var(--muted)">Tell Boo your crew members...</div></div>
+        <div id="crew-msg-wrap" style="display:none;margin-bottom:10px;">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">REMINDER MESSAGE</div>
+          <textarea class="crew-inp" id="crew-msg-inp" rows="2" style="resize:vertical;width:100%;box-sizing:border-box;" placeholder="What Boo sends when you tap TEXT..." onchange="updateCrewMsg(this.value)"></textarea>
+        </div>
+        <div id="crew-list"><div style="font-size:12px;color:var(--muted)">Tell Boo your crew members, or add one below.</div></div>
         <div class="crew-footer">
           <button class="crew-add-btn" onclick="addCrewMember()">+ ADD MEMBER</button>
-          <span id="crew-textall-wrap"></span>
         </div>
       </div>
     </div>
@@ -482,7 +483,7 @@ const CLIENT_CONFIG = {
 let showData = {
   epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:90, pin:"5000",
   prelivePerformer:"", preliveMsg:"",
-  guests:[], crew:[], cues:[], booMemory:[]
+  guests:[], crew:[], cues:[], booMemory:[], crewReminderMsg:''
 };
 let conversationHistory = [];
 let isThinking = false;
@@ -699,7 +700,7 @@ async function handleSwitchEpisode(rowId) {
   if (rowId === currentEpRow) return;
   await saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory };
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
   conversationHistory = [];
   const loaded = await loadState(rowId);
   if (loaded) {
@@ -715,7 +716,7 @@ function handleNewEpisode() {
   document.getElementById('ep-list-panel').style.display = 'none';
   saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory };
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
   conversationHistory = [];
   currentEpRow = 0;
   localStorage.setItem('beb_current_ep_row', '0');
@@ -1461,13 +1462,24 @@ function initCueDrag() {
   });
 }
 
-function renderCrewList() {
-  const crew = showData.crew || [];
-  const list = document.getElementById('crew-list');
+function crewDefaultMsg() {
   const epNum = showData.epNum || '';
   const epTitle = showData.epTitle || '';
   const epDate = showData.epDate || '';
-  const msgBody = encodeURIComponent(`Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}. See you on set.`);
+  return `Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}. See you on set.`;
+}
+
+function renderCrewList() {
+  const crew = showData.crew || [];
+  const list = document.getElementById('crew-list');
+  const msgWrap = document.getElementById('crew-msg-wrap');
+  const msgInp = document.getElementById('crew-msg-inp');
+  const hasMobile = crew.some(m => m.mobile);
+  const msg = showData.crewReminderMsg || crewDefaultMsg();
+  const msgBody = encodeURIComponent(msg);
+
+  msgWrap.style.display = hasMobile ? 'block' : 'none';
+  if (hasMobile) msgInp.value = msg;
 
   list.innerHTML = crew.length === 0
     ? '<div style="font-size:12px;color:var(--muted)">Tell Boo your crew members, or add one below.</div>'
@@ -1485,41 +1497,23 @@ function renderCrewList() {
           </div>
         </div>`;
       }).join('');
+}
 
-  const withMobile = crew.filter(m => m.mobile);
-  const wrap = document.getElementById('crew-textall-wrap');
-  if (withMobile.length > 1) {
-    const allNums = withMobile.map(m => m.mobile).join(',');
-    wrap.innerHTML = `<a class="crew-textall-btn" href="sms:${allNums}?body=${msgBody}">TEXT ALL</a>`;
-  } else {
-    wrap.innerHTML = '';
-  }
+function updateCrewMsg(value) {
+  showData.crewReminderMsg = value;
+  saveState();
+  const msgBody = encodeURIComponent(value || crewDefaultMsg());
+  document.querySelectorAll('.crew-sms').forEach((a, i) => {
+    const mobile = showData.crew[i]?.mobile;
+    if (mobile) a.href = `sms:${mobile}?body=${msgBody}`;
+  });
 }
 
 function updateCrew(idx, field, value) {
   if (!showData.crew[idx]) return;
   showData.crew[idx][field] = value;
   saveState();
-  const epNum = showData.epNum || '';
-  const epTitle = showData.epTitle || '';
-  const epDate = showData.epDate || '';
-  const msgBody = encodeURIComponent(`Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}. See you on set.`);
-  const m = showData.crew[idx];
-  const row = document.querySelectorAll('.crew-item')[idx];
-  if (row) {
-    const smsEl = row.querySelector('.crew-actions');
-    const smsHref = m.mobile ? `sms:${m.mobile}?body=${msgBody}` : '';
-    smsEl.innerHTML = (smsHref ? `<a class="crew-sms" href="${smsHref}">TEXT</a>` : '<span style="font-size:10px;color:var(--muted)">no mobile</span>')
-      + `<button class="crew-remove" onclick="removeCrew(${idx})" title="Remove">✕</button>`;
-  }
-  const withMobile = showData.crew.filter(m => m.mobile);
-  const wrap = document.getElementById('crew-textall-wrap');
-  if (withMobile.length > 1) {
-    const allNums = withMobile.map(m => m.mobile).join(',');
-    wrap.innerHTML = `<a class="crew-textall-btn" href="sms:${allNums}?body=${msgBody}">TEXT ALL</a>`;
-  } else {
-    wrap.innerHTML = '';
-  }
+  if (field === 'mobile') renderCrewList();
 }
 
 function removeCrew(idx) {
