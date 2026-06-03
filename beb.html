@@ -831,7 +831,6 @@ function initMic() {
   };
 
   recognition.onend = () => {
-    if (echoGuard) return; // cooldown after Boo speaks — don't restart yet
     if (isSpeaking || (!micPaused || booChillMode)) {
       setTimeout(() => { try { recognition.start(); } catch(e){} }, 200);
     }
@@ -871,12 +870,11 @@ function unmuteMicAfterSpeaking() {
   pendingTranscript = '';
   clearTimeout(silenceTimer);
   document.getElementById('mic-btn').classList.remove('speaking');
-  try { recognition?.stop(); } catch(e) {}
+  // Keep recognition running — just discard results for 1.5s to clear echo
   setTimeout(() => {
     echoGuard = false;
     pendingTranscript = '';
     if (!micPaused && !booChillMode && !isThinking) {
-      try { recognition?.start(); } catch(e) {}
       setMicStatus("SPEAKABOO LISTENING...", "listening");
     }
   }, 1500);
