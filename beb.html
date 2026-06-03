@@ -1371,6 +1371,23 @@ document.getElementById('mic-btn').classList.remove('thinking');
     const safeDisplay = looksLikeJSON ? "Done — I've updated the show data. Check the panel!" : rawDisplay;
     const safeSpeech = looksLikeJSON ? "Done! I've updated the show data — check the panel." : rawSpeech;
 
+    // Auto-correct: if speech implies a cue change but no cues came through, ask Boo silently
+    const speechLower = (rawSpeech + ' ' + rawDisplay).toLowerCase();
+    const impliesCueChange = /\b(added|adding|add|scene|cue|removed|removing|deleted|moved|reorder|renamed|closing|opening|inserted|insert|changed|dropped|cut|trimm|shorten|credits|updated|new scene)\b/.test(speechLower);
+    const cuesMissing = !(response.updates?.cues?.length > 0);
+    if (impliesCueChange && cuesMissing) {
+      conversationHistory.push({ role: 'user', content: "Your last response didn't include updates.cues. Send the complete updated cues array now. No speech needed — just the JSON." });
+      try {
+        const fix = await callClaude("Your last response didn't include updates.cues. Send the complete updated cues array now. No speech needed — just the JSON.");
+        if (fix?.updates?.cues?.length > 0) {
+          showData.cues = fix.updates.cues;
+          conversationHistory.push({ role: 'assistant', content: JSON.stringify(fix) });
+          response.updates = response.updates || {};
+          response.updates.cues = fix.updates.cues;
+        }
+      } catch(e) { console.error('[cue auto-correct]', e); }
+    }
+
     // Show what was actually updated so missed updates are visible
     const u2 = response.updates || {};
     const updated = [];
