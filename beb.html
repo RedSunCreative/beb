@@ -411,32 +411,24 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     </div>
 
     <div class="ros-dropdown-wrap" id="ros-dropdown-wrap">
-      <button class="generate-btn ros" id="ros-toggle-btn" onclick="toggleRosMenu()" style="margin-top:0;" data-tip="Publish your run of show. Live for show day, Static for print, Graphic for the wheel.">📄 RUN OF SHOW &nbsp;▾</button>
+      <button class="generate-btn ros" id="ros-toggle-btn" onclick="toggleRosMenu()" style="margin-top:0;" data-tip="Publish or print your show scripts.">📄 SHOW SCRIPTS &nbsp;▾</button>
       <div class="ros-dropdown-menu" id="ros-dropdown-menu">
-        <div class="ros-menu-item" onclick="openLiveRoS()">
-          <div class="ros-item-name">▶ Open Live Run of Show</div>
-          <div class="ros-item-desc">Opens the published show manager in a new tab</div>
+        <div class="ros-menu-item" onclick="generateBSM()">
+          <div class="ros-item-name">⚡ Publish Live Show Script</div>
+          <div class="ros-item-desc">Builds and publishes the live show controller to the web</div>
         </div>
         <div class="ros-menu-item" onclick="generateROS()">
-          <div class="ros-item-name">📄 Generate Static Run of Show</div>
-          <div class="ros-item-desc">Formatted doc — text to crew or print to PDF</div>
+          <div class="ros-item-name">📄 Print Static Show Script</div>
+          <div class="ros-item-desc">Full formatted show doc — open in browser and print to PDF</div>
         </div>
-        <div class="ros-menu-item" onclick="generateROSSimple()">
-          <div class="ros-item-name">⭕ Generate Run of Show Infographic</div>
-          <div class="ros-item-desc">Visual wheel — great for the studio wall or call sheet</div>
+        <div class="ros-menu-item" onclick="generateSceneList()">
+          <div class="ros-item-name">📋 Print Static Scene List</div>
+          <div class="ros-item-desc">Simple one-page scene list with names and durations</div>
         </div>
       </div>
     </div>
-    <div id="ros-share-panel" style="display:none;margin-top:8px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
-    <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);" data-tip="Review scene names, timings, and crew notes before you publish.">✏️ EDIT RUN OF SHOW SCRIPT</button>
-    <button class="generate-btn" id="generate-btn" onclick="generateBSM()" data-tip="Builds the live show controller and puts it on the web. This is what runs on set.">⚡ GENERATE BOO SHOW MANAGER</button>
-
-    <div id="bsm-qr-wrap" style="display:none;margin-top:8px;padding:14px;background:rgba(0,196,74,0.05);border:1px solid rgba(0,196,74,0.18);border-radius:8px;text-align:center;">
-      <div style="font-size:9px;color:var(--green);letter-spacing:4px;font-weight:700;margin-bottom:10px;">SCAN TO OPEN BSM</div>
-      <div id="bsm-qr-code" style="background:white;padding:7px;border-radius:5px;display:inline-block;"></div>
-      <div id="bsm-qr-url" style="font-size:9px;color:var(--muted);letter-spacing:0.5px;margin-top:8px;word-break:break-all;line-height:1.4;"></div>
-      <a id="bsm-open-link" href="#" target="_blank" style="display:inline-block;margin-top:10px;padding:7px 16px;background:rgba(0,196,74,0.12);border:1px solid rgba(0,196,74,0.35);border-radius:6px;color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-decoration:none;">⚡ OPEN BSM IN NEW TAB</a>
-    </div>
+    <div id="scripts-share-panel" style="display:none;margin-top:8px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
+    <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);" data-tip="Review scene names, timings, and crew notes before you publish.">✏️ EDIT SHOW SCRIPT</button>
 
   </div>
 </div>
@@ -1647,8 +1639,9 @@ async function uploadToGitHub(filename, content) {
 
 // ─── GENERATE BSM ───
 async function generateBSM() {
-  const btn = document.getElementById('generate-btn');
-  btn.textContent = '⏳ GENERATING...';
+  closeRosMenu();
+  const btn = document.getElementById('ros-toggle-btn');
+  btn.textContent = '⏳ PUBLISHING...';
   btn.disabled = true;
 
   const split = s => s ? s.split('\n').map(l => l.trim()).filter(Boolean) : [];
@@ -1714,14 +1707,10 @@ async function generateBSM() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    // Show QR code immediately
+
+    // Build share URL
     const bsmUrl = `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
-    const qrEl = document.getElementById('bsm-qr-code');
-    qrEl.innerHTML = '';
-    new QRCode(qrEl, { text: bsmUrl, width: 148, height: 148, colorDark: '#111', colorLight: '#fff' });
-    document.getElementById('bsm-qr-url').textContent = bsmUrl;
-    document.getElementById('bsm-open-link').href = bsmUrl;
-    document.getElementById('bsm-qr-wrap').style.display = 'block';
+
 
     // Upload to GitHub if PAT is configured
     if (localStorage.getItem('beb_github_pat') || CLIENT_CONFIG.githubPAT) {
@@ -1730,15 +1719,21 @@ async function generateBSM() {
       const ok = await uploadToGitHub(filename, output);
       const epDate = showData.epDate || new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
       btn.style.color = '';
-      btn.textContent = ok ? `✓ RoS ${epDate} — LIVE!` : '⚠️ DOWNLOADED — UPLOAD FAILED';
+      if (ok) {
+        const bsmUrl = `https://${CLIENT_CONFIG.githubRepo?.split('/')[0]?.toLowerCase()}.github.io/${CLIENT_CONFIG.githubRepo?.split('/')[1]}/${filename}`;
+        showScriptsSharePanel('✓ Live Show Script published', bsmUrl, true);
+        btn.textContent = '✓ PUBLISHED';
+      } else {
+        btn.textContent = '⚠️ UPLOAD FAILED — check GitHub PAT';
+      }
     } else {
-      btn.textContent = `✓ DOWNLOADED ${filename.toUpperCase()}`;
+      btn.textContent = `✓ DOWNLOADED`;
     }
-    setTimeout(() => { btn.textContent = '⚡ GENERATE BOO SHOW MANAGER'; btn.disabled = false; }, 8000);
+    setTimeout(() => { btn.textContent = '📄 SHOW SCRIPTS ▾'; btn.disabled = false; }, 5000);
   } catch(e) {
     console.error(e);
-    btn.textContent = '✕ GENERATE FAILED — CHECK CONSOLE';
-    setTimeout(() => { btn.textContent = '⚡ GENERATE BOO SHOW MANAGER'; btn.disabled = false; }, 3000);
+    btn.textContent = '✕ FAILED — check console';
+    setTimeout(() => { btn.textContent = '📄 SHOW SCRIPTS ▾'; btn.disabled = false; }, 3000);
   }
 }
 
@@ -1834,7 +1829,7 @@ async function generateROS() {
 
   closeRosMenu();
   const btn = document.getElementById('ros-toggle-btn');
-  const sharePanel = document.getElementById('ros-share-panel');
+  const sharePanel = document.getElementById('scripts-share-panel');
   btn.textContent = '⏳ BUILDING...';
   btn.disabled = true;
   sharePanel.style.display = 'none';
@@ -1982,241 +1977,112 @@ body{background:#fff;color:#000;font-family:'Barlow Condensed',sans-serif;font-s
   const uploaded = await uploadToGitHub(filename, html);
 
   if (uploaded) {
-    const smsMsg = encodeURIComponent(`Here's the Static RoS for Episode ${epNum}. See you on the set! Peace, Boo, Little Big Voices Show Manager.\n\n${rosUrl}`);
-    sharePanel.innerHTML = `
-      <div style="color:var(--teal);font-size:11px;letter-spacing:2px;font-weight:bold;margin-bottom:8px;">✓ STATIC RoS PUBLISHED</div>
-      <div style="font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:10px;">${rosUrl}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="sms:?body=${smsMsg}" style="background:var(--green);color:#fff;padding:8px 14px;border-radius:6px;font-size:11px;font-weight:bold;letter-spacing:1px;text-decoration:none;">📱 TEXT TO CREW</a>
-        <a href="${rosUrl}" target="_blank" style="background:var(--teal);color:#fff;padding:8px 14px;border-radius:6px;font-size:11px;font-weight:bold;letter-spacing:1px;text-decoration:none;">🌐 OPEN</a>
-        <button onclick="navigator.clipboard.writeText('${rosUrl}')" style="background:var(--border);color:var(--white);padding:8px 14px;border-radius:6px;font-size:11px;font-weight:bold;letter-spacing:1px;border:none;cursor:pointer;">📋 COPY LINK</button>
-      </div>`;
-    sharePanel.style.display = 'block';
-    btn.textContent = '✓ PUBLISHED';
-    setTimeout(() => { btn.textContent = '📄 RoS  ▾'; btn.disabled = false; }, 3000);
+    showScriptsSharePanel('\u2713 Static Show Script published', rosUrl, true);
+    btn.textContent = '\u2713 PUBLISHED';
+    setTimeout(() => { btn.textContent = '\U0001F4C4 SHOW SCRIPTS \u25be'; btn.disabled = false; }, 4000);
   } else {
-    btn.textContent = '⚠️ UPLOAD FAILED — check GitHub PAT';
-    setTimeout(() => { btn.textContent = '📄 RoS  ▾'; btn.disabled = false; }, 4000);
+    btn.textContent = '\u26a0\ufe0f UPLOAD FAILED — check GitHub PAT';
+    setTimeout(() => { btn.textContent = '\U0001F4C4 SHOW SCRIPTS \u25be'; btn.disabled = false; }, 4000);
     btn.disabled = false;
   }
 }
 
-// ─── GENERATE ROS SIMPLE ─────────────────────────────────────────────────────
-function generateROSSimple() {
-  const cues = showData.cues;
-  if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
+// ─── SCRIPTS SHARE PANEL ─────────────────────────────────────────────────────
+function crewTextButtons(msg) {
+  const crew = (showData.crew || []).filter(m => m.mobile);
+  if (!crew.length) return '';
+  const body = encodeURIComponent(msg);
+  return '<div style="margin-top:8px;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">TEXT CREW</div>' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
+    crew.map(m => `<a href="sms:${m.mobile}?body=${body}" style="background:var(--green);color:#fff;padding:5px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-decoration:none;">${m.name.split(' ')[0]}</a>`).join('') +
+    '</div>';
+}
 
-  closeRosMenu();
-  const btn = document.getElementById('ros-toggle-btn');
-  btn.textContent = '⏳ BUILDING...';
-  btn.disabled = true;
-
-  const cfg = CLIENT_CONFIG;
+function showScriptsSharePanel(label, url, hasLink) {
+  const panel = document.getElementById('scripts-share-panel');
   const epNum = showData.epNum || 'X';
-  const totalDur = cues.reduce((a, c) => a + Math.max(1, parseDur(c.dur) || 0), 0);
-  const showRuntime = cues.reduce((a, c) => a + (c.prelive ? 0 : Math.max(1, parseDur(c.dur) || 0)), 0);
+  const epTitle = showData.epTitle || 'Little Big Voices';
+  const epDate = showData.epDate || '';
+  const msg = `${epTitle} — Episode ${epNum}${epDate ? ', ' + epDate : ''}. ${url}`;
+  const linkButtons = hasLink ? `
+    <a href="${url}" target="_blank" style="background:var(--teal);color:#fff;padding:6px 12px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-decoration:none;">OPEN ↗</a>
+    <button onclick="navigator.clipboard.writeText('${url.replace(/'/g, "\\'")}');this.textContent='COPIED ✓';setTimeout(()=>this.textContent='COPY LINK',2000)" style="background:var(--border);color:var(--white);padding:6px 12px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;border:none;cursor:pointer;">COPY LINK</button>` : '';
+  panel.innerHTML = `
+    <div style="color:var(--teal);font-size:10px;letter-spacing:2px;font-weight:bold;margin-bottom:8px;">${label}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">${linkButtons}</div>
+    ${crewTextButtons(msg)}`;
+  panel.style.display = 'block';
+}
 
-  const typeColors = { pod:'#3BB8C9', music:'#F5D03A', kitchen:'#E8431A', video:'#7744bb', '':'#445566' };
-  const preliveColor = '#1d6b35';
-  function getColor(c) { return c.prelive ? preliveColor : (typeColors[c.stageType] || typeColors['']); }
+// ─── GENERATE SCENE LIST ──────────────────────────────────────────────────────
+function generateSceneList() {
+  const cues = showData.cues.filter(c => !c.prelive);
+  if (!cues.length) { addBooMessage("No scenes yet — ask Boo to build the run of show first."); return; }
+  closeRosMenu();
 
-  const cx = 370, cy = 370, outerR = 355, innerR = 122;
-  // Shift text toward outer ring for more arc width and bigger fonts
-  const textR = Math.round(innerR + (outerR - innerR) * 0.70);  // ~285
-  const GAP = 0.012;
+  const epNum  = showData.epNum  || 'X';
+  const epTitle = showData.epTitle || 'Little Big Voices';
+  const epDate  = showData.epDate  || '';
+  const total   = Math.round(showData.cues.reduce((a,c) => a + (c.prelive ? 0 : parseDur(c.dur)), 0) * 10) / 10;
 
-  // Word-wrap for SVG wedge text
-  const wrapWords = (text, maxCh, maxLines = 3) => {
-    const words = text.split(' ');
-    const lines = [];
-    let cur = '';
-    for (const w of words) {
-      const t = cur ? cur + ' ' + w : w;
-      if (t.length <= maxCh) { cur = t; }
-      else { if (cur) lines.push(cur); cur = w.length > maxCh ? w.substring(0, maxCh - 1) + '…' : w; }
+  // Try to find a person's name for each scene
+  const guestNames = (showData.guests || []).map(g => g.name).filter(Boolean);
+  function personFor(cue) {
+    const s = (cue.scene || '').toLowerCase();
+    for (const name of guestNames) {
+      if (s.includes(name.toLowerCase().split(' ')[0])) return name;
     }
-    if (cur) lines.push(cur);
-    return lines.slice(0, maxLines);
-  };
+    if (/clos|credit|goodbye|finale|danc/i.test(s)) return 'All Cast & Crew';
+    if (/crew|shout/i.test(s)) return 'Crew';
+    return '';
+  }
 
-  // SVG icon paths centered at (0,0), ~±10 unit radius — scaled per wedge
-  const wedgeIcon = (stageType, prelive) => {
-    if (prelive) return `<circle r="8" fill="none" stroke="white" stroke-width="1.8"/><polyline points="0,-5 0,0 3.5,2.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
-    switch (stageType) {
-      case 'music':   return `<ellipse cx="-2" cy="5" rx="4" ry="2.8" transform="rotate(-25,-2,5)" fill="white"/><line x1="1.8" y1="5" x2="1.8" y2="-8" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="1.8" y1="-8" x2="8" y2="-6" stroke="white" stroke-width="2" stroke-linecap="round"/>`;
-      case 'kitchen': return `<polygon points="0,-11 2.5,-2.5 11,0 2.5,2.5 0,11 -2.5,2.5 -11,0 -2.5,-2.5" fill="white"/>`;
-      case 'video':   return `<polygon points="-7,-9 9,0 -7,9" fill="white"/>`;
-      case 'pod':     return `<rect x="-4" y="-9" width="8" height="11" rx="4" fill="white"/><path d="M-7,0 Q-7,9 0,9 Q7,9 7,0" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="0" y1="9" x2="0" y2="13" stroke="white" stroke-width="1.8" stroke-linecap="round"/>`;
-      default:        return `<circle r="6" fill="white" opacity="0.7"/>`;
-    }
-  };
-
-  // Center S1 at 12 o'clock instead of starting its edge there
-  const s1Sweep = (Math.max(1, parseDur(cues[0]?.dur) || 0) / totalDur) * 2 * Math.PI;
-
-  let wedgeSVG = '';
-  let curAngle = -Math.PI / 2 - s1Sweep / 2;
-
-  cues.forEach((c, i) => {
-    const dur = Math.max(1, parseDur(c.dur) || 0);
-    const sweep = (dur / totalDur) * 2 * Math.PI;
-    const sa = curAngle + GAP / 2;
-    const ea = curAngle + sweep - GAP / 2;
-    const mid = (sa + ea) / 2;
-    const midDeg = mid * 180 / Math.PI;
-    const large = sweep > Math.PI ? 1 : 0;
-    const color = getColor(c);
-    const p = (r, a) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
-    const [ix1, iy1] = p(innerR, sa), [ox1, oy1] = p(outerR, sa);
-    const [ox2, oy2] = p(outerR, ea), [ix2, iy2] = p(innerR, ea);
-
-    // Thinner separator line
-    wedgeSVG += `<path d="M${ix1.toFixed(1)},${iy1.toFixed(1)} L${ox1.toFixed(1)},${oy1.toFixed(1)} A${outerR},${outerR} 0 ${large} 1 ${ox2.toFixed(1)},${oy2.toFixed(1)} L${ix2.toFixed(1)},${iy2.toFixed(1)} A${innerR},${innerR} 0 ${large} 0 ${ix1.toFixed(1)},${iy1.toFixed(1)} Z" fill="${color}" stroke="white" stroke-width="0.5"/>`;
-
-    if (sweep > 0.06) {
-      // Flip text in bottom half so it is never upside-down
-      const textRot = Math.sin(mid) > 0 ? midDeg - 90 : midDeg + 90;
-      const [tx, ty] = p(textR, mid);
-
-      // Scale text size to wedge size
-      const ns  = sweep > 0.55 ? 30 : sweep > 0.35 ? 26 : sweep > 0.18 ? 20 : 14;
-      const nms = sweep > 0.55 ? 16 : sweep > 0.35 ? 14 : sweep > 0.18 ? 12 : 10;
-      const lineH = nms * 1.3;
-
-      // Icon sizing — half-height in px, scale relative to ±11 unit path design
-      const hasIcon = sweep > 0.09;
-      const iconHP  = hasIcon ? (sweep > 0.55 ? 13 : sweep > 0.35 ? 10 : sweep > 0.18 ? 8 : 6) : 0;
-      const iconSc  = iconHP / 11;
-      const iconGap = hasIcon ? 4 : 0;
-
-      // Chord at textR constrains characters per line
-      const chord = 2 * textR * Math.sin(Math.max(0, sweep - GAP) / 2);
-      const charsPerLine = sweep > 0.15 ? Math.max(4, Math.floor(chord / (nms * 0.52))) : 0;
-      const maxLines = sweep > 0.4 ? 3 : 2;
-
-      const rawName = (c.scene || '(untitled)').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const nameLines = charsPerLine > 0 ? wrapWords(rawName, charsPerLine, maxLines) : [];
-      const numLabel = `S${i + 1}`;
-
-      // Block: [icon] [gap] [S#] [gap] [name lines]
-      const gap = 5;
-      const blockH = iconHP * 2 + iconGap + ns + (nameLines.length > 0 ? gap + nameLines.length * lineH : 0);
-      const startY = -Math.round(blockH / 2);
-      const iconCY  = startY + iconHP;                  // icon center y
-      const numY    = startY + iconHP * 2 + iconGap + ns; // S# baseline
-
-      // Build using <g> so icon (<g>) and text can coexist in the same transform
-      const nameTspans = nameLines.map((line, li) =>
-        `<tspan x="0" dy="${li === 0 ? gap + nms : lineH}" font-size="${nms}" font-weight="400" opacity="0.93">${line}</tspan>`
-      ).join('');
-
-      wedgeSVG += `<g transform="translate(${tx.toFixed(1)},${ty.toFixed(1)}) rotate(${textRot.toFixed(1)})" text-anchor="middle">`;
-      if (hasIcon) {
-        wedgeSVG += `<g transform="translate(0,${iconCY}) scale(${iconSc.toFixed(3)})" opacity="0.88">${wedgeIcon(c.stageType, c.prelive)}</g>`;
-      }
-      wedgeSVG += `<text text-anchor="middle" fill="white" font-family="'Barlow Condensed',Arial,sans-serif">`;
-      wedgeSVG += `<tspan x="0" y="${numY}" font-size="${ns}" font-weight="700">${numLabel}</tspan>${nameTspans}`;
-      wedgeSVG += `</text></g>`;
-    }
-
-    curAngle += sweep;
-  });
-
-  // Center disc — extend slightly past innerR so contents can be ~50% bigger than original
-  const discR  = innerR + 14;                      // 136 (was 116 = innerR-6)
-  const logoSmR = Math.round(discR * 0.54);        // ~73 (was 46 — +59%)
-  const logoCY  = cy - Math.round(discR * 0.36);   // ~cy-49 (was cy-35)
-  const centerEl = cfg.logoUrl
-    ? `<defs><clipPath id="lcs"><circle cx="${cx}" cy="${logoCY}" r="${logoSmR}"/></clipPath></defs>
-       <circle cx="${cx}" cy="${cy}" r="${discR}" fill="white"/>
-       <circle cx="${cx}" cy="${logoCY}" r="${logoSmR}" fill="white"/>
-       <image href="${cfg.logoUrl}" x="${cx-logoSmR}" y="${logoCY-logoSmR}" width="${logoSmR*2}" height="${logoSmR*2}" clip-path="url(#lcs)" preserveAspectRatio="xMidYMid meet"/>
-       <text x="${cx}" y="${cy+55}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="52">E${epNum}</text>
-       ${showData.epTitle ? `<text x="${cx}" y="${cy+75}" text-anchor="middle" fill="#555" font-family="'Barlow Condensed',Arial,sans-serif" font-size="16" font-weight="700">${showData.epTitle.substring(0, 20).toUpperCase()}</text>` : ''}
-       <text x="${cx}" y="${cy+93}" text-anchor="middle" fill="#aaa" font-family="'Barlow Condensed',Arial,sans-serif" font-size="14">${[showData.epDate, showRuntime + ' MIN'].filter(Boolean).join(' \xb7 ')}</text>`
-    : `<circle cx="${cx}" cy="${cy}" r="${discR}" fill="#f0f4f8"/>
-       <text x="${cx}" y="${cy-10}" text-anchor="middle" fill="${cfg.brandColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="24">${cfg.showShortName}</text>
-       <text x="${cx}" y="${cy+50}" text-anchor="middle" fill="${cfg.accentColor}" font-family="'Barlow Condensed',Arial,sans-serif" font-weight="900" font-size="56">E${epNum}</text>`;
-
-  // "Start Here!" arrow pointing at 12 o'clock (S1 boundary)
-  const topPad = 68;
-  const arrowTip = cy - outerR; // 15
-  const startArrow = `
-    <text x="${cx}" y="${-topPad + 18}" text-anchor="middle" font-family="'Barlow Condensed',Arial,sans-serif" font-size="16" font-weight="900" fill="#444" letter-spacing="3">START HERE!</text>
-    <line x1="${cx}" y1="${-topPad + 28}" x2="${cx}" y2="${arrowTip - 10}" stroke="#444" stroke-width="2.5"/>
-    <polygon points="${cx},${arrowTip + 2} ${cx - 8},${arrowTip - 11} ${cx + 8},${arrowTip - 11}" fill="#444"/>
-  `;
-
-  const vbSize = cx * 2;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${-topPad} ${vbSize} ${vbSize + topPad}" style="max-width:100%;height:auto;display:block;margin:0 auto;"><rect x="0" y="${-topPad}" width="${vbSize}" height="${vbSize + topPad}" fill="white"/>${wedgeSVG}${centerEl}${startArrow}</svg>`;
-
-  const bsmQrUrl = cfg.qrUrl || `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
-
-  const legendEntries = [
-    {c:preliveColor,        l:'PRE-SHOW',      type:null,      prelive:true},
-    {c:typeColors.pod,      l:'POD STAGE',     type:'pod',     prelive:false},
-    {c:typeColors.music,    l:'MUSIC STAGE',   type:'music',   prelive:false},
-    {c:typeColors.kitchen,  l:'KITCHEN DISCO', type:'kitchen', prelive:false},
-    {c:typeColors.video,    l:'VIDEO',         type:'video',   prelive:false},
-  ];
-  const legendHTML = legendEntries.map(e => {
-    const iconSvg = wedgeIcon(e.type, e.prelive);
-    return `<span style="display:inline-flex;align-items:center;gap:9px;margin:0 20px 10px 0;">
-      <svg width="28" height="28" viewBox="-13 -13 26 26" style="flex-shrink:0;border-radius:5px;overflow:hidden;">
-        <rect x="-13" y="-13" width="26" height="26" fill="${e.c}"/>
-        <g opacity="0.9" transform="scale(0.83)">${iconSvg}</g>
-      </svg>
-      <span style="font-size:15px;color:#333;font-weight:700;letter-spacing:1px;">${e.l}</span>
-    </span>`;
+  const rows = cues.map((c, i) => {
+    const person = personFor(c);
+    const dur = parseDur(c.dur);
+    const durFmt = dur % 1 === 0 ? `${dur}m` : `${Math.floor(dur)}m ${Math.round((dur%1)*60)}s`;
+    return `<tr style="background:${i%2===0?'#fff':'#f7f7f7'}">
+      <td style="padding:7px 10px;color:#666;font-size:9pt;">${i+1}</td>
+      <td style="padding:7px 10px;font-weight:600;font-size:10pt;">${c.scene||''}</td>
+      <td style="padding:7px 10px;font-size:10pt;color:#333;">${person}</td>
+      <td style="padding:7px 10px;text-align:right;color:#555;font-size:9pt;white-space:nowrap;">${durFmt}</td>
+    </tr>`;
   }).join('');
 
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>${cfg.showName} E${epNum} — ROS Visual</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>Scene List — Episode ${epNum}</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:white;font-family:'Barlow Condensed',Arial,sans-serif;}
-.page{max-width:760px;margin:0 auto;padding:10px 16px 16px;}
-.foot{display:flex;justify-content:center;align-items:center;gap:40px;margin-top:10px;padding-top:12px;border-top:2px solid #ddd;flex-wrap:wrap;}
-.legend-wrap{text-align:center;}
-.legend-head{font-size:11px;color:#aaa;letter-spacing:4px;font-weight:700;margin-bottom:10px;}
-.legend{display:inline-flex;flex-wrap:wrap;justify-content:center;}
-.qr-wrap{text-align:center;}
-.qr-box{background:white;padding:5px;border:1px solid #ddd;border-radius:5px;display:inline-block;}
-.qr-lbl{font-size:12px;color:#555;letter-spacing:1px;margin-top:6px;font-weight:700;}
-.qr-sub{font-size:10px;color:#aaa;letter-spacing:0.5px;margin-top:2px;}
-@media print{@page{size:letter portrait;margin:0.35in;}body{background:white !important;}}
+  body{font-family:Arial,sans-serif;margin:36px 48px;color:#000;}
+  h1{font-size:17pt;margin:0 0 4px;}
+  h2{font-size:10pt;color:#555;font-weight:normal;margin:0 0 20px;}
+  table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif;}
+  thead tr{background:#111;color:#fff;}
+  th{padding:8px 10px;text-align:left;font-size:9pt;letter-spacing:1px;text-transform:uppercase;}
+  th:last-child{text-align:right;}
+  .total{padding:8px 10px;font-weight:bold;font-size:10pt;border-top:2px solid #111;}
+  .print-btn{margin-top:20px;padding:8px 20px;background:#000;color:#fff;border:none;font-size:11pt;cursor:pointer;border-radius:4px;}
+  @media print{.print-btn{display:none;} body{margin:20px;}}
 </style>
-</head>
-<body>
-<div class="page">
-  ${svg}
-  <div class="foot">
-    <div class="legend-wrap">
-      <div class="legend-head">STAGE LEGEND</div>
-      <div class="legend">${legendHTML}</div>
-    </div>
-    <div class="qr-wrap">
-      <div class="qr-box" id="qr-vis"></div>
-      <div class="qr-lbl">BOO SHOW MANAGER</div>
-      <div class="qr-sub">E${epNum} · SCAN TO OPEN</div>
-    </div>
-  </div>
-</div>
-<script>new QRCode(document.getElementById('qr-vis'),{text:${JSON.stringify(bsmQrUrl)},width:96,height:96,colorDark:"#111",colorLight:"#fff"});<\/script>
-</body>
-</html>`;
+</head><body>
+<h1>${epTitle} — Episode ${epNum}</h1>
+<h2>${epDate ? epDate + ' &nbsp;·&nbsp; ' : ''}${total} min runtime &nbsp;·&nbsp; ${cues.length} scenes</h2>
+<table>
+  <thead><tr><th>#</th><th>Scene</th><th>Who</th><th>Duration</th></tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr>
+    <td class="total" colspan="3">Total runtime</td>
+    <td class="total" style="text-align:right;">${total}m</td>
+  </tr></tfoot>
+</table>
+<button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</body></html>`;
 
-  const blob = new Blob([html], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-  btn.textContent = '✓ OPENED';
-  setTimeout(() => { btn.textContent = '📄 RoS  ▾'; btn.disabled = false; }, 2500);
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  showScriptsSharePanel('✓ Scene list ready — print or save as PDF', '', false);
 }
+
 
 // ─── ROS EDIT PANEL ──────────────────────────────────────────────────────────
 function showROSEditPanel() {
