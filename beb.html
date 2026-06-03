@@ -2360,10 +2360,10 @@ window.addEventListener('load', async () => {
   micBtnEl.classList.add('paused');
   setMicStatus("SPEAKABOO OFF — TAP TO ENABLE", "");
 
-  // All data sections start expanded
+  // All data sections start collapsed
   ['ep-body','runtime-body','guests-body','crew-body','cues-body','memory-body'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = 'block';
+    if (el) el.style.display = 'none';
   });
 
   const loaded = await loadState();
