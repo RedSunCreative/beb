@@ -49,25 +49,12 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .mic-status.show{display:block;}
 .mic-row{display:flex;gap:10px;align-items:center;}
 
-.mic-btn{width:110px;height:110px;border-radius:50%;border:3px solid #6a0000;background:#3a0000;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;padding:0;}
-.mic-btn.listening{background:#003a10;border-color:#00c44a;box-shadow:0 0 0 10px rgba(0,196,74,0.15);}
-.mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid #00c44a;animation:pulse 1.2s ease-out infinite;}
-.mic-btn.speaking{background:#2a2a00;border-color:var(--gold);}
-.mic-btn.thinking{background:#3a1a00;border-color:var(--orange);}
-.mic-btn.paused{background:#3a0000;border-color:#cc2222;box-shadow:0 0 0 8px rgba(204,34,34,0.15);}
+.mic-btn{width:120px;height:120px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;padding:0;overflow:hidden;}
+.mic-btn.listening{box-shadow:0 0 0 10px rgba(0,196,74,0.2);}
+.mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid #00c44a;animation:pulse 1.2s ease-out infinite;pointer-events:none;}
+.mic-btn.speaking,.mic-btn.thinking{box-shadow:0 0 0 10px rgba(255,204,0,0.2);}
 @keyframes pulse{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(1.6);opacity:0;}}
-.mic-svg{display:block;overflow:visible;}
-.mic-arc-text{fill:rgba(255,255,255,0.28);font-family:'Barlow Condensed',sans-serif;font-weight:700;}
-.mic-chip-text{fill:rgba(255,255,255,0.28);font-family:'Barlow Condensed',sans-serif;font-weight:900;}
-.mic-icon-path{fill:var(--orange);}
-.mic-btn.listening .mic-arc-text,.mic-btn.listening .mic-chip-text{fill:rgba(0,196,74,0.9);}
-.mic-btn.listening .mic-icon-path{fill:#00c44a;}
-.mic-btn.speaking .mic-arc-text,.mic-btn.speaking .mic-chip-text{fill:rgba(255,204,0,0.9);}
-.mic-btn.speaking .mic-icon-path{fill:var(--gold);}
-.mic-btn.thinking .mic-arc-text,.mic-btn.thinking .mic-chip-text{fill:rgba(255,140,0,0.9);}
-.mic-btn.thinking .mic-icon-path{fill:var(--orange);}
-.mic-btn.paused .mic-arc-text,.mic-btn.paused .mic-chip-text{fill:rgba(204,34,34,0.9);}
-.mic-btn.paused .mic-icon-path{fill:#cc2222;}
+.mic-img{width:100%;height:100%;display:block;border-radius:50%;}
 
 .mic-text-wrap{flex:1;}
 .mic-text{width:100%;background:var(--dark);border:1px solid var(--border);color:var(--white);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Barlow',sans-serif;resize:none;height:64px;outline:none;transition:border-color 0.2s;}
@@ -318,18 +305,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       <div class="mic-status" id="mic-status"></div>
       <div class="mic-row">
         <button class="mic-btn" id="mic-btn" onclick="toggleMicPause()" data-tip="Hands-free. Tap to start — Boo listens while you build the show together.">
-          <svg class="mic-svg" viewBox="0 0 110 110" width="110" height="110">
-            <defs>
-              <path id="micTopArc" d="M 10,55 A 45,45 0 0,1 100,55"/>
-            </defs>
-            <text class="mic-arc-text" font-size="18" letter-spacing="2">
-              <textPath href="#micTopArc" startOffset="50%" text-anchor="middle">SPEAKABOO</textPath>
-            </text>
-            <g class="mic-icon-path" transform="translate(37, 34) scale(1.5)">
-              <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm-7 8a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.94V22h-2v-2.06A9 9 0 0 1 3 11h2z"/>
-            </g>
-            <text id="mic-chip" class="mic-chip-text" x="55" y="98" text-anchor="middle" font-size="15" letter-spacing="3">OFF</text>
-          </svg>
+          <img id="mic-img" class="mic-img" src="speakaboo-off.png" alt="SpeakaBoo">
         </button>
         <div class="mic-text-wrap">
           <textarea class="mic-text" id="mic-text" placeholder="Listening... or type here" onkeydown="handleKey(event)"></textarea>
@@ -908,14 +884,15 @@ function stopBoo() {
 
 function setMicStatus(text, cls) {
   const bar = document.getElementById('mic-status');
-  const chip = document.getElementById('mic-chip');
   const btn = document.getElementById('mic-btn');
-  const isOn = ['listening','speaking','thinking'].includes(cls);
+  const img = document.getElementById('mic-img');
   const isError = text.includes('ERROR') || text.includes('NOT SUPPORTED');
   bar.textContent = isError ? text : '';
   bar.className = 'mic-status' + (isError ? ' show' : '');
-  if (chip) chip.textContent = isOn ? 'ON' : 'OFF';
   btn.className = 'mic-btn' + (cls ? ' ' + cls : '');
+  if (cls === 'listening') img.src = 'speakaboo-on.png';
+  else if (cls === 'speaking' || cls === 'thinking') img.src = 'speakaboo-waiting.png';
+  else img.src = 'speakaboo-off.png';
 }
 
 function handleKey(e) {
