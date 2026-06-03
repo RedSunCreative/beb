@@ -818,7 +818,7 @@ function initMic() {
         const text = pendingTranscript.trim();
         pendingTranscript = '';
         document.getElementById('mic-text').value = '';
-        if (text) processUserInput(text);
+        if (text && text.split(' ').length >= 2) processUserInput(text);
       }, 4000);
     }
     if (!booChillMode) document.getElementById('mic-text').value = pendingTranscript + interimChunk;
@@ -1263,7 +1263,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
   if (data.error || !res.ok) {
     const errMsg = data.error?.message || data.error?.type || `HTTP ${res.status}`;
     console.error('[Boo API error]', errMsg, data);
-    return { speech: "Didn't get a clean response — give it a moment and try again.", display: "<em>Didn't get a clean response. Give it a moment and try again.</em>", updates: {} };
+    return { speech: "Didn't get a clean response — give it a moment and try again.", display: `<em>Didn't get a clean response. (${errMsg}) Give it a moment and try again.</em>`, updates: {} };
   }
 
   const text = data.content?.filter(b => b.type === 'text').pop()?.text;
