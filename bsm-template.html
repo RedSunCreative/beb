@@ -828,7 +828,7 @@ function render(){
   if(bc&&bm){
     if(booData&&!standbyActive&&!preLiveActive){
       bc.style.display="block";
-      if(booData.name) bm.innerHTML=`<span class="boo-name-flash" id="boo-name-flash-el" style="color:#F5D03A;">${booData.name}</span>${booData.msg}`;
+      if(booData.name) bm.innerHTML=`<div style="font-size:10px;letter-spacing:3px;color:#888;margin-bottom:6px;border-top:1px solid #555;padding-top:10px;">FOLLOWING —</div><span class="boo-name-flash" id="boo-name-flash-el" style="color:#F5D03A;">${booData.name}</span>${booData.msg}`;
       else bm.innerHTML=booData.msg;
     } else bc.style.display="none";
   }
