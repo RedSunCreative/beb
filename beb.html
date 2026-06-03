@@ -482,6 +482,7 @@ let showData = {
 let conversationHistory = [];
 let isThinking = false;
 let isSpeaking = false;
+let echoGuard = false;
 let micPaused = false;
 let booChillMode = false;
 let currentAudio = null;
@@ -775,7 +776,7 @@ function initMic() {
       }
       return;
     }
-    if (isThinking || micPaused) return;
+    if (isThinking || micPaused || echoGuard) return;
     let finalChunk = '';
     let interimChunk = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -830,7 +831,7 @@ function initMic() {
   };
 
   recognition.onend = () => {
-    // Keep recognition alive during speech (needed to catch interrupt phrases)
+    if (echoGuard) return; // cooldown after Boo speaks — don't restart yet
     if (isSpeaking || (!micPaused || booChillMode)) {
       setTimeout(() => { try { recognition.start(); } catch(e){} }, 200);
     }
@@ -866,10 +867,19 @@ function muteMicWhileSpeaking() {
 
 function unmuteMicAfterSpeaking() {
   isSpeaking = false;
+  echoGuard = true;
+  pendingTranscript = '';
+  clearTimeout(silenceTimer);
   document.getElementById('mic-btn').classList.remove('speaking');
-  if (!micPaused && !booChillMode) {
-    setTimeout(() => { try { recognition?.start(); } catch(e) {} }, 300);
-  }
+  try { recognition?.stop(); } catch(e) {}
+  setTimeout(() => {
+    echoGuard = false;
+    pendingTranscript = '';
+    if (!micPaused && !booChillMode) {
+      try { recognition?.start(); } catch(e) {}
+      setMicStatus("SPEAKABOO LISTENING...", "listening");
+    }
+  }, 1500);
 }
 
 function stopBoo() {
