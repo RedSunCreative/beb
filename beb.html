@@ -1028,6 +1028,8 @@ Your job: help Mark plan and build Little Big Voices episodes. Do the work, conf
 
 Mark talks to you hands-free. Keep responses SHORT — 1 to 3 sentences max. Confirm what you recorded, then be quiet.
 
+Address him as Mark — never "you" in alerts, cues, or confirmations. "Mark needs to trim two segments" not "You need to trim two segments."
+
 === MEMORY ===
 You learn from Mark over time. When you observe something worth remembering — a preference he's stated, a rule he confirmed, a correction he made, a fact about the show or the crew — silently append one or more tags at the very end of your "speech" value ONLY:
 [[REMEMBER: one clear sentence about what you learned]]
@@ -1200,7 +1202,7 @@ RESPOND WITH JSON — no markdown, no code fences, always valid JSON:
 
 CRITICAL: Only include fields in "updates" that actually changed. NEVER include "cues" or "guests" unless you are sending a new or updated array. Sending an empty array wipes the data. For cues and guests, always send the COMPLETE updated array — never partial.
 
-CRITICAL — CUE CHANGES: Any time you move, reorder, insert, remove, rename, or edit any scene — you MUST send the full updated cues array in updates.cues. The UI cannot update from your speech alone. If you say you changed something and don't send the array, Mark's screen shows nothing. No exceptions: verbal confirmation without the array means the change did not happen.
+CRITICAL — CUE CHANGES: Any time you add, move, reorder, insert, remove, rename, or edit any scene — you MUST send the full updated cues array in updates.cues. The UI cannot update from your speech alone. If you say you changed something and don't send the array, Mark's screen shows nothing and he will think you failed. No exceptions: verbal confirmation without the array means the change did not happen. If you are unsure whether to include it, include it.
 
 CRITICAL — CONSISTENCY: Any change to one field must cascade through every field it affects across ALL cues. Before sending the updated array, review the full sequence and fix everything:
   • Scene renamed → update nextScene on the PREVIOUS cue
@@ -1369,7 +1371,16 @@ document.getElementById('mic-btn').classList.remove('thinking');
     const safeDisplay = looksLikeJSON ? "Done — I've updated the show data. Check the panel!" : rawDisplay;
     const safeSpeech = looksLikeJSON ? "Done! I've updated the show data — check the panel." : rawSpeech;
 
-    addBooMessage(safeDisplay);
+    // Show what was actually updated so missed updates are visible
+    const u2 = response.updates || {};
+    const updated = [];
+    if (u2.cues?.length > 0) updated.push('cues');
+    if (u2.guests?.length > 0) updated.push('guests');
+    if (u2.crew?.length > 0) updated.push('crew');
+    if (u2.epNum || u2.epTitle || u2.epDate || u2.epLen) updated.push('episode info');
+    const updateNote = updated.length ? `<div style="font-size:9px;color:var(--teal);letter-spacing:1px;margin-top:4px;opacity:0.7;">updated: ${updated.join(', ')}</div>` : '';
+
+    addBooMessage(safeDisplay + updateNote);
     updateAllDisplays();
     saveState();
     await speakBoo(safeSpeech);
