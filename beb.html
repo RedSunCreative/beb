@@ -206,10 +206,10 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
   </div>
   <div class="header-right">
     <div style="position:relative;display:inline-block;" id="ep-switcher">
-      <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()" data-tip="Switch between saved episodes or start a new one">EP ▾</button>
+      <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()" data-tip="Jump between saved episodes or kick off a brand new one">EP ▾</button>
       <div class="ep-list-panel" id="ep-list-panel" style="display:none;"></div>
     </div>
-    <button class="settings-gear" onclick="openSettings()" data-tip="Configure API keys, ElevenLabs voice, GitHub credentials, and app settings">⚙</button>
+    <button class="settings-gear" onclick="openSettings()" data-tip="Your keys, your voice, your show. Set up API keys, ElevenLabs, and GitHub all in here.">⚙</button>
     <div class="save-badge" id="save-badge">● READY</div>
   </div>
 </div>
@@ -233,7 +233,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
           <input type="password" class="settings-input" id="st-github-pat" placeholder="github_pat_...">
           <button class="settings-toggle" onclick="toggleShow('st-github-pat',this)">👁</button>
         </div>
-        <div class="settings-note">Required for BSM auto-upload to GitHub Pages</div>
+        <div class="settings-note">Needed so Boo can auto-publish your show to GitHub Pages</div>
       </div>
     </div>
 
@@ -257,7 +257,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
         <div class="settings-input-row">
           <input type="text" class="settings-input" id="st-xi-voice" placeholder="Voice ID from ElevenLabs">
         </div>
-        <div class="settings-note">Leave blank to use the default voice from CLIENT_CONFIG</div>
+        <div class="settings-note">Leave blank and Boo uses whatever voice is in CLIENT_CONFIG</div>
       </div>
     </div>
 
@@ -298,13 +298,13 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     <div class="mic-area">
       <div class="mic-status" id="mic-status">SPEAKABOO OFF...</div>
       <div class="mic-row">
-        <button class="mic-btn" id="mic-btn" onclick="toggleMicPause()" data-tip="SpeakaBoo — Boo's voice mode. Tap to toggle on/off. When on, speak naturally and Boo listens hands-free.">
+        <button class="mic-btn" id="mic-btn" onclick="toggleMicPause()" data-tip="SpeakaBoo! Tap to wake Boo up, then just talk. He listens hands-free while you plan the show.">
           <svg class="mic-icon" viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2zm-7 8a7 7 0 0 0 14 0h2a9 9 0 0 1-8 8.94V22h-2v-2.06A9 9 0 0 1 3 11h2z"/></svg>
         </button>
         <div class="mic-text-wrap">
           <textarea class="mic-text" id="mic-text" placeholder="Listening... or type here" onkeydown="handleKey(event)"></textarea>
         </div>
-        <button class="send-btn" id="send-btn" onclick="sendText()" data-tip="Send your typed message to Boo">SEND</button>
+        <button class="send-btn" id="send-btn" onclick="sendText()" data-tip="Fire it off to Boo (or just hit Enter!)">SEND</button>
       </div>
     </div>
   </div>
@@ -313,7 +313,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('ep-body')">
-        <div class="data-section-title">EPISODE INFO <span id="d-ep-badge" style="color:var(--teal);font-weight:900;"></span><span class="tip-q" data-tip="Basic episode details — number, title, date, and runtime. Boo fills this in automatically as you plan." onclick="event.stopPropagation()">?</span></div>
+        <div class="data-section-title">EPISODE INFO <span id="d-ep-badge" style="color:var(--teal);font-weight:900;"></span><span class="tip-q" data-tip="The basics — ep number, title, date, runtime. Start talking and Boo fills this in for you." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="ep-complete">—</div>
       </div>
       <div class="data-section-body" id="ep-body">
@@ -331,7 +331,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('runtime-body')">
-        <div class="data-section-title">RUNTIME <span class="tip-q" data-tip="Live scene count vs. your target runtime. Green = on track, orange = over, gold = under." onclick="event.stopPropagation()">?</span></div>
+        <div class="data-section-title">RUNTIME <span class="tip-q" data-tip="Keeping score! Green = on time, orange = running long, gold = you've got wiggle room." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="runtime-status">0 min</div>
       </div>
       <div class="data-section-body" id="runtime-body">
@@ -346,7 +346,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('guests-body')">
-        <div class="data-section-title">GUESTS <span class="tip-q" data-tip="Pod guests and performers Boo has recorded for this episode. Tell Boo their names and segments." onclick="event.stopPropagation()">?</span></div>
+        <div class="data-section-title">GUESTS <span class="tip-q" data-tip="Everyone on the show this ep. Just tell Boo who's coming — he handles the rest." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="guest-count">0</div>
       </div>
       <div class="data-section-body" id="guests-body">
@@ -356,7 +356,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('crew-body')">
-        <div class="data-section-title">CREW <span class="tip-q" data-tip="Your production crew — name, role, and mobile number. Used in SHOUTOUT scenes and the Static RoS." onclick="event.stopPropagation()">?</span></div>
+        <div class="data-section-title">CREW <span class="tip-q" data-tip="Your people behind the scenes — name, role, mobile number. Shows up in shoutouts and the run of show." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="crew-count">0</div>
       </div>
       <div class="data-section-body" id="crew-body">
@@ -366,7 +366,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('cues-body')">
-        <div class="data-section-title">CUE LIST <span class="tip-q" data-tip="Your run-of-show scene list. Drag scenes to reorder. Click EDIT on any scene to change its details." onclick="event.stopPropagation()">?</span></div>
+        <div class="data-section-title">CUE LIST <span class="tip-q" data-tip="Your whole show, scene by scene. Drag to reorder — yes, it really works! Hit EDIT to tweak any scene." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="cue-count-badge">0 cues</div>
       </div>
       <div class="data-section-body" id="cues-body">
@@ -377,7 +377,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 
     <div class="data-section">
       <div class="data-section-header" onclick="toggleSection('memory-body')">
-        <div class="data-section-title">BOO'S MEMORY <span class="tip-q" data-tip="Notes Boo keeps about your preferences and show rules. He references these automatically — no need to repeat yourself." onclick="event.stopPropagation()">?</span></div>
+        <div class="data-section-title">BOO'S MEMORY <span class="tip-q" data-tip="Boo's running notes on how you like things done. He checks these so you don't have to repeat yourself every single time." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="memory-count">0</div>
       </div>
       <div class="data-section-body" id="memory-body" style="display:none;">
@@ -386,7 +386,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     </div>
 
     <div class="ros-dropdown-wrap" id="ros-dropdown-wrap">
-      <button class="generate-btn ros" id="ros-toggle-btn" onclick="toggleRosMenu()" style="margin-top:0;" data-tip="Generate and share your Run of Show — choose Static, Graphic, or Live">📄 RoS &nbsp;▾</button>
+      <button class="generate-btn ros" id="ros-toggle-btn" onclick="toggleRosMenu()" style="margin-top:0;" data-tip="Publish your Run of Show! Pick Static (print-friendly), Graphic (the wheel), or Live (show day).">📄 RoS &nbsp;▾</button>
       <div class="ros-dropdown-menu" id="ros-dropdown-menu">
         <div class="ros-menu-item" onclick="generateROS()">
           <div class="ros-item-name">📄 Static RoS</div>
@@ -403,8 +403,8 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
     </div>
     <div id="ros-share-panel" style="display:none;margin-top:8px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
-    <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);" data-tip="Manually review and edit scene names, timings, and crew notes before generating">✏️ EDIT RUN OF SHOW</button>
-    <button class="generate-btn" id="generate-btn" onclick="generateBSM()" data-tip="Build the live Boo Show Manager and publish it to GitHub Pages — this is what runs on set during the show">⚡ GENERATE BOO SHOW MANAGER</button>
+    <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);" data-tip="Tweak before you publish — scene names, timings, crew notes. Your last chance!">✏️ EDIT RUN OF SHOW</button>
+    <button class="generate-btn" id="generate-btn" onclick="generateBSM()" data-tip="The big one! Builds your live show controller and publishes it to the web — this is what runs on set.">⚡ GENERATE BOO SHOW MANAGER</button>
 
     <div id="bsm-qr-wrap" style="display:none;margin-top:8px;padding:14px;background:rgba(0,196,74,0.05);border:1px solid rgba(0,196,74,0.18);border-radius:8px;text-align:center;">
       <div style="font-size:9px;color:var(--green);letter-spacing:4px;font-weight:700;margin-bottom:10px;">SCAN TO OPEN BSM</div>
@@ -947,7 +947,7 @@ async function speakBoo(text) {
     const clean = text.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, '');
     const xiKey   = localStorage.getItem('beb_xi_key')   || XI_KEY;
     const xiVoice = localStorage.getItem('beb_xi_voice') || CLIENT_CONFIG.elevenlabsVoiceId || XI_VOICE;
-    if (!xiKey) { addMsg('boo', '[SpeakaBoo: no ElevenLabs key set — add it in ⚙ Settings]'); unmuteMicAfterSpeaking(); return; }
+    if (!xiKey) { addMsg('boo', "Boo wants to talk but needs his voice! Drop your ElevenLabs key in ⚙ Settings."); unmuteMicAfterSpeaking(); return; }
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${xiVoice}`, {
       method: 'POST',
       headers: { 'xi-api-key': xiKey, 'Content-Type': 'application/json' },
