@@ -1056,9 +1056,21 @@ function setView(v){
     } catch(e) {}
   }
   await requestWakeLock();
-  // Re-request if page becomes visible again (Fire TV can release it on tab switch)
+  // Re-request wake lock and re-sync state when page becomes visible
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !lock) requestWakeLock();
+    if (document.visibilityState === 'visible') {
+      if (!lock) requestWakeLock();
+      // Re-sync cue state immediately in case we missed updates while hidden
+      if (typeof sbGet === 'function' && typeof applyRemoteState === 'function') {
+        sbGet().then(s => { if (s) applyRemoteState(s); });
+      }
+    }
+  });
+
+  // Lock the back button on Fire TV — prevents Silk from navigating away from BSM
+  history.pushState(null, '', window.location.href);
+  window.addEventListener('popstate', () => {
+    history.pushState(null, '', window.location.href);
   });
 
   // 2. Invisible canvas animation — keeps JS engine active
