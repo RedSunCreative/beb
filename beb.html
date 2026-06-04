@@ -1039,6 +1039,20 @@ async function speakBoo(text) {
 }
 
 // ─── CLAUDE ───
+function buildHistoryEntry(response) {
+  // Strip large arrays (cues/guests/crew) — current state lives in system prompt already.
+  // Keeping them in history multiplies token cost with every request.
+  const entry = { speech: response.speech, display: response.display };
+  if (response.updates) {
+    const u = {};
+    for (const k of Object.keys(response.updates)) {
+      if (k !== 'cues' && k !== 'guests' && k !== 'crew') u[k] = response.updates[k];
+    }
+    if (Object.keys(u).length) entry.updates = u;
+  }
+  return { role: 'assistant', content: JSON.stringify(entry) };
+}
+
 async function callClaude(userMessage, opts = {}) {
   const memoryBlock = (showData.booMemory && showData.booMemory.length > 0)
     ? `\n=== WHAT BOO KNOWS ABOUT MARK & LBV ===\n${showData.booMemory.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
@@ -1068,7 +1082,7 @@ You may include multiple tags if needed. Do NOT mention the tags to Mark. Do NOT
 ${memoryBlock}
 ${_runtimeBlock}
 CURRENT SHOW DATA:
-${JSON.stringify(showData, null, 2)}
+${JSON.stringify(showData)}
 
 === THE SHOW BLUEPRINT ===
 
@@ -1298,7 +1312,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
 
   const reqBody = {
     model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
+    max_tokens: 4096,
     system: systemPrompt,
     messages: [...conversationHistory, { role: 'user', content: userMessage }]
   };
@@ -1406,8 +1420,8 @@ document.getElementById('mic-btn').classList.remove('thinking');
       if (u.cues?.length > 0) showData.cues = u.cues;
     }
 
-    conversationHistory.push({ role: 'assistant', content: JSON.stringify(response) });
-    if (conversationHistory.length > 40) conversationHistory = conversationHistory.slice(-40);
+    conversationHistory.push(buildHistoryEntry(response));
+    if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-20);
 
     const rawDisplay = response.display || response.speech || '';
     const rawSpeech = response.speech || response.display || '';
@@ -1425,7 +1439,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
         const fix = await callClaude("Your last response didn't include updates.cues. Send the complete updated cues array now. No speech needed — just the JSON.");
         if (fix?.updates?.cues?.length > 0) {
           showData.cues = fix.updates.cues;
-          conversationHistory.push({ role: 'assistant', content: JSON.stringify(fix) });
+          conversationHistory.push(buildHistoryEntry(fix));
           response.updates = response.updates || {};
           response.updates.cues = fix.updates.cues;
         }
