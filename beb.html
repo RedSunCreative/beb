@@ -49,7 +49,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .mic-status.show{display:block;}
 .mic-row{display:flex;gap:10px;align-items:center;}
 
-.mic-btn{width:96px;height:96px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;padding:0;overflow:hidden;}
+.mic-btn{width:96px;height:96px;border-radius:50%;border:none;outline:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;padding:0;overflow:hidden;}
 .mic-btn.listening{box-shadow:0 0 0 10px rgba(0,196,74,0.2);}
 .mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid #00c44a;animation:pulse 1.2s ease-out infinite;pointer-events:none;}
 .mic-btn.speaking,.mic-btn.thinking{box-shadow:0 0 0 10px rgba(255,204,0,0.2);}
@@ -1282,6 +1282,8 @@ Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name,
 Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage, cueCard }
 cueCard: freeform prompter text for host — bullet lines, real names only. "" if not applicable.
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
+booName: the NEXT person who needs a get-ready message — shown on the studio TV screens DURING the current scene so they know they're coming up. Use their real first and last name. "" if no one needs a heads-up.
+booMsg: the get-ready message shown to that person on the TV. Write it directly to them. Use {M} as the live countdown placeholder — the BSM replaces {M} with the real remaining minutes in real time. Example: "You have about {M} before you're on the Pod Stage. Please move to the Red X and wait for Mark to motion you in. Thank you!" Always use {M} when there's a meaningful countdown. Omit {M} only when the message is immediate ("Mark is introducing you right now — please head to the Red X").
 prelive:true means pre-show (Countdown) — excluded from runtime total.`;
 
   const reqBody = {
