@@ -147,7 +147,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .runtime-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:500;}
 .runtime-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
 
-.thinking{display:flex;gap:5px;align-items:center;padding:14px 16px;}
+.thinking-dots{display:flex;gap:5px;align-items:center;padding:14px 16px;}
 .thinking-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:think 1.2s ease-in-out infinite;}
 .thinking-dot:nth-child(2){animation-delay:0.2s;}
 .thinking-dot:nth-child(3){animation-delay:0.4s;}
@@ -984,7 +984,7 @@ function showThinking() {
   const div = document.createElement('div');
   div.className = 'boo-msg';
   div.id = 'thinking-indicator';
-  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div></div>`;
+  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking-dots"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div></div>`;
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
 }
@@ -2355,6 +2355,9 @@ window.addEventListener('load', async () => {
     })
     .catch(() => {});
   initMic();
+
+  // Preload SpeakaBoo button images to prevent src-change flash
+  ['speakaboo-on.png','speakaboo-off.png','speakaboo-waiting.png'].forEach(src=>{new Image().src=src;});
 
   // Mic starts OFF — user enables voice when ready
   micPaused = true;
