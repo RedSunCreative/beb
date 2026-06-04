@@ -49,12 +49,13 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .mic-status.show{display:block;}
 .mic-row{display:flex;gap:10px;align-items:center;}
 
-.mic-btn{width:96px;height:96px;border-radius:50%;border:none;outline:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;padding:0;overflow:hidden;}
+.mic-btn{width:96px;height:96px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;position:relative;padding:0;overflow:hidden;}
 .mic-btn.listening{box-shadow:0 0 0 10px rgba(0,196,74,0.2);}
 .mic-btn.listening::after{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:3px solid #00c44a;animation:pulse 1.2s ease-out infinite;pointer-events:none;}
 .mic-btn.speaking,.mic-btn.thinking{box-shadow:0 0 0 10px rgba(255,204,0,0.2);}
 @keyframes pulse{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(1.6);opacity:0;}}
-.mic-img{width:100%;height:100%;display:block;transform:scale(1.12);}
+.mic-img{width:100%;height:100%;display:block;border-radius:50%;transition:transform 0.2s;}
+.mic-btn:not(.listening):not(.speaking):not(.thinking) .mic-img{transform:scale(1.12);}
 
 .mic-text-wrap{flex:1;}
 .mic-text{width:100%;background:var(--dark);border:1px solid var(--border);color:var(--white);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Barlow',sans-serif;resize:none;height:64px;outline:none;transition:border-color 0.2s;}
@@ -147,7 +148,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .runtime-val{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:500;}
 .runtime-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
 
-.thinking-dots{display:flex;gap:5px;align-items:center;padding:14px 16px;}
+.thinking{display:flex;gap:5px;align-items:center;padding:14px 16px;}
 .thinking-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:think 1.2s ease-in-out infinite;}
 .thinking-dot:nth-child(2){animation-delay:0.2s;}
 .thinking-dot:nth-child(3){animation-delay:0.4s;}
@@ -844,7 +845,7 @@ function initMic() {
         pendingTranscript = '';
         document.getElementById('mic-text').value = '';
         if (text && text.split(' ').length >= 2) processUserInput(text);
-      }, 7000);
+      }, 4000);
     }
     if (!booChillMode) document.getElementById('mic-text').value = pendingTranscript + interimChunk;
   };
@@ -984,7 +985,7 @@ function showThinking() {
   const div = document.createElement('div');
   div.className = 'boo-msg';
   div.id = 'thinking-indicator';
-  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking-dots"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div></div>`;
+  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div></div>`;
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
 }
@@ -1002,22 +1003,11 @@ async function speakBoo(text) {
     const xiKey   = localStorage.getItem('beb_xi_key')   || XI_KEY;
     const xiVoice = localStorage.getItem('beb_xi_voice') || CLIENT_CONFIG.elevenlabsVoiceId || XI_VOICE;
     if (!xiKey) { addMsg('boo', "No ElevenLabs key yet — running text-only for now. Add it in ⚙ Settings whenever you're ready."); unmuteMicAfterSpeaking(); return; }
-    const ttsAbort = new AbortController();
-    const ttsTimeout = setTimeout(() => ttsAbort.abort(), 20000);
-    let res;
-    try {
-      res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${xiVoice}`, {
-        method: 'POST',
-        headers: { 'xi-api-key': xiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: clean, model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.6, similarity_boost: 0.75, style: 0.15, use_speaker_boost: true } }),
-        signal: ttsAbort.signal
-      });
-    } catch(e) {
-      clearTimeout(ttsTimeout);
-      if (e.name === 'AbortError') throw new Error('TTS timeout');
-      throw e;
-    }
-    clearTimeout(ttsTimeout);
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${xiVoice}`, {
+      method: 'POST',
+      headers: { 'xi-api-key': xiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: clean, model_id: 'eleven_turbo_v2', voice_settings: { stability: 0.6, similarity_boost: 0.75, style: 0.15, use_speaker_boost: true } })
+    });
     if (!res.ok) { const errText = await res.text().catch(()=>''); throw new Error(`TTS ${res.status}: ${errText.slice(0,120)}`); }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -1039,20 +1029,6 @@ async function speakBoo(text) {
 }
 
 // ─── CLAUDE ───
-function buildHistoryEntry(response) {
-  // Strip large arrays (cues/guests/crew) — current state lives in system prompt already.
-  // Keeping them in history multiplies token cost with every request.
-  const entry = { speech: response.speech, display: response.display };
-  if (response.updates) {
-    const u = {};
-    for (const k of Object.keys(response.updates)) {
-      if (k !== 'cues' && k !== 'guests' && k !== 'crew') u[k] = response.updates[k];
-    }
-    if (Object.keys(u).length) entry.updates = u;
-  }
-  return { role: 'assistant', content: JSON.stringify(entry) };
-}
-
 async function callClaude(userMessage, opts = {}) {
   const memoryBlock = (showData.booMemory && showData.booMemory.length > 0)
     ? `\n=== WHAT BOO KNOWS ABOUT MARK & LBV ===\n${showData.booMemory.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n`
@@ -1082,7 +1058,7 @@ You may include multiple tags if needed. Do NOT mention the tags to Mark. Do NOT
 ${memoryBlock}
 ${_runtimeBlock}
 CURRENT SHOW DATA:
-${JSON.stringify(showData)}
+${JSON.stringify(showData, null, 2)}
 
 === THE SHOW BLUEPRINT ===
 
@@ -1306,8 +1282,6 @@ Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name,
 Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage, cueCard }
 cueCard: freeform prompter text for host — bullet lines, real names only. "" if not applicable.
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
-booName: the NEXT person who needs a get-ready message — shown on the studio TV screens DURING the current scene so they know they're coming up. Use their real first and last name. "" if no one needs a heads-up.
-booMsg: the get-ready message shown to that person on the TV. Write it directly to them. Use {M} as the live countdown placeholder — the BSM replaces {M} with the real remaining minutes in real time. Example: "You have about {M} before you're on the Pod Stage. Please move to the Red X and wait for Mark to motion you in. Thank you!" Always use {M} when there's a meaningful countdown. Omit {M} only when the message is immediate ("Mark is introducing you right now — please head to the Red X").
 prelive:true means pre-show (Countdown) — excluded from runtime total.`;
 
   const reqBody = {
@@ -1320,22 +1294,11 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
     reqBody.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }];
   }
 
-  const claudeAbort = new AbortController();
-  const claudeTimeout = setTimeout(() => claudeAbort.abort(), 25000);
-  let res;
-  try {
-    res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SB_KEY}` },
-      body: JSON.stringify(reqBody),
-      signal: claudeAbort.signal
-    });
-  } catch(e) {
-    clearTimeout(claudeTimeout);
-    if (e.name === 'AbortError') throw new Error('Boo timed out — took too long to respond.');
-    throw e;
-  }
-  clearTimeout(claudeTimeout);
+  const res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SB_KEY}` },
+    body: JSON.stringify(reqBody)
+  });
 
   const data = await res.json();
 
@@ -1420,8 +1383,8 @@ document.getElementById('mic-btn').classList.remove('thinking');
       if (u.cues?.length > 0) showData.cues = u.cues;
     }
 
-    conversationHistory.push(buildHistoryEntry(response));
-    if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-20);
+    conversationHistory.push({ role: 'assistant', content: JSON.stringify(response) });
+    if (conversationHistory.length > 40) conversationHistory = conversationHistory.slice(-40);
 
     const rawDisplay = response.display || response.speech || '';
     const rawSpeech = response.speech || response.display || '';
@@ -1439,7 +1402,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
         const fix = await callClaude("Your last response didn't include updates.cues. Send the complete updated cues array now. No speech needed — just the JSON.");
         if (fix?.updates?.cues?.length > 0) {
           showData.cues = fix.updates.cues;
-          conversationHistory.push(buildHistoryEntry(fix));
+          conversationHistory.push({ role: 'assistant', content: JSON.stringify(fix) });
           response.updates = response.updates || {};
           response.updates.cues = fix.updates.cues;
         }
@@ -2391,9 +2354,6 @@ window.addEventListener('load', async () => {
     })
     .catch(() => {});
   initMic();
-
-  // Preload SpeakaBoo button images to prevent src-change flash
-  ['speakaboo-on.png','speakaboo-off.png','speakaboo-waiting.png'].forEach(src=>{new Image().src=src;});
 
   // Mic starts OFF — user enables voice when ready
   micPaused = true;
