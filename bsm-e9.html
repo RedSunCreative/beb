@@ -339,7 +339,6 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
         <div class="standby-where" id="standby-where"></div>
         <div class="standby-inst" id="standby-inst"></div>
       </div>
-      <div class="warn-banner" id="warn-banner"><div class="warn-tag" id="warn-tag"></div><div class="warn-msg" id="warn-msg"></div></div>
       <div class="room-msg-banner" id="room-msg-banner">
         <div class="boo-tag"><svg width="20" height="24" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/><ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/><ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/><ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/><path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/><ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/><path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/></svg> BOO SAYS:</div>
         <div class="room-msg-text" id="room-msg-text"></div>
@@ -417,6 +416,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <div class="boo-name"><div class="boo-name-main">I'M BOO! 👋 HOST ONLY VIEW</div><div class="boo-name-sub">YOUR LITTLE BIG SHOW MANAGER</div></div>
     </div>
     <div class="now-live-bar" id="host-now-live-bar"><div class="nl-dot" id="host-nl-dot"></div><div class="nl-label" id="host-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div>
+    <div class="warn-banner" id="warn-banner"><div class="warn-tag" id="warn-tag"></div><div class="warn-msg" id="warn-msg"></div></div>
     <div class="timer-grid">
       <div class="timer-card"><div class="timer-label">SEGMENT</div><div class="big-timer" id="h-seg">20:00</div><div class="timer-sub" id="h-scene">PRE-SHOW</div></div>
       <div class="timer-card"><div class="timer-label">SHOW</div><div class="big-timer" id="h-show">90:00</div><div class="timer-sub" id="ep-label-host-timer">LITTLE BIG VOICES</div></div>
@@ -805,6 +805,7 @@ let removedIndices=new Set();
 let pendingInsert=null;
 let cueIdx=0,segSecs=CUES[0]?.dur*60||0,showSecs=EPISODE.showMins*60;
 let running=false,timerInt=null,warning=null,flashOn=true,flashInt=null;
+let booFlashOn=true,booFlashInt=null;
 let tvRotation=0,zoomLevel=100;
 let view="tv",techTab="audio";
 let scheduleOffset=0,showLive=false,standbyActive=false,preLiveActive=false,preLiveFired=false;
@@ -864,7 +865,7 @@ function doFlash(){
     const el=document.getElementById(id);if(el) el.style.opacity=flashOn?"1":"0.2";
   });
   const nameEl=document.getElementById('boo-name-flash-el');
-  if(nameEl) nameEl.style.color=flashOn?"#F5D03A":(warning==="2"||warning==="over"?"#E8431A":"#ffffff");
+  if(nameEl&&(warning==="2"||warning==="over")) nameEl.style.color=flashOn?"#F5D03A":"#E8431A";
   const appl=document.getElementById('applause-text');
   if(appl&&document.getElementById('applause-banner').style.display!=='none'){
     appl.style.color=flashOn?"#F5D03A":"#fff";
@@ -880,6 +881,20 @@ function doFlash(){
   const rc=document.getElementById("ros-change-banner");
   if(rc&&rc.style.display!=="none"){rc.style.borderColor=flashOn?"#E8431A":"#7a1a00";}
   if(warning) applyFlash();
+}
+function startBooSlowFlash(){
+  if(booFlashInt) return;
+  booFlashInt=setInterval(()=>{
+    booFlashOn=!booFlashOn;
+    const el=document.getElementById('boo-name-flash-el');
+    if(el) el.style.color=booFlashOn?"#F5D03A":"#ffffff";
+  },1800);
+}
+function stopBooFlash(){
+  if(booFlashInt){clearInterval(booFlashInt);booFlashInt=null;}
+  booFlashOn=true;
+  const el=document.getElementById('boo-name-flash-el');
+  if(el) el.style.color="#F5D03A";
 }
 function setFlashRate(ms){clearInterval(flashInt);flashInt=setInterval(()=>{flashOn=!flashOn;doFlash();},ms);}
 setFlashRate(700);
@@ -1107,7 +1122,7 @@ function render(){
     } else bc.style.display="none";
   }
   const wb=document.getElementById("warn-banner"),wt=document.getElementById("warn-tag"),wm=document.getElementById("warn-msg");
-  if(wb&&wt&&wm){
+  if(wb&&wt&&wm&&view!=="tv"){
     const wmsg=warning==="over"?c.w2||c.w5:warning==="2"?c.w2:warning==="5"?c.w5:null;
     if(warning&&wmsg){wb.style.display="block";wt.style.color=segColor();wt.textContent=warning==="over"?"⏱ WRAP UP":warning==="2"?"⚡ 2 MIN":"🔔 5 MIN";wm.textContent=wmsg;applyFlash();}
     else wb.style.display="none";
@@ -1151,8 +1166,9 @@ function tick(){
   segSecs--;
   if(showTimerStarted) showSecs=Math.max(showSecs-1,0);
   const c=CUES[cueIdx];
+  if(segSecs===240) startBooSlowFlash();
   if(segSecs===300&&c?.w5) warning="5";
-  else if(segSecs===120&&c?.w2){warning="2";setFlashRate(300);}
+  else if(segSecs===120&&c?.w2){warning="2";stopBooFlash();setFlashRate(300);}
   else if(segSecs<=0){warning="over";setFlashRate(300);}
   render();
 }
@@ -1175,7 +1191,7 @@ function goNext(){
     setTimeout(()=>sbSet({is_live:false,cue_idx:0,ros_change_msg:"__APPLAUSE__"}),600);
     return;
   }
-  scheduleOffset+=segSecs;clearInterval(timerInt);warning=null;setFlashRate(700);clearBanners();clearROSBanner();
+  scheduleOffset+=segSecs;clearInterval(timerInt);warning=null;setFlashRate(700);stopBooFlash();clearBanners();clearROSBanner();
   let next=cueIdx+1;
   while(next<CUES.length-1&&removedIndices.has(next)) next++;
   cueIdx=next;segSecs=CUES[cueIdx].dur*60;
@@ -1190,7 +1206,7 @@ function goNext(){
 
 function goPrev(){
   if(cueIdx<=0) return;
-  clearInterval(timerInt);warning=null;setFlashRate(700);scheduleOffset=0;clearBanners();
+  clearInterval(timerInt);warning=null;setFlashRate(700);stopBooFlash();scheduleOffset=0;clearBanners();
   cueIdx--;segSecs=CUES[cueIdx].dur*60;
   running=true;timerInt=setInterval(tick,1000);
   sbSet({cue_idx:cueIdx,is_live:true,standby_active:false,prelive_active:false});
