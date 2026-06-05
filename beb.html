@@ -1835,6 +1835,8 @@ async function generateBSM() {
       const epDate = showData.epDate || new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
       btn.style.color = '';
       if (ok) {
+        const rosHtml = buildROSHtml();
+        if (rosHtml) await uploadToGitHub(`ros-e${epNum}.html`, rosHtml);
         const bsmUrl = `https://${CLIENT_CONFIG.githubRepo?.split('/')[0]?.toLowerCase()}.github.io/${CLIENT_CONFIG.githubRepo?.split('/')[1]}/${filename}`;
         showScriptsSharePanel('✓ Live Show Script published', bsmUrl, true);
         btn.textContent = '✓ PUBLISHED';
@@ -1935,19 +1937,12 @@ function closeSceneEdit() {
 }
 
 // ─── GENERATE RUN OF SHOW ───
-async function generateROS() {
+function buildROSHtml() {
   const cues = showData.cues.map((c, i, arr) => {
     const next = arr[i + 1];
     return { ...c, nextScene: next?.scene ?? '', nextHint: next?.booName ?? next?.scene ?? '', audioNext: next?.audioNow ?? '', videoNext: next?.videoNow ?? '', camerasNext: next?.camerasNow ?? '', lightingNext: next?.lightingNow ?? '', ...deriveStandby(arr, i), ...deriveWarnings(arr, i) };
   });
-  if (!cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
-
-  closeRosMenu();
-  const btn = document.getElementById('ros-toggle-btn');
-  const sharePanel = document.getElementById('scripts-share-panel');
-  btn.textContent = '⏳ BUILDING...';
-  btn.disabled = true;
-  sharePanel.style.display = 'none';
+  if (!cues.length) return null;
 
   const cfg = CLIENT_CONFIG;
   const epNum = showData.epNum || 'X';
@@ -1989,7 +1984,6 @@ async function generateROS() {
   }).join('');
 
   const bsmUrl = cfg.qrUrl || `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
-  const rosUrl = `https://redsuncreative.github.io/beb/ros-e${epNum}.html`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -2087,6 +2081,23 @@ body{background:#fff;color:#000;font-family:'Barlow Condensed',sans-serif;font-s
 <script>new QRCode(document.getElementById('qr-ros'),{text:${JSON.stringify(bsmUrl)},width:80,height:80,colorDark:"#000000",colorLight:"#ffffff"});<\/script>
 </body>
 </html>`;
+
+  return html;
+}
+
+async function generateROS() {
+  if (!showData.cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
+  closeRosMenu();
+  const btn = document.getElementById('ros-toggle-btn');
+  const sharePanel = document.getElementById('scripts-share-panel');
+  btn.textContent = '⏳ BUILDING...';
+  btn.disabled = true;
+  sharePanel.style.display = 'none';
+
+  const epNum = showData.epNum || 'X';
+  const rosUrl = `https://redsuncreative.github.io/beb/ros-e${epNum}.html`;
+  const html = buildROSHtml();
+  if (!html) { btn.textContent = '📄 SHOW SCRIPTS \u25be'; btn.disabled = false; return; }
 
   const filename = `ros-e${epNum}.html`;
   const uploaded = await uploadToGitHub(filename, html);
