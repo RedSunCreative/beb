@@ -1319,7 +1319,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
   }
 
   const claudeAbort = new AbortController();
-  const claudeTimeout = setTimeout(() => claudeAbort.abort(), 25000);
+  const claudeTimeout = setTimeout(() => claudeAbort.abort(), 50000);
   let res;
   try {
     res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
