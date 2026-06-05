@@ -33,7 +33,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 .main{padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
 .scene-name{font-size:24px;color:#fff;font-weight:bold;margin-bottom:2px;}
 .boo-card{background:#4a5260;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px 16px;}
-.boo-tag{font-size:10px;color:#3BB8C9;letter-spacing:3px;margin-bottom:8px;}
+.boo-tag{display:flex;align-items:center;gap:6px;font-size:13px;color:#F5D03A;letter-spacing:3px;margin-bottom:6px;font-weight:bold;}
 .boo-msg{font-size:20px;color:#fff;line-height:1.6;}
 .boo-name-flash{font-size:28px;font-weight:900;display:block;margin-bottom:8px;}
 .warn-banner{border-radius:8px;padding:12px 16px;transition:all 0.3s;border:2px solid transparent;display:none;}
@@ -317,7 +317,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
     </div>
     <div style="padding:8px 16px 0;"><div class="now-live-bar" id="tv-now-live-bar"><div class="nl-dot" id="tv-nl-dot"></div><div class="nl-label" id="tv-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div></div>
     <div class="main">
-      <div class="scene-name" id="tv-scene">PRE-SHOW COUNTDOWN VIDEO</div>
+      <div class="scene-name" id="tv-scene" style="display:none">PRE-SHOW COUNTDOWN VIDEO</div>
       <div class="ros-change-banner" id="ros-change-banner"><div class="ros-change-msg" id="ros-change-msg"></div></div>
       <div class="prelive-banner" id="prelive-banner"><div class="prelive-title">🎯 PRE-LIVE — PLEASE READ</div><div class="prelive-msg" id="prelive-msg"></div></div>
       <div class="standby-banner" id="standby-banner">
@@ -327,13 +327,13 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
         <div class="standby-inst" id="standby-inst"></div>
       </div>
       <div class="warn-banner" id="warn-banner"><div class="warn-tag" id="warn-tag"></div><div class="warn-msg" id="warn-msg"></div></div>
-      <div class="boo-card" id="boo-card" style="display:none">
-        <div class="boo-tag">👋 BOO SAYS</div>
-        <div class="boo-msg" id="boo-msg"></div>
-      </div>
       <div class="up-next" id="up-next" style="display:none">
         <div class="un-label">UP NEXT</div>
         <div class="un-scene" id="un-scene"></div>
+      </div>
+      <div class="boo-card" id="boo-card" style="display:none">
+        <div class="boo-tag"><svg width="20" height="24" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/><ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/><ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/><ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/><path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/><ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/><path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/></svg> BOO SAYS</div>
+        <div class="boo-msg" id="boo-msg"></div>
       </div>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
@@ -827,7 +827,7 @@ function doFlash(){
     const el=document.getElementById(id);if(el) el.style.opacity=flashOn?"1":"0.2";
   });
   const nameEl=document.getElementById('boo-name-flash-el');
-  if(nameEl) nameEl.style.color=flashOn?"#F5D03A":"#E8431A";
+  if(nameEl) nameEl.style.color=flashOn?"#F5D03A":(warning==="2"||warning==="over"?"#E8431A":"#ffffff");
   const appl=document.getElementById('applause-text');
   if(appl&&document.getElementById('applause-banner').style.display!=='none'){
     appl.style.color=flashOn?"#F5D03A":"#fff";
@@ -1048,7 +1048,7 @@ function render(){
   if(bc&&bm){
     if(booData&&!standbyActive&&!preLiveActive){
       bc.style.display="block";
-      if(booData.name) bm.innerHTML=`<div style="font-size:10px;letter-spacing:3px;color:#888;margin-bottom:6px;border-top:1px solid #555;padding-top:10px;">FOLLOWING —</div><span class="boo-name-flash" id="boo-name-flash-el" style="color:#F5D03A;">${booData.name}</span>${booData.msg}`;
+      if(booData.name) bm.innerHTML=`<span class="boo-name-flash" id="boo-name-flash-el" style="color:#F5D03A;">${booData.name}</span>${booData.msg}`;
       else bm.innerHTML=booData.msg;
     } else bc.style.display="none";
   }
