@@ -1311,7 +1311,7 @@ standbyWho: name of person who needs to be in position before this scene. standb
 prelive:true means pre-show (Countdown) — excluded from runtime total.`;
 
   const reqBody = {
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 8192,
     system: systemPrompt,
     messages: [...conversationHistory, { role: 'user', content: userMessage }]
@@ -1421,7 +1421,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
     }
 
     conversationHistory.push(buildHistoryEntry(response));
-    if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-20);
+    if (conversationHistory.length > 10) conversationHistory = conversationHistory.slice(-10);
 
     const rawDisplay = response.display || response.speech || '';
     const rawSpeech = response.speech || response.display || '';
