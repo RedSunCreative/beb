@@ -534,7 +534,7 @@ const BASE_CUES = [
     cameras: ["Please power up all cameras and frame", "CAM 1: Music Stage wide", "CAM 2: Music Stage close", "CAM 3: Pod Stage wide"],
     lighting: ["House lights up, please", "Stand by for show lighting"],
     audioNext: ["Music mics up + reverb/delay", "Audience mics up on LIVE! yell. TY!"],
-    videoNext: ["CAM 1, 2, 3 live — Music Stage", "GO LBV E9 Video Opener after LIVE! yell"],
+    videoNext: ["CAM 1, 2, 3 live — Music Stage", "GO LBV E9 Show Open.mp4 after LIVE! yell"],
     camerasNext: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
     lightingNext: ["Music Stage performance lighting"],
     cueCard: null
@@ -546,11 +546,11 @@ const BASE_CUES = [
     w5: "5 minutes remaining in this segment.", w2: "2 minutes remaining.",
     next: "PRE-RECORDED INTRO", nextScene: "PRE-RECORDED INTRO",
     audio: ["Music mics up + reverb/delay", "Audience mics up on LIVE! yell. TY!"],
-    video: ["CAM 1, 2, 3 live — Music Stage", "GO LBV E9 Video Opener after LIVE! yell"],
+    video: ["CAM 1, 2, 3 live — Music Stage", "GO LBV E9 Show Open.mp4 after LIVE! yell"],
     cameras: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
     lighting: ["Music Stage performance lighting"],
-    audioNext: ["GO playback audio — LBV E9 Intro. TY!"],
-    videoNext: ["GO LBV E9 Intro Video"],
+    audioNext: ["GO playback audio — LBV E9 Show Open.mp4. TY!"],
+    videoNext: ["GO LBV E9 Show Open.mp4"],
     camerasNext: ["Video playback — stand by cams for pod"],
     lightingNext: ["Hold current lighting"],
     cueCard: null
@@ -560,26 +560,26 @@ const BASE_CUES = [
     prelive: false,
     booName: null, booTpl: null,
     w5: "5 minutes — SHOW OPENER, please head to the Pod Stage.", w2: "2 minutes — SHOW OPENER, to the Pod Stage now.",
-    next: "SHOW OPENER", nextScene: "SHOW OPENER",
-    audio: ["GO playback audio — LBV E9 Intro. TY!"],
-    video: ["GO LBV E9 Intro Video"],
+    next: "Karly Pittman", nextScene: "SHOW OPENER",
+    audio: ["GO playback audio — LBV E9 Show Open.mp4. TY!"],
+    video: ["GO LBV E9 Show Open.mp4"],
     cameras: ["Video playback — stand by cams for pod"],
     lighting: ["Hold current lighting"],
-    audioNext: ["Host mics — Mark + Corey live", "Audience mics"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Corey Hopkins"],
+    audioNext: ["Host mics — Mark live", "Audience mics"],
+    videoNext: ["CAM 3, 4 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark"],
     lightingNext: ["Pod Stage lighting"],
     cueCard: null
   },
   {
     dur: 5, scene: "SHOW OPENER", liveLabel: "NOW LIVE: SHOW OPENER",
     prelive: false,
-    booName: null, booTpl: null,
+    booName: "Karly Pittman", booTpl: "You have about {M} before you are on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
     w5: "5 minutes — wrapping up, Kitchen Disco is next.", w2: "2 minutes — heading to Kitchen Disco.",
     next: "Karly Pittman", nextScene: "KITCHEN DISCO #1",
-    audio: ["Host mics — Mark + Corey live", "Audience mics"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Corey Hopkins"],
+    audio: ["Host mics — Mark live", "Audience mics"],
+    video: ["CAM 3, 4 — Pod Stage"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark"],
     lighting: ["Pod Stage lighting"],
     audioNext: ["Kitchen mics live", "Audience mics"],
     videoNext: ["CAM 6: Kitchen Disco Stage"],
@@ -639,91 +639,11 @@ const BASE_CUES = [
     dur: 12, scene: "INTERVIEW — Kyndle Lee", liveLabel: "NOW LIVE: INTERVIEW — Kyndle Lee",
     prelive: false,
     booName: null, booTpl: null,
-    w5: "5 minutes remaining in this segment.", w2: "2 minutes remaining.",
-    next: "Elaine Lofton", nextScene: "Sunset Stage — Kelia Hopkins",
-    audio: ["Podcast faders — Mark primary", "Audience mics live"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Kyndle Lee"],
-    lighting: ["Pod Stage interview lighting"],
-    audioNext: ["Sunset Stage mics live", "Audience mics"],
-    videoNext: ["CAM 7: Sunset Stage"],
-    camerasNext: ["CAM 7: Sunset Stage wide and close"],
-    lightingNext: ["Sunset Stage lighting"],
-    cueCard: null
-  },
-  {
-    dur: 3, scene: "Sunset Stage — Kelia Hopkins", liveLabel: "NOW LIVE: Sunset Stage — Kelia Hopkins",
-    prelive: false,
-    booName: "Elaine Lofton", booTpl: "Kelia is introducing you right now! Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
-    w5: "5 minutes — Elaine Lofton, please head to the Pod Stage.", w2: "2 minutes — Elaine Lofton, to the Pod Stage now.",
-    next: "INTERVIEW — Elaine Lofton", nextScene: "INTERVIEW — Elaine Lofton",
-    audio: ["Sunset Stage mics live", "Audience mics"],
-    video: ["CAM 7: Sunset Stage"],
-    cameras: ["CAM 7: Sunset Stage wide and close"],
-    lighting: ["Sunset Stage lighting"],
-    audioNext: ["Podcast faders — Mark primary", "Audience mics live"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Elaine Lofton"],
-    lightingNext: ["Pod Stage interview lighting"],
-    cueCard: null
-  },
-  {
-    dur: 12, scene: "INTERVIEW — Elaine Lofton", liveLabel: "NOW LIVE: INTERVIEW — Elaine Lofton",
-    prelive: false,
-    booName: null, booTpl: null,
-    w5: "5 minutes — PERFORMANCE — Straight From the Hip performance coming up.", w2: "2 minutes — PERFORMANCE — Straight From the Hip up next.",
-    next: "PERFORMANCE — Straight From the Hip", nextScene: "PERFORMANCE — Straight From the Hip",
-    audio: ["Podcast faders — Mark primary", "Audience mics live"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Elaine Lofton"],
-    lighting: ["Pod Stage interview lighting"],
-    audioNext: ["Music mics + reverb/delay", "Audience mics"],
-    videoNext: ["CAM 1, 2, 3 — Music Stage"],
-    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
-    lightingNext: ["Music Stage performance lighting"],
-    cueCard: null
-  },
-  {
-    dur: 4, scene: "PERFORMANCE — Straight From the Hip", liveLabel: "NOW LIVE: PERFORMANCE — Straight From the Hip",
-    prelive: false,
-    booName: null, booTpl: "Everyone — please gather on stage and in the Kitchen Disco! It's time to dance!",
-    w5: "5 minutes remaining in this segment.", w2: "2 minutes remaining.",
-    next: "Michael Lofton", nextScene: "Sunset Stage — Corey Hopkins",
-    audio: ["Music mics + reverb/delay", "Audience mics"],
-    video: ["CAM 1, 2, 3 — Music Stage"],
-    cameras: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
-    lighting: ["Music Stage performance lighting"],
-    audioNext: ["Sunset Stage mics live", "Audience mics"],
-    videoNext: ["CAM 7: Sunset Stage"],
-    camerasNext: ["CAM 7: Sunset Stage wide and close"],
-    lightingNext: ["Sunset Stage lighting"],
-    cueCard: null
-  },
-  {
-    dur: 3, scene: "Sunset Stage — Corey Hopkins", liveLabel: "NOW LIVE: Sunset Stage — Corey Hopkins",
-    prelive: false,
-    booName: "Michael Lofton", booTpl: "Corey is introducing you right now! Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
-    w5: "5 minutes — Michael Lofton, please head to the Pod Stage.", w2: "2 minutes — Michael Lofton, to the Pod Stage now.",
-    next: "Mimi Conroy", nextScene: "INTERVIEW — Michael Lofton",
-    audio: ["Sunset Stage mics live", "Audience mics"],
-    video: ["CAM 7: Sunset Stage"],
-    cameras: ["CAM 7: Sunset Stage wide and close"],
-    lighting: ["Sunset Stage lighting"],
-    audioNext: ["Podcast faders — Mark primary", "Audience mics live"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Michael Lofton"],
-    lightingNext: ["Pod Stage interview lighting"],
-    cueCard: null
-  },
-  {
-    dur: 12, scene: "INTERVIEW — Michael Lofton", liveLabel: "NOW LIVE: INTERVIEW — Michael Lofton",
-    prelive: false,
-    booName: "Mimi Conroy", booTpl: "You and Mimi are up in the kitchen! Please make your way to the Kitchen Disco Stage when you are ready. Thank you!",
     w5: "5 minutes — wrapping up, Kitchen Disco is next.", w2: "2 minutes — heading to Kitchen Disco.",
     next: "Surprise Guest", nextScene: "KITCHEN DISCO #2 — Mimi & Michael / Happy Hour Treats",
     audio: ["Podcast faders — Mark primary", "Audience mics live"],
     video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Michael Lofton"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Kyndle Lee"],
     lighting: ["Pod Stage interview lighting"],
     audioNext: ["Kitchen mics live", "Audience mics"],
     videoNext: ["CAM 6: Kitchen Disco Stage"],
@@ -732,7 +652,7 @@ const BASE_CUES = [
     cueCard: null
   },
   {
-    dur: 5, scene: "KITCHEN DISCO #2 — Mimi & Michael / Happy Hour Treats", liveLabel: "NOW LIVE: KITCHEN DISCO #2 — Mimi & Michael / Happy Hour Treats",
+    dur: 5, scene: "KITCHEN DISCO #2 — Mimi & Michael / Happy Hour Treats", liveLabel: "NOW LIVE: KITCHEN DISCO #2 — Mimi & Happy Hour Treats",
     prelive: false,
     booName: "Surprise Guest", booTpl: "You are up next! Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
     w5: "5 minutes — Surprise Guest, please head to the Pod Stage.", w2: "2 minutes — Surprise Guest, to the Pod Stage now.",
@@ -751,28 +671,60 @@ const BASE_CUES = [
     dur: 5, scene: "INTERVIEW — Surprise Guest", liveLabel: "NOW LIVE: INTERVIEW — Surprise Guest",
     prelive: false,
     booName: "David Rothgeb", booTpl: "You have about {M} before Straight From the Hip. Please head to the Music Stage when you are ready. Thank you!",
-    w5: "5 minutes — SHOW CLOSE, please head to the Pod Stage.", w2: "2 minutes — SHOW CLOSE, to the Pod Stage now.",
-    next: "SHOW CLOSE", nextScene: "SHOW CLOSE",
+    w5: "5 minutes — PERFORMANCE — Straight From the Hip performance coming up.", w2: "2 minutes — PERFORMANCE — Straight From the Hip up next.",
+    next: "PERFORMANCE — Straight From the Hip", nextScene: "PERFORMANCE — Straight From the Hip",
     audio: ["Podcast faders — Mark primary", "Audience mics live"],
     video: ["CAM 3, 4, 5 — Pod Stage"],
     cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Surprise Guest"],
     lighting: ["Pod Stage interview lighting"],
-    audioNext: ["Host mics — Mark + Corey Hopkins live", "Audience mics"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Corey Hopkins"],
+    audioNext: ["Music mics + reverb/delay", "Audience mics"],
+    videoNext: ["CAM 1, 2, 3 — Music Stage"],
+    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
+    lightingNext: ["Music Stage performance lighting"],
+    cueCard: null
+  },
+  {
+    dur: 4, scene: "PERFORMANCE — Straight From the Hip", liveLabel: "NOW LIVE: PERFORMANCE — Straight From the Hip",
+    prelive: false,
+    booName: null, booTpl: "Everyone — please gather on stage and in the Kitchen Disco! It's time to dance!",
+    w5: "5 minutes — SHOW CLOSE, please head to the Pod Stage.", w2: "2 minutes — SHOW CLOSE, to the Pod Stage now.",
+    next: "SHOW CLOSE", nextScene: "SHOW CLOSE",
+    audio: ["Music mics + reverb/delay", "Audience mics"],
+    video: ["CAM 1, 2, 3 — Music Stage"],
+    cameras: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
+    lighting: ["Music Stage performance lighting"],
+    audioNext: ["Host mics — Mark live", "Audience mics"],
+    videoNext: ["CAM 3, 4 — Pod Stage"],
+    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark"],
     lightingNext: ["Pod Stage lighting"],
     cueCard: null
   },
   {
-    dur: 1, scene: "SHOW CLOSE", liveLabel: "NOW LIVE: SHOW CLOSE — Mark + Corey Hopkins",
+    dur: 1, scene: "SHOW CLOSE", liveLabel: "NOW LIVE: SHOW CLOSE",
+    prelive: false,
+    booName: null, booTpl: "Everyone — please gather on the Music Stage and Kitchen Disco for the ending credits!",
+    w5: "5 minutes — ENDING CREDITS — All Guests Dance performance coming up.", w2: "2 minutes — ENDING CREDITS — All Guests Dance up next.",
+    next: "ENDING CREDITS — All Guests Dance", nextScene: "ENDING CREDITS — All Guests Dance",
+    audio: ["Host mics — Mark live", "Audience mics"],
+    video: ["CAM 3, 4 — Pod Stage"],
+    cameras: ["CAM 3: Pod wide", "CAM 4: Mark"],
+    lighting: ["Pod Stage lighting"],
+    audioNext: ["GO Ending Video audio", "Bring mics back for applause", "Fade Master Audio. TY!"],
+    videoNext: ["GO Ending Video", "Take live Music Stage dancing"],
+    camerasNext: ["CAM 1: Music Stage wide", "Slider cam GO", "CAM 3: Atrium Viewing Area crowd"],
+    lightingNext: ["GO disco lighting — Music Stage. TY!"],
+    cueCard: null
+  },
+  {
+    dur: 3, scene: "ENDING CREDITS — All Guests Dance", liveLabel: "NOW LIVE: ENDING CREDITS",
     prelive: false,
     booName: null, booTpl: null,
     w5: "5 minutes — finishing the show!", w2: "2 minutes left — almost done!",
     next: null, nextScene: null,
-    audio: ["Host mics — Mark + Corey Hopkins live", "Audience mics"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Corey Hopkins"],
-    lighting: ["Pod Stage lighting"],
+    audio: ["GO Ending Video audio", "Bring mics back for applause", "Fade Master Audio. TY!"],
+    video: ["GO Ending Video", "Take live Music Stage dancing"],
+    cameras: ["CAM 1: Music Stage wide", "Slider cam GO", "CAM 3: Atrium Viewing Area crowd"],
+    lighting: ["GO disco lighting — Music Stage. TY!"],
     audioNext: [],
     videoNext: [],
     camerasNext: [],
@@ -781,7 +733,7 @@ const BASE_CUES = [
   }
 ];
 
-const STANDBY_DEFS = [null, null, null, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Kyndle Lee", stage: "Pod Stage", isPod: true}, {who: "Kyndle Lee", stage: "Pod Stage", isPod: true}, {who: "Michael Lofton", stage: "Pod Stage", isPod: true}, null, {who: "Michael Lofton", stage: "Pod Stage", isPod: true}, {who: "Michael Lofton", stage: "Pod Stage", isPod: true}, null, {who: "Surprise Guest", stage: "Pod Stage", isPod: true}, {who: "Surprise Guest", stage: "Pod Stage", isPod: true}, null, null];
+const STANDBY_DEFS = [null, null, null, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Kyndle Lee", stage: "Pod Stage", isPod: true}, {who: "Kyndle Lee", stage: "Pod Stage", isPod: true}, {who: "Surprise Guest", stage: "Pod Stage", isPod: true}, {who: "Surprise Guest", stage: "Pod Stage", isPod: true}, null, null, null, null];
 // ─── END BEB OUTPUT ────────────────────────────────────────────────────────────
 
 const INSERT_DEFS={
@@ -1095,7 +1047,7 @@ function render(){
   if(bc&&bm){
     if(booData&&!standbyActive&&!preLiveActive){
       bc.style.display="block";
-      if(booData.name) bm.innerHTML=`<span class="boo-name-flash" id="boo-name-flash-el" style="color:#F5D03A;">${booData.name}</span>${booData.msg}`;
+      if(booData.name) bm.innerHTML=`<div style="font-size:10px;letter-spacing:3px;color:#888;margin-bottom:6px;border-top:1px solid #555;padding-top:10px;">FOLLOWING —</div><span class="boo-name-flash" id="boo-name-flash-el" style="color:#F5D03A;">${booData.name}</span>${booData.msg}`;
       else bm.innerHTML=booData.msg;
     } else bc.style.display="none";
   }
@@ -1323,9 +1275,21 @@ function setView(v){
     } catch(e) {}
   }
   await requestWakeLock();
-  // Re-request if page becomes visible again (Fire TV can release it on tab switch)
+  // Re-request wake lock and re-sync state when page becomes visible
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && !lock) requestWakeLock();
+    if (document.visibilityState === 'visible') {
+      if (!lock) requestWakeLock();
+      // Re-sync cue state immediately in case we missed updates while hidden
+      if (typeof sbGet === 'function' && typeof applyRemoteState === 'function') {
+        sbGet().then(s => { if (s) applyRemoteState(s); });
+      }
+    }
+  });
+
+  // Lock the back button on Fire TV — prevents Silk from navigating away from BSM
+  history.pushState(null, '', window.location.href);
+  window.addEventListener('popstate', () => {
+    history.pushState(null, '', window.location.href);
   });
 
   // 2. Invisible canvas animation — keeps JS engine active
