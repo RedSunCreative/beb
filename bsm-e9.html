@@ -33,7 +33,20 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 .main{padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
 .scene-name{font-size:24px;color:#fff;font-weight:bold;margin-bottom:2px;}
 .boo-card{background:#4a5260;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px 16px;}
-.boo-tag{display:flex;align-items:center;gap:6px;font-size:13px;color:#F5D03A;letter-spacing:3px;margin-bottom:6px;font-weight:bold;}
+.boo-tag{display:flex;align-items:center;gap:6px;font-size:13px;color:#E8431A;letter-spacing:3px;margin-bottom:6px;font-weight:bold;}
+.room-msg-banner{background:#4a5260;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px 16px;display:none;}
+.room-msg-text{font-size:20px;color:#fff;line-height:1.6;margin-top:6px;}
+.crew-msg-banner{background:#1a0a00;border:2px solid #E8431A;border-radius:8px;padding:12px 14px;display:none;margin:8px 16px 0;}
+.crew-msg-label{font-size:10px;color:#E8431A;letter-spacing:3px;font-weight:bold;margin-bottom:6px;}
+.crew-msg-text{font-size:20px;color:#fff;}
+.bcast-wrap{background:#383f4d;border-radius:8px;padding:12px 14px;border:1px solid #464d59;display:none;}
+.bcast-title{font-size:10px;color:#F5D03A;letter-spacing:3px;font-weight:bold;margin-bottom:10px;}
+.bcast-row{margin-bottom:10px;}
+.bcast-lbl{font-size:9px;color:#C4B9A8;letter-spacing:2px;margin-bottom:5px;}
+.bcast-input{width:100%;background:#2a2f3a;border:1px solid #5a6270;color:#fff;border-radius:6px;padding:8px 10px;font-size:14px;font-family:inherit;resize:none;box-sizing:border-box;}
+.bcast-btns{display:flex;gap:6px;margin-top:5px;}
+.bcast-send{flex:1;padding:8px;background:#1a0a00;border:2px solid #E8431A;color:#E8431A;border-radius:6px;font-size:12px;font-weight:bold;cursor:pointer;letter-spacing:1px;}
+.bcast-clear{padding:8px 12px;background:#111;border:1px solid #444;color:#888;border-radius:6px;font-size:12px;font-weight:bold;cursor:pointer;}
 .boo-msg{font-size:20px;color:#fff;line-height:1.6;}
 .boo-name-flash{font-size:28px;font-weight:900;display:block;margin-bottom:8px;}
 .warn-banner{border-radius:8px;padding:12px 16px;transition:all 0.3s;border:2px solid transparent;display:none;}
@@ -327,12 +340,16 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
         <div class="standby-inst" id="standby-inst"></div>
       </div>
       <div class="warn-banner" id="warn-banner"><div class="warn-tag" id="warn-tag"></div><div class="warn-msg" id="warn-msg"></div></div>
+      <div class="room-msg-banner" id="room-msg-banner">
+        <div class="boo-tag"><svg width="20" height="24" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/><ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/><ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/><ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/><path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/><ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/><path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/></svg> BOO SAYS:</div>
+        <div class="room-msg-text" id="room-msg-text"></div>
+      </div>
       <div class="up-next" id="up-next" style="display:none">
         <div class="un-label">UP NEXT</div>
         <div class="un-scene" id="un-scene"></div>
       </div>
       <div class="boo-card" id="boo-card" style="display:none">
-        <div class="boo-tag"><svg width="20" height="24" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/><ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/><ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/><ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/><path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/><ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/><path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/></svg> BOO SAYS</div>
+        <div class="boo-tag"><svg width="20" height="24" viewBox="0 0 130 150" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;"><ellipse cx="65" cy="128" rx="38" ry="22" fill="#3BB8C9"/><rect x="57" y="98" width="16" height="14" rx="4" fill="#f4c08a"/><ellipse cx="65" cy="82" rx="32" ry="30" fill="#f4c08a"/><ellipse cx="65" cy="68" rx="33" ry="20" fill="#8B3A0F"/><ellipse cx="65" cy="55" rx="28" ry="16" fill="#A0430F"/><ellipse cx="54" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="76" cy="82" rx="6" ry="7" fill="#fff"/><ellipse cx="55" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><ellipse cx="77" cy="83" rx="4" ry="4.5" fill="#3a7a3a"/><circle cx="56" cy="82" r="2" fill="#1a1a1a"/><circle cx="78" cy="82" r="2" fill="#1a1a1a"/><path d="M55 98 Q65 106 75 98" stroke="#c0604a" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M34 72 Q65 44 96 72" stroke="#444" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="34" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="34" cy="76" rx="6" ry="8" fill="#333"/><ellipse cx="96" cy="76" rx="9" ry="11" fill="#555"/><ellipse cx="96" cy="76" rx="6" ry="8" fill="#333"/><path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/></svg> BOO SAYS:</div>
         <div class="boo-msg" id="boo-msg"></div>
       </div>
     </div>
@@ -372,6 +389,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <button class="tech-tab" id="tab-cameras" onclick="setTechTab('cameras')">CAMERAS</button>
       <button class="tech-tab" id="tab-lighting" onclick="setTechTab('lighting')">LIGHTS</button>
     </div>
+    <div class="crew-msg-banner" id="crew-msg-banner"><div class="crew-msg-label">📺 FROM HOST</div><div class="crew-msg-text" id="crew-msg-text"></div></div>
     <div class="tech-content">
       <div class="tech-section"><div class="tech-section-title" id="tech-now-title">NOW</div><div id="tech-now-lines"></div></div>
       <div class="tech-next"><div class="tech-next-label" id="tech-next-label">UP NEXT</div><div class="tech-next-lines" id="tech-next-lines"></div></div>
@@ -420,6 +438,25 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <button class="nav-btn" id="next-btn" onclick="goNext()" style="background:#0a2a1a;color:#4ade80;border:2px solid #2d6a2d;">NEXT CUE →</button>
     </div>
     <div class="next-hint" id="next-hint" style="display:none"></div>
+    <div class="bcast-wrap" id="bcast-wrap">
+      <div class="bcast-title">BROADCAST</div>
+      <div class="bcast-row">
+        <div class="bcast-lbl">📺 ROOM MESSAGE — all TV screens</div>
+        <textarea class="bcast-input" id="room-msg-input" rows="2" placeholder="Message to guests in the room..."></textarea>
+        <div class="bcast-btns">
+          <button class="bcast-send" onclick="sendRoomMsg()">SEND TO ROOM</button>
+          <button class="bcast-clear" onclick="clearRoomMsg()">✕ CLEAR</button>
+        </div>
+      </div>
+      <div class="bcast-row">
+        <div class="bcast-lbl">🎛️ CREW NOTE — tech screen only</div>
+        <textarea class="bcast-input" id="crew-msg-input" rows="2" placeholder="Note to the crew..."></textarea>
+        <div class="bcast-btns">
+          <button class="bcast-send" onclick="sendCrewMsg()">SEND TO CREW</button>
+          <button class="bcast-clear" onclick="clearCrewMsg()">✕ CLEAR</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ALL CLEAR SCREEN -->
@@ -963,6 +1000,7 @@ function showLiveUI(){
   document.getElementById("nav-grid").style.display="grid";
   document.getElementById("next-hint").style.display="block";
   document.getElementById("start-show-btn").style.display="none";
+  const bw=document.getElementById("bcast-wrap");if(bw) bw.style.display="block";
 }
 
 function applyRemoteState(state){
@@ -976,6 +1014,7 @@ function applyRemoteState(state){
     cueIdx=0;segSecs=CUES[0].dur*60;showSecs=90*60;
     standbyActive=false;preLiveActive=false;preLiveFired=false;
     clearBanners();
+    if(state.ros_change_msg==="__APPLAUSE__"){const a=document.getElementById("applause-banner");if(a) a.style.display="flex";}
     if(view==="tv") setView("tv-welcome");
     else if(view==="tech") setView("tech-welcome");
     return;
@@ -1012,16 +1051,31 @@ function applyRemoteState(state){
       setNowLiveLabels("NOW LIVE: 2 MINUTE WARNING COUNTDOWN");
     } else if(banner) banner.style.display="none";
   }
-  // ROS / Applause — never restore __APPLAUSE__ on remote state after page load
-  if(state.ros_change_msg==="__APPLAUSE__"){
-    // Only show if we're mid-show, not on fresh load
-    if(showLive){const banner=document.getElementById("applause-banner");if(banner) banner.style.display="flex";}
-  } else if(state.ros_change_msg&&state.ros_change_msg.length>2){
+  const rmsg=state.ros_change_msg||"";
+  if(rmsg==="__APPLAUSE__"){
+    if(showLive){const a=document.getElementById("applause-banner");if(a) a.style.display="flex";}
+  } else if(rmsg.startsWith("__ROOM:")){
+    const txt=rmsg.slice(7);
+    const rb=document.getElementById("room-msg-banner"),rt=document.getElementById("room-msg-text");
+    if(rb&&rt){rt.textContent=txt;rb.style.display="block";}
+    const cb=document.getElementById("crew-msg-banner");if(cb) cb.style.display="none";
+    const rbc=document.getElementById("ros-change-banner");if(rbc) rbc.style.display="none";
+  } else if(rmsg.startsWith("__CREW:")){
+    const txt=rmsg.slice(7);
+    const cb=document.getElementById("crew-msg-banner"),ct=document.getElementById("crew-msg-text");
+    if(cb&&ct){ct.textContent=txt;cb.style.display="block";}
+    const rb=document.getElementById("room-msg-banner");if(rb) rb.style.display="none";
+    const rbc=document.getElementById("ros-change-banner");if(rbc) rbc.style.display="none";
+  } else if(rmsg&&rmsg.length>2){
     const banner=document.getElementById("ros-change-banner"),msg=document.getElementById("ros-change-msg");
-    if(banner&&msg){msg.textContent=state.ros_change_msg;banner.style.display="block";}
+    if(banner&&msg){msg.textContent=rmsg;banner.style.display="block";}
+    const rb=document.getElementById("room-msg-banner");if(rb) rb.style.display="none";
+    const cb=document.getElementById("crew-msg-banner");if(cb) cb.style.display="none";
   } else {
     const banner=document.getElementById("ros-change-banner");if(banner) banner.style.display="none";
-    const appl=document.getElementById("applause-banner");if(appl&&state.ros_change_msg==="") appl.style.display="none";
+    const appl=document.getElementById("applause-banner");if(appl&&rmsg==="") appl.style.display="none";
+    const rb=document.getElementById("room-msg-banner");if(rb) rb.style.display="none";
+    const cb=document.getElementById("crew-msg-banner");if(cb) cb.style.display="none";
   }
   if(showLive) render();
 }
@@ -1116,7 +1170,9 @@ function goNext(){
   if(cueIdx>=CUES.length-1){
     ["view-tv","view-tech","view-host"].forEach(id=>{const el=document.getElementById(id);if(el) el.style.display="none";});
     document.getElementById("view-allclear").style.display="flex";
-    sbSet({is_live:false,cue_idx:0,ros_change_msg:""});
+    const appl=document.getElementById("applause-banner");if(appl) appl.style.display="flex";
+    sbSet({ros_change_msg:"__APPLAUSE__"});
+    setTimeout(()=>sbSet({is_live:false,cue_idx:0,ros_change_msg:"__APPLAUSE__"}),600);
     return;
   }
   scheduleOffset+=segSecs;clearInterval(timerInt);warning=null;setFlashRate(700);clearBanners();clearROSBanner();
@@ -1157,8 +1213,30 @@ function resetShow(){
   // Hide applause and allclear screens
   const appl=document.getElementById("applause-banner");if(appl) appl.style.display="none";
   const ac=document.getElementById("view-allclear");if(ac) ac.style.display="none";
+  const bw=document.getElementById("bcast-wrap");if(bw) bw.style.display="none";
+  const ri=document.getElementById("room-msg-input");if(ri) ri.value="";
+  const ci=document.getElementById("crew-msg-input");if(ci) ci.value="";
   sbSet({cue_idx:0,is_live:false,standby_active:false,prelive_active:false,ros_change_msg:""});
   setView("host-welcome");
+}
+
+function sendRoomMsg(){
+  const msg=document.getElementById("room-msg-input")?.value.trim();
+  if(!msg) return;
+  sbSet({ros_change_msg:`__ROOM:${msg}`});
+}
+function clearRoomMsg(){
+  const el=document.getElementById("room-msg-input");if(el) el.value="";
+  sbSet({ros_change_msg:""});
+}
+function sendCrewMsg(){
+  const msg=document.getElementById("crew-msg-input")?.value.trim();
+  if(!msg) return;
+  sbSet({ros_change_msg:`__CREW:${msg}`});
+}
+function clearCrewMsg(){
+  const el=document.getElementById("crew-msg-input");if(el) el.value="";
+  sbSet({ros_change_msg:""});
 }
 
 function openLiveEdit(){pendingInsert=null;document.getElementById("confirm-card").style.display="none";document.getElementById("insert-section").style.display="block";document.getElementById("custom-input-wrap").style.display="none";buildCueList();document.getElementById("live-edit-overlay").style.display="block";document.body.style.overflow="hidden";}
