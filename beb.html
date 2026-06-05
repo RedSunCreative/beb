@@ -508,7 +508,7 @@ let conversationHistory = [];
 let isThinking = false;
 let isSpeaking = false;
 let echoGuard = false;
-let micPaused = false;
+let micPaused = localStorage.getItem('beb_voice_enabled') !== 'true';
 let booChillMode = false;
 let currentAudio = null;
 
@@ -867,6 +867,7 @@ function initMic() {
 
 function toggleMicPause() {
   micPaused = !micPaused;
+  localStorage.setItem('beb_voice_enabled', micPaused ? 'false' : 'true');
   const btn = document.getElementById('mic-btn');
   if (micPaused) {
     try { recognition?.stop(); } catch(e) {}
@@ -875,6 +876,7 @@ function toggleMicPause() {
     setMicStatus("SPEAKABOO OFF — TAP TO ENABLE", "");
   } else {
     btn.classList.remove('paused');
+    setMicStatus("SPEAKABOO ON", "");
     try { recognition?.start(); } catch(e) {}
   }
 }
@@ -2401,11 +2403,15 @@ window.addEventListener('load', async () => {
     .catch(() => {});
   initMic();
 
-  // Mic starts OFF — user enables voice when ready
-  micPaused = true;
+  // Voice off by default; stays off until user taps SpeakaBoo
   const micBtnEl = document.getElementById('mic-btn');
-  micBtnEl.classList.add('paused');
-  setMicStatus("SPEAKABOO OFF — TAP TO ENABLE", "");
+  if (micPaused) {
+    micBtnEl.classList.add('paused');
+    setMicStatus("SPEAKABOO OFF — TAP TO ENABLE", "");
+  } else {
+    setMicStatus("SPEAKABOO ON", "");
+    try { recognition?.start(); } catch(e) {}
+  }
 
   // All data sections start collapsed
   ['ep-body','runtime-body','guests-body','crew-body','cues-body','memory-body'].forEach(id => {
