@@ -595,8 +595,9 @@ function deriveWarnings(cues, i) {
     w5 = `5 minutes — wrapping up, Kitchen Disco is next.`;
     w2 = `2 minutes — heading to Kitchen Disco.`;
   } else if (type === 'music') {
-    w5 = `5 minutes — ${label} performance coming up.`;
-    w2 = `2 minutes — ${label} up next.`;
+    const perfLabel = guestFrom(nxt.scene) || nxt.scene || 'performance';
+    w5 = `5 minutes — ${perfLabel} coming up.`;
+    w2 = `2 minutes — ${perfLabel} up next.`;
   } else if (type === 'video' || nxt.prelive) {
     w5 = `5 minutes remaining in this segment.`;
     w2 = `2 minutes remaining.`;
