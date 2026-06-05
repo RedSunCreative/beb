@@ -1133,8 +1133,11 @@ function goNext(){
 
 function goPrev(){
   if(cueIdx<=0) return;
-  clearInterval(timerInt);running=false;warning=null;setFlashRate(700);scheduleOffset=0;clearBanners();
-  cueIdx--;segSecs=CUES[cueIdx].dur*60;render();
+  clearInterval(timerInt);warning=null;setFlashRate(700);scheduleOffset=0;clearBanners();
+  cueIdx--;segSecs=CUES[cueIdx].dur*60;
+  running=true;timerInt=setInterval(tick,1000);
+  sbSet({cue_idx:cueIdx,is_live:true,standby_active:false,prelive_active:false});
+  render();
 }
 
 function clearBanners(){
