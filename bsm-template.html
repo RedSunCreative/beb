@@ -442,19 +442,21 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <div class="bcast-title">BROADCAST</div>
       <div class="bcast-row">
         <div class="bcast-lbl">📺 ROOM MESSAGE — all TV screens</div>
-        <textarea class="bcast-input" id="room-msg-input" rows="2" placeholder="Message to guests in the room..."></textarea>
+        <textarea class="bcast-input" id="room-msg-input" rows="2" placeholder="Message to guests in the room... (Enter to send)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendRoomMsg();}"></textarea>
         <div class="bcast-btns">
-          <button class="bcast-send" onclick="sendRoomMsg()">SEND TO ROOM</button>
+          <button class="bcast-send" id="room-send-btn" onclick="sendRoomMsg()">SEND TO ROOM</button>
           <button class="bcast-clear" onclick="clearRoomMsg()">✕ CLEAR</button>
         </div>
+        <div id="room-msg-status" style="font-size:10px;color:#4ade80;letter-spacing:1px;min-height:14px;margin-top:4px;"></div>
       </div>
       <div class="bcast-row">
         <div class="bcast-lbl">🎛️ CREW NOTE — tech screen only</div>
-        <textarea class="bcast-input" id="crew-msg-input" rows="2" placeholder="Note to the crew..."></textarea>
+        <textarea class="bcast-input" id="crew-msg-input" rows="2" placeholder="Note to the crew... (Enter to send)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCrewMsg();}"></textarea>
         <div class="bcast-btns">
-          <button class="bcast-send" onclick="sendCrewMsg()">SEND TO CREW</button>
+          <button class="bcast-send" id="crew-send-btn" onclick="sendCrewMsg()">SEND TO CREW</button>
           <button class="bcast-clear" onclick="clearCrewMsg()">✕ CLEAR</button>
         </div>
+        <div id="crew-msg-status" style="font-size:10px;color:#4ade80;letter-spacing:1px;min-height:14px;margin-top:4px;"></div>
       </div>
     </div>
   </div>
@@ -1022,19 +1024,27 @@ function sendRoomMsg(){
   const msg=document.getElementById("room-msg-input")?.value.trim();
   if(!msg) return;
   sbSet({ros_change_msg:`__ROOM:${msg}`});
+  const btn=document.getElementById("room-send-btn");
+  if(btn){const t=btn.textContent;btn.textContent="✓ SENT";btn.style.borderColor="#4ade80";btn.style.color="#4ade80";setTimeout(()=>{btn.textContent=t;btn.style.borderColor="";btn.style.color="";},2500);}
+  const s=document.getElementById("room-msg-status");if(s) s.textContent="Now on TV screens — CLEAR to dismiss";
 }
 function clearRoomMsg(){
   const el=document.getElementById("room-msg-input");if(el) el.value="";
   sbSet({ros_change_msg:""});
+  const s=document.getElementById("room-msg-status");if(s) s.textContent="";
 }
 function sendCrewMsg(){
   const msg=document.getElementById("crew-msg-input")?.value.trim();
   if(!msg) return;
   sbSet({ros_change_msg:`__CREW:${msg}`});
+  const btn=document.getElementById("crew-send-btn");
+  if(btn){const t=btn.textContent;btn.textContent="✓ SENT";btn.style.borderColor="#4ade80";btn.style.color="#4ade80";setTimeout(()=>{btn.textContent=t;btn.style.borderColor="";btn.style.color="";},2500);}
+  const s=document.getElementById("crew-msg-status");if(s) s.textContent="Now on crew screen — CLEAR to dismiss";
 }
 function clearCrewMsg(){
   const el=document.getElementById("crew-msg-input");if(el) el.value="";
   sbSet({ros_change_msg:""});
+  const s=document.getElementById("crew-msg-status");if(s) s.textContent="";
 }
 
 function openLiveEdit(){pendingInsert=null;document.getElementById("confirm-card").style.display="none";document.getElementById("insert-section").style.display="block";document.getElementById("custom-input-wrap").style.display="none";buildCueList();document.getElementById("live-edit-overlay").style.display="block";document.body.style.overflow="hidden";}
