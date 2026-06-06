@@ -1331,8 +1331,12 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
     reqBody.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }];
   }
 
+  // Streaming: web_search uses tool events so we skip streaming for that path.
+  const useStream = !opts.webSearch;
+  if (useStream) reqBody.stream = true;
+
   const claudeAbort = new AbortController();
-  const claudeTimeout = setTimeout(() => claudeAbort.abort(), 50000);
+  const claudeTimeout = setTimeout(() => claudeAbort.abort(), 60000);
   let res;
   try {
     res = await fetch(`${SB_URL}/functions/v1/claude-proxy`, {
@@ -1348,26 +1352,77 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
   }
   clearTimeout(claudeTimeout);
 
-  const data = await res.json();
-
-  if (data.error || !res.ok) {
+  if (!res.ok && !useStream) {
+    const data = await res.json();
     const errMsg = data.error?.message || data.error?.type || `HTTP ${res.status}`;
     console.error('[Boo API error]', errMsg, data);
     return { speech: "Didn't get a clean response — give it a moment and try again.", display: `<em>Didn't get a clean response. (${errMsg}) Give it a moment and try again.</em>`, updates: {} };
   }
 
-  const text = data.content?.filter(b => b.type === 'text').pop()?.text;
-  if (!text) {
-    console.error('[Boo] No text block in response', JSON.stringify(data).slice(0, 400));
-    return { speech: "Nothing came back — give it a moment and try again.", display: "<em>Nothing came back. Give it a moment and try again.</em>", updates: {} };
+  let fullText;
+
+  if (useStream) {
+    // Read SSE stream, accumulate text_delta events, show speech preview as it arrives
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulated = '';
+    let speechShown = false;
+    const statusEl = document.getElementById('mic-status-text');
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (!raw || raw === '[DONE]') continue;
+          try {
+            const evt = JSON.parse(raw);
+            if (evt.type === 'error') {
+              console.error('[Boo stream error]', evt.error);
+              return { speech: "Stream error — give it a moment and try again.", display: "<em>Stream error. Give it a moment and try again.</em>", updates: {} };
+            }
+            if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+              accumulated += evt.delta.text;
+              // Show speech preview once we have the full speech field
+              if (!speechShown && statusEl) {
+                const m = accumulated.match(/"speech"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+                if (m) {
+                  const preview = m[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').slice(0, 80);
+                  statusEl.textContent = preview || 'SPEAKABOO RESPONDING...';
+                  speechShown = true;
+                }
+              }
+            }
+          } catch(_) {}
+        }
+      }
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+    fullText = accumulated;
+  } else {
+    const data = await res.json();
+    if (data.error) {
+      const errMsg = data.error?.message || data.error?.type || `HTTP ${res.status}`;
+      console.error('[Boo API error]', errMsg, data);
+      return { speech: "Didn't get a clean response — give it a moment and try again.", display: `<em>Didn't get a clean response. (${errMsg}) Give it a moment and try again.</em>`, updates: {} };
+    }
+    fullText = data.content?.filter(b => b.type === 'text').pop()?.text;
+    if (!fullText) {
+      console.error('[Boo] No text block in response', JSON.stringify(data).slice(0, 400));
+      return { speech: "Nothing came back — give it a moment and try again.", display: "<em>Nothing came back. Give it a moment and try again.</em>", updates: {} };
+    }
   }
 
   let parsed;
-  try { parsed = JSON.parse(text); }
+  try { parsed = JSON.parse(fullText); }
   catch(e) {
-    const match = text.match(/\{[\s\S]*\}/);
+    const match = fullText.match(/\{[\s\S]*\}/);
     try { parsed = match ? JSON.parse(match[0]) : null; } catch(e2) { parsed = null; }
-    if (!parsed) { console.error('[Boo] JSON parse failed', text.slice(0, 400)); parsed = { speech: text, display: text, updates: {} }; }
+    if (!parsed) { console.error('[Boo] JSON parse failed', fullText.slice(0, 400)); parsed = { speech: fullText, display: fullText, updates: {} }; }
   }
   return parsed;
 }

@@ -12,6 +12,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
+    const streaming = body.stream === true;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -24,8 +25,19 @@ serve(async (req) => {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
+    if (streaming) {
+      return new Response(response.body, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "X-Accel-Buffering": "no",
+        },
+        status: response.status,
+      });
+    }
 
+    const data = await response.json();
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: response.status,
