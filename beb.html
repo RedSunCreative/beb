@@ -1310,9 +1310,20 @@ cueCard: freeform prompter text for host — bullet lines, real names only. "" i
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
 prelive:true means pre-show (Countdown) — excluded from runtime total.`;
 
+  // Use full token budget only when a cue/data change is likely; simple questions get a fast path.
+  const msg = userMessage.toLowerCase();
+  const needsFullOutput =
+    /\b(build|generate|rebuild|redo|restructure|reorder)\b/.test(msg) ||
+    /\b(add|insert|remove|delete|move|rename|change|update|set|edit|note|record|save|remember)\b/.test(msg) ||
+    /crew\s*(instruct|card|mode|work)/.test(msg) || /work.*crew/.test(msg) ||
+    /\b(cue.?card|write.*intro|research.*guest|same.?as)\b/.test(msg) ||
+    /\b(scene|cue|segment|guest|song|music|kitchen|disco|opener|closing|standby|prelive)\b/.test(msg) ||
+    (showData.cues.length === 0 && msg.length > 15);
+  const maxTokens = needsFullOutput ? 8192 : 512;
+
   const reqBody = {
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 8192,
+    max_tokens: maxTokens,
     system: systemPrompt,
     messages: [...conversationHistory, { role: 'user', content: userMessage }]
   };
