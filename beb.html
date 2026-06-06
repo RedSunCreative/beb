@@ -1317,7 +1317,10 @@ Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name,
 Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage, cueCard }
 cueCard: freeform prompter text for host — bullet lines, real names only. "" if not applicable.
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
-prelive:true means pre-show (Countdown) — excluded from runtime total.`;
+prelive:true means pre-show (Countdown) — excluded from runtime total.
+
+=== SCENE REFERENCE VALIDATION ===
+When Mark references a scene by name or number (e.g. "Kitchen Disco #2", "scene 3", "the Kyndle interview"), verify it exists in the current showData.cues before acting. If it doesn't exist, say so and ask which scene he meant — do not invent or create a scene he didn't ask for. If cues is empty, this rule does not apply.`;
 
   // Use full token budget only when a cue/data change is likely; simple questions get a fast path.
   const msg = userMessage.toLowerCase();
