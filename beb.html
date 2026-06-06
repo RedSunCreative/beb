@@ -997,7 +997,7 @@ function showThinking() {
   const div = document.createElement('div');
   div.className = 'boo-msg';
   div.id = 'thinking-indicator';
-  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div><div id="boo-narration" style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:6px;min-height:14px;"></div></div>`;
+  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div><div id="boo-narration" style="font-size:13px;color:var(--teal);letter-spacing:0.5px;margin-top:8px;min-height:16px;font-family:'Barlow Condensed',sans-serif;font-weight:400;"></div></div>`;
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
 }
@@ -1432,18 +1432,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
                     speechShown = true;
                   }
                 }
-                // After speech, narrate cue progress by scene name as they stream in
-                if (speechShown) {
-                  const scenes = [...accumulated.matchAll(/"scene"\s*:\s*"([^"]+)"/g)];
-                  if (scenes.length) {
-                    const latest = scenes[scenes.length - 1][1];
-                    if (latest !== lastScene) {
-                      lastScene = latest;
-                      const narration = sceneNarration(latest);
-                      if (narration) narEl.textContent = narration;
-                    }
-                  }
-                }
+                // Once speech is shown, keep it pinned — don't overwrite with scene names
               }
             }
           } catch(_) {}
