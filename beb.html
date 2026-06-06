@@ -1364,12 +1364,33 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
   let fullText;
 
   if (useStream) {
-    // Read SSE stream, accumulate text_delta events, show speech preview as it arrives
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let accumulated = '';
     let speechShown = false;
+    let lastScene = '';
     const statusEl = document.getElementById('mic-status-text');
+
+    const sceneNarration = (scene) => {
+      if (!scene) return null;
+      const s = scene.toUpperCase();
+      if (s.includes('COUNTDOWN')) return 'Setting up the pre-show countdown...';
+      if (s.includes('COLD OPEN')) return 'Handling the cold open...';
+      if (s.includes('PRE-RECORDED') || s.includes('INTRO')) return 'Slotting the pre-recorded intro...';
+      if (s.includes('SHOW OPENER') || s.includes('SHOW OPEN')) return 'Building the show opener...';
+      if (s.includes('KITCHEN DISCO')) return 'Kitchen Disco — checking the transition...';
+      if (s.includes('INTERVIEW')) {
+        const who = scene.replace(/INTERVIEW\s*[—-]\s*/i, '').trim().split(' ')[0];
+        return who ? `Working on ${who}'s interview...` : 'Working on the interview...';
+      }
+      if (s.includes('PERFORMANCE') || s.includes('SONG') || s.includes('MUSIC')) {
+        const who = scene.replace(/PERFORMANCE\s*[—-]\s*/i, '').trim().split(' ')[0];
+        return who ? `Music — ${who}...` : 'Checking the music timing...';
+      }
+      if (s.includes('SHOW CLOSE') || s.includes('CLOSING')) return 'Wrapping up the show close...';
+      if (s.includes('ENDING') || s.includes('CREDITS')) return 'Final credits — almost done...';
+      return `On it — ${scene.toLowerCase().slice(0, 40)}...`;
+    };
 
     try {
       while (true) {
@@ -1388,13 +1409,27 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
             }
             if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
               accumulated += evt.delta.text;
-              // Show speech preview once we have the full speech field
-              if (!speechShown && statusEl) {
-                const m = accumulated.match(/"speech"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-                if (m) {
-                  const preview = m[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').slice(0, 80);
-                  statusEl.textContent = preview || 'SPEAKABOO RESPONDING...';
-                  speechShown = true;
+              if (statusEl) {
+                // Once speech field is complete, show it as preview
+                if (!speechShown) {
+                  const m = accumulated.match(/"speech"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+                  if (m) {
+                    const preview = m[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').slice(0, 80);
+                    statusEl.textContent = preview || 'SPEAKABOO RESPONDING...';
+                    speechShown = true;
+                  }
+                }
+                // After speech, narrate cue progress by scene name as they stream in
+                if (speechShown) {
+                  const scenes = [...accumulated.matchAll(/"scene"\s*:\s*"([^"]+)"/g)];
+                  if (scenes.length) {
+                    const latest = scenes[scenes.length - 1][1];
+                    if (latest !== lastScene) {
+                      lastScene = latest;
+                      const narration = sceneNarration(latest);
+                      if (narration) statusEl.textContent = narration;
+                    }
+                  }
                 }
               }
             }
