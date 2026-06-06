@@ -1369,7 +1369,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
     let accumulated = '';
     let speechShown = false;
     let lastScene = '';
-    const statusEl = document.getElementById('mic-status-text');
+    const statusEl = document.getElementById('mic-text'); // textarea — placeholder visible while empty during thinking
 
     const sceneNarration = (scene) => {
       if (!scene) return null;
@@ -1415,7 +1415,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
                   const m = accumulated.match(/"speech"\s*:\s*"((?:[^"\\]|\\.)*)"/);
                   if (m) {
                     const preview = m[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').slice(0, 80);
-                    statusEl.textContent = preview || 'SPEAKABOO RESPONDING...';
+                    statusEl.placeholder = preview || 'Boo is responding...';
                     speechShown = true;
                   }
                 }
@@ -1427,7 +1427,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
                     if (latest !== lastScene) {
                       lastScene = latest;
                       const narration = sceneNarration(latest);
-                      if (narration) statusEl.textContent = narration;
+                      if (narration) statusEl.placeholder = narration;
                     }
                   }
                 }
