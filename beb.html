@@ -21,6 +21,11 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
 .header-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--gold);letter-spacing:2px;line-height:1;}
 .header-sub{font-size:11px;color:var(--muted);letter-spacing:2px;margin-top:2px;}
 .header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.show-countdown{display:flex;flex-direction:column;align-items:flex-end;margin-right:4px;}
+.show-countdown-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;line-height:1;}
+.show-countdown-time{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--teal);letter-spacing:1px;line-height:1.2;}
+.show-countdown-time.urgent{color:var(--gold);}
+.show-countdown-time.empty{color:var(--border);font-size:13px;letter-spacing:1px;}
 .save-badge{font-size:22px;color:var(--teal);letter-spacing:2px;font-family:'Barlow Condensed',sans-serif;font-weight:400;}
 .ep-switch-btn{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--gold);background:rgba(245,208,58,0.1);border:2px solid var(--gold);border-radius:6px;padding:6px 14px;cursor:pointer;letter-spacing:1px;white-space:nowrap;}
 .ep-switch-btn:hover{background:rgba(245,208,58,0.2);}
@@ -217,6 +222,10 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     <div class="header-sub">LITTLE BIG VOICES · VOICE-INTERACTIVE</div>
   </div>
   <div class="header-right">
+    <div class="show-countdown" id="show-countdown" title="Countdown to show date">
+      <div class="show-countdown-label">NEXT SHOW</div>
+      <div class="show-countdown-time empty" id="show-countdown-time">— —</div>
+    </div>
     <div style="position:relative;display:inline-block;" id="ep-switcher">
       <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()" data-tip="Switch between saved episodes or start a new one.">EP ▾</button>
       <div class="ep-list-panel" id="ep-list-panel" style="display:none;"></div>
@@ -1574,6 +1583,35 @@ document.getElementById('mic-btn').classList.remove('thinking');
   document.getElementById('send-btn').disabled = false;
 }
 
+// ─── COUNTDOWN ───
+function updateCountdown() {
+  const el = document.getElementById('show-countdown-time');
+  if (!el) return;
+  const dateStr = showData.epDate;
+  if (!dateStr) { el.textContent = '— —'; el.className = 'show-countdown-time empty'; return; }
+
+  // Parse date; assume 7pm local if no time specified
+  const raw = new Date(dateStr);
+  if (isNaN(raw)) { el.textContent = '— —'; el.className = 'show-countdown-time empty'; return; }
+  const show = new Date(raw.getFullYear(), raw.getMonth(), raw.getDate(), 19, 0, 0);
+
+  const diff = show - Date.now();
+  if (diff <= 0) { el.textContent = 'SHOWTIME'; el.className = 'show-countdown-time urgent'; return; }
+
+  const totalMins = Math.floor(diff / 60000);
+  const d = Math.floor(totalMins / 1440);
+  const h = Math.floor((totalMins % 1440) / 60);
+  const m = totalMins % 60;
+
+  const parts = [];
+  if (d > 0) parts.push(d + 'd');
+  if (h > 0 || d > 0) parts.push(h + 'h');
+  parts.push(m + 'm');
+
+  el.textContent = parts.join(' ');
+  el.className = 'show-countdown-time' + (d === 0 ? ' urgent' : '');
+}
+
 // ─── DISPLAY ───
 function setVal(id, val, fallback) {
   const el = document.getElementById(id);
@@ -1603,6 +1641,7 @@ function updateAllDisplays() {
   else if (delta > 0) { deltaEl.textContent = '+' + delta + 'm'; deltaEl.style.color = 'var(--orange)'; }
   else { deltaEl.textContent = delta + 'm'; deltaEl.style.color = 'var(--gold)'; }
   document.getElementById('runtime-status').textContent = totalMins + ' min';
+  updateCountdown();
   document.getElementById('cue-count-badge').textContent = showData.cues.length + ' cues';
   document.getElementById('guest-count').textContent = showData.guests.length;
   document.getElementById('crew-count').textContent = (showData.crew||[]).length;
@@ -2505,6 +2544,8 @@ window.addEventListener('load', async () => {
     })
     .catch(() => {});
   initMic();
+  updateCountdown();
+  setInterval(updateCountdown, 30000);
 
   // Voice off by default; stays off until user taps SpeakaBoo
   const micBtnEl = document.getElementById('mic-btn');
