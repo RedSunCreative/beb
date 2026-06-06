@@ -1320,9 +1320,11 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
     /\b(scene|cue|segment|guest|song|music|kitchen|disco|opener|closing|standby|prelive)\b/.test(msg) ||
     (showData.cues.length === 0 && msg.length > 15);
   const maxTokens = needsFullOutput ? 8192 : 512;
+  // Sonnet for cue builds (reliable JSON at scale); Haiku for fast-path simple queries
+  const model = needsFullOutput ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
   const reqBody = {
-    model: 'claude-haiku-4-5-20251001',
+    model,
     max_tokens: maxTokens,
     system: systemPrompt,
     messages: [...conversationHistory, { role: 'user', content: userMessage }]
@@ -1519,7 +1521,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
     if (u2.guests?.length > 0) updated.push('guests');
     if (u2.crew?.length > 0) updated.push('crew');
     if (u2.epNum || u2.epTitle || u2.epDate || u2.epLen) updated.push('episode info');
-    const updateNote = updated.length ? `<div style="font-size:9px;color:var(--teal);letter-spacing:1px;margin-top:4px;opacity:0.7;">updated: ${updated.join(', ')}</div>` : '';
+    const updateNote = updated.length ? `<div style="font-size:12px;font-weight:600;color:var(--teal);letter-spacing:1px;margin-top:6px;padding:4px 8px;background:rgba(59,184,201,0.12);border-radius:4px;display:inline-block;">✓ Updated: ${updated.join(', ')}</div>` : '';
 
     addBooMessage(safeDisplay + updateNote);
     updateAllDisplays();
