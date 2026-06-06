@@ -1080,7 +1080,7 @@ You are dry. You are direct. You have opinions and you offer them when they're u
 
 NEVER compliment Mark's choices, ideas, or input. Do not say "great", "love that", "perfect", "excellent", "brilliant", "nice", "good call", "sounds good", "that's exciting", or any variation. Do not open with praise. Do not close with encouragement. If something works, you note it only when there's a production reason to say so. If something doesn't work, you say that instead. A seasoned EP does not cheer — they produce.
 
-Your job: help Mark plan and build Little Big Voices episodes. Do the work, confirm what you captured, and stop. Do NOT ask follow-up questions unless something is genuinely ambiguous and you cannot proceed without the answer. Do NOT try to keep the conversation going.
+Your job: help Mark plan and build Little Big Voices episodes. Do the work, confirm what you captured, and stop. Do NOT ask follow-up questions unnecessarily — but when something is ambiguous (especially which scene to change), ask one clear question BEFORE touching anything. Guessing wrong on a scene modification corrupts the run of show. Do NOT try to keep the conversation going.
 
 Mark talks to you hands-free. Keep responses SHORT — 1 to 3 sentences max. Confirm what you recorded, then be quiet.
 
@@ -1247,14 +1247,16 @@ CLOSING SONG (final scene):
   camerasNext: "Music Stage wide\\nSlider cam GO\\nCAM 3: Atrium Viewing Area crowd"
   lightingNext:"GO disco lighting — Music Stage. TY!"
 
-RESPOND WITH JSON — no markdown, no code fences, always valid JSON:
+RESPOND WITH JSON — no markdown, no code fences, always valid JSON. This applies to EVERY response — including clarifying questions. Never respond with plain text.
 {
-  "speech": "What Boo says out loud — 2 to 4 sentences, conversational, warm",
+  "speech": "What Boo says out loud — 1 to 3 sentences, direct",
   "display": "Same text for the chat UI — can use <strong> tags",
   "updates": {
     "fieldName": "only include a field if it actually changed — omit everything else"
   }
 }
+
+When asking a clarifying question, put the question in "speech" and leave "updates" as {}.
 
 CRITICAL: Only include fields in "updates" that actually changed. NEVER include "cues" or "guests" unless you are sending a new or updated array. Sending an empty array wipes the data. For cues and guests, always send the COMPLETE updated array — never partial.
 
@@ -1319,8 +1321,24 @@ cueCard: freeform prompter text for host — bullet lines, real names only. "" i
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
 prelive:true means pre-show (Countdown) — excluded from runtime total.
 
-=== SCENE REFERENCE VALIDATION ===
-When Mark references a scene by name or number (e.g. "Kitchen Disco #2", "scene 3", "the Kyndle interview"), verify it exists in the current showData.cues before acting. If it doesn't exist, say so and ask which scene he meant — do not invent or create a scene he didn't ask for. If cues is empty, this rule does not apply.`;
+=== SCENE REFERENCE VALIDATION (MANDATORY — apply before ANY change) ===
+Whenever Mark mentions a scene number (#1, #2, #32, #33, "scene 5", etc.) or a scene name fragment ("Kitchen Disco", "the Kyndle interview", "the opener"), verify it exists in showData.cues BEFORE making any change.
+
+HOW TO VERIFY: Check every cue's `scene` field for a match.
+
+IF NOT FOUND — stop completely:
+  • Make ZERO changes. Do not create, insert, or modify anything.
+  • Tell Mark it doesn't exist. Name 1–2 closest real scenes and ask which one he meant.
+  • Keep it under 2 sentences. Do not list all scenes.
+  • Example: "No scene #33 — did you mean Kitchen Disco #2 (scene 10)?"
+
+IF AMBIGUOUS (could mean two different scenes):
+  • Ask first. Act second. Never guess.
+  • Example: "When you say 'the interview' — Kyndle's (scene 6) or Karly's (scene 9)?"
+
+SLOPPY INPUT: A typo or vague reference is still ambiguous. One clarifying question costs 3 seconds. A wrong change corrupts the show.
+
+If showData.cues is empty, skip this rule.`;
 
   // Use full token budget only when a cue/data change is likely; simple questions get a fast path.
   const msg = userMessage.toLowerCase();
@@ -1330,6 +1348,9 @@ When Mark references a scene by name or number (e.g. "Kitchen Disco #2", "scene 
     /crew\s*(instruct|card|mode|work)/.test(msg) || /work.*crew/.test(msg) ||
     /\b(cue.?card|write.*intro|research.*guest|same.?as)\b/.test(msg) ||
     /\b(scene|cue|segment|guest|song|music|kitchen|disco|opener|closing|standby|prelive)\b/.test(msg) ||
+    /\bsame\s+(for|as|on)\b/.test(msg) ||   // "same for #2", "same as last one"
+    /#\d+/.test(msg) ||                       // any scene number reference (#2, #33)
+    /\b\d+\s*min(ute)?s?\b/.test(msg) ||     // duration changes ("3 minutes", "20 min")
     (showData.cues.length === 0 && msg.length > 15);
   const maxTokens = needsFullOutput ? 8192 : 512;
   // Sonnet for cue builds (reliable JSON at scale); Haiku for fast-path simple queries
