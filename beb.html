@@ -1401,12 +1401,15 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
       return `On it — ${scene.toLowerCase().slice(0, 40)}...`;
     };
 
+    let lineBuffer = '';
     try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split('\n')) {
+        lineBuffer += decoder.decode(value, { stream: true });
+        const lines = lineBuffer.split('\n');
+        lineBuffer = lines.pop(); // hold incomplete last line across chunks
+        for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
           const raw = line.slice(6).trim();
           if (!raw || raw === '[DONE]') continue;
