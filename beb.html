@@ -997,7 +997,7 @@ function showThinking() {
   const div = document.createElement('div');
   div.className = 'boo-msg';
   div.id = 'thinking-indicator';
-  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div></div>`;
+  div.innerHTML = `${BOO_SVG}<div class="boo-bubble"><div class="thinking"><div class="thinking-dot"></div><div class="thinking-dot"></div><div class="thinking-dot"></div></div><div id="boo-narration" style="font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:6px;min-height:14px;"></div></div>`;
   area.appendChild(div);
   area.scrollTop = area.scrollHeight;
 }
@@ -1378,7 +1378,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
     let accumulated = '';
     let speechShown = false;
     let lastScene = '';
-    const statusEl = document.getElementById('mic-text'); // textarea — placeholder visible while empty during thinking
+    const getNarrationEl = () => document.getElementById('boo-narration');
 
     const sceneNarration = (scene) => {
       if (!scene) return null;
@@ -1418,13 +1418,14 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
             }
             if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
               accumulated += evt.delta.text;
-              if (statusEl) {
+              const narEl = getNarrationEl();
+              if (narEl) {
                 // Once speech field is complete, show it as preview
                 if (!speechShown) {
                   const m = accumulated.match(/"speech"\s*:\s*"((?:[^"\\]|\\.)*)"/);
                   if (m) {
                     const preview = m[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').slice(0, 80);
-                    statusEl.placeholder = preview || 'Boo is responding...';
+                    narEl.textContent = preview || '';
                     speechShown = true;
                   }
                 }
@@ -1436,7 +1437,7 @@ prelive:true means pre-show (Countdown) — excluded from runtime total.`;
                     if (latest !== lastScene) {
                       lastScene = latest;
                       const narration = sceneNarration(latest);
-                      if (narration) statusEl.placeholder = narration;
+                      if (narration) narEl.textContent = narration;
                     }
                   }
                 }
