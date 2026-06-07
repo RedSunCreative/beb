@@ -55,7 +55,8 @@ BEB generates → BSM consumes. Development goes back and forth between both as 
 - Commit and push after each meaningful change
 - Use git commit messages that are descriptive
 - `/compact` early in long sessions — don't let context balloon
-- Test changes before moving to the next feature
+- **MANDATORY before every push: `bash test_beb.sh` must pass (18/18). Also run `bash test_beb.sh --break` once per session to verify the tests themselves catch failures.**
+- The test suite checks: JS syntax, no backticks inside the systemPrompt template literal, required prompt sections, routing regex coverage, Supabase data health, and GitHub Pages live integrity.
 
 ## Important Notes
 - `Claude Console API Key.rtf` is in the project folder — do not commit this file
