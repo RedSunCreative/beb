@@ -1363,9 +1363,11 @@ CRITICAL: Never write placeholders. Real names only. If you can't find info on a
 Format: plain text bullet lines only, no markdown. Tight — prompter card, not script.
 When all scenes are done, send the COMPLETE updated cues array.
 
-Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", mobile, songs: [{name, duration}], confirmed: true|false, vip: true|false, floorNotes: "" }
+Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", mobile, email, bio, socials, contactMethod, songs: [{name, duration}], confirmed: true|false, vip: true|false, floorNotes: "" }
 confirmed: true once attendance is confirmed. vip: true marks a guest as VIP. floorNotes: brief handling instruction for the Floor Manager (e.g. "hearing difficulty — use written notes").
+bio: guest's self-written biography from their intake form — use to write cueCard introductions. socials: social platforms and links they want promoted. contactMethod: how the audience can reach them after the show.
 When Mark says "[guest] is confirmed" / "confirm [guest]" / "[guest] confirmed" — set confirmed:true. When Mark says "[guest] is VIP" — set vip:true. When Mark adds a floor note for a guest — set floorNotes.
+When Mark says "write intro cue cards" or "generate cue card intros" — for each guest scene whose guest has a bio, write a cueCard that gives Mark a punchy host introduction: 3-5 bullet lines, real names only, drawn from their bio. Scenes with no matching guest bio get cueCard "".
 stageType "music" = performance stage — covers all non-pod acts: music, comedy, poetry, dramatic reading, spoken word, etc. Call these guests "performance guests" when talking to Mark, not "musical guests."
 stageType "pod" = pod interview guest. stageType "kitchen" = Kitchen Disco host.
 epThemeDesc: the descriptive paragraph for this episode's theme — set when Mark describes the theme in paragraph form.
@@ -1833,7 +1835,8 @@ function updateAllDisplays() {
       const smsRos  = g.mobile && rosUrl ? `sms:${g.mobile}?body=${rosBody}` : '';
       const mailHref = g.email ? `mailto:${g.email}?subject=${mailSubj}&body=${mailBody}` : '';
       const badges = (g.confirmed ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--green);background:rgba(74,222,128,0.12);border-radius:3px;padding:1px 5px;margin-left:5px;">CONFIRMED</span>` : '') +
-                     (g.vip ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:3px;padding:1px 5px;margin-left:3px;">VIP</span>` : '');
+                     (g.vip ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:3px;padding:1px 5px;margin-left:3px;">VIP</span>` : '') +
+                     (g.bio ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--teal);background:rgba(59,184,201,0.12);border-radius:3px;padding:1px 5px;margin-left:3px;">FORM</span>` : '');
       const firstName = esc((g.name||'').split(' ')[0].toUpperCase());
       return `<div class="crew-item">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -1846,6 +1849,8 @@ function updateAllDisplays() {
           </div>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">${esc(g.segment||'')}</div>
+        ${g.bio ? `<div style="font-size:11px;color:var(--muted);margin-bottom:5px;line-height:1.4;font-style:italic;">${esc(g.bio.slice(0,160))}${g.bio.length>160?'…':''}</div>` : ''}
+        ${g.socials ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">&#128279; ${esc(g.socials.slice(0,100))}</div>` : ''}
         <div class="crew-fields">
           <input class="crew-inp" placeholder="Mobile" value="${esc(g.mobile||'')}" onchange="updateGuest(${i},'mobile',this.value)">
           <input class="crew-inp" placeholder="Email" value="${esc(g.email||'')}" onchange="updateGuest(${i},'email',this.value)" style="grid-column:span 2;">
