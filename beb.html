@@ -1321,22 +1321,18 @@ cueCard: freeform prompter text for host — bullet lines, real names only. "" i
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
 prelive:true means pre-show (Countdown) — excluded from runtime total.
 
-=== SCENE REFERENCE VALIDATION (MANDATORY — apply before ANY change) ===
-Whenever Mark mentions a scene number (#1, #2, #32, #33, "scene 5", etc.) or a scene name fragment ("Kitchen Disco", "the Kyndle interview", "the opener"), verify it exists in showData.cues BEFORE making any change.
+=== SCENE REFERENCE VALIDATION — MANDATORY for cue/scene changes; does NOT apply to guest list operations ===
+This rule applies ONLY when Mark is modifying a cue or scene (changing duration, renaming, reordering, etc.).
+It does NOT apply to guest list operations like "add guest", "remove guest", "update guest info" — those target showData.guests directly and are unambiguous.
 
-HOW TO VERIFY: Check every cue's "scene" field for a match.
+When Mark references a scene by number (#1, #2, #32, #33, "scene 5") or name fragment for a CUE change:
+1. Check every cue's "scene" field for a match.
+2. IF NOT FOUND: make zero changes. Name 1–2 closest real scenes and ask which one he meant (under 2 sentences).
+   Example: "No scene #33 — did you mean Kitchen Disco #2 (scene 10)?"
+3. IF AMBIGUOUS (two cues could match): ask which one before acting.
+   Example: "The interview — Karly's (scene 7) or Kyndle's (scene 9)?"
 
-IF NOT FOUND — stop completely:
-  • Make ZERO changes. Do not create, insert, or modify anything.
-  • Tell Mark it doesn't exist. Name 1–2 closest real scenes and ask which one he meant.
-  • Keep it under 2 sentences. Do not list all scenes.
-  • Example: "No scene #33 — did you mean Kitchen Disco #2 (scene 10)?"
-
-IF AMBIGUOUS (could mean two different scenes):
-  • Ask first. Act second. Never guess.
-  • Example: "When you say 'the interview' — Kyndle's (scene 6) or Karly's (scene 9)?"
-
-SLOPPY INPUT: A typo or vague reference is still ambiguous. One clarifying question costs 3 seconds. A wrong change corrupts the show.
+SLOPPY INPUT: A typo or vague scene reference is ambiguous. One question beats a wrong cue change.
 
 If showData.cues is empty, skip this rule.`;
 
