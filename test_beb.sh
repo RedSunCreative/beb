@@ -134,6 +134,8 @@ REQUIRED=(
   "THE SHOW BLUEPRINT"
   "When asking a clarifying question"
   "MANDATORY"
+  "GUEST TYPE"
+  "Pod guest or performance guest"
 )
 for section in "${REQUIRED[@]}"; do
   if grep -qF "$section" "$BEB"; then
@@ -213,18 +215,17 @@ fi
 echo ""
 echo "--- Test 6: GitHub Pages live site integrity ---"
 BT=$(printf '`')
-LIVE=$(curl -s "https://redsuncreative.github.io/beb/beb.html" \
-  -H "Cache-Control: no-cache" -L --max-time 20 2>/dev/null | \
-  grep "HOW TO VERIFY" || true)
+LIVE_FULL=$(curl -s "https://redsuncreative.github.io/beb/beb.html" -L --max-time 20 2>/dev/null)
+LIVE_CHARS=${#LIVE_FULL}
 
-if [[ -z "$LIVE" ]]; then
-  fail "GitHub Pages: HOW TO VERIFY line not found (fetch failed or content changed)"
-elif echo "$LIVE" | grep -qF "${BT}cue"; then
+if [[ "$LIVE_CHARS" -lt 50000 ]]; then
+  fail "GitHub Pages: page too short or failed to fetch ($LIVE_CHARS chars)"
+elif echo "$LIVE_FULL" | grep -qF "Check every ${BT}cue"; then
   fail "GitHub Pages: serving BROKEN version with backtick inside systemPrompt"
-elif echo "$LIVE" | grep -q '"scene"'; then
-  pass "GitHub Pages: serving fixed version (double-quoted field reference)"
+elif echo "$LIVE_FULL" | grep -q 'SCENE REFERENCE VALIDATION'; then
+  pass "GitHub Pages: serving fixed version (SCENE REFERENCE VALIDATION section present, no crash backtick)"
 else
-  fail "GitHub Pages: unexpected HOW TO VERIFY content: $LIVE"
+  fail "GitHub Pages: SCENE REFERENCE VALIDATION section not found in live page"
 fi
 
 # ──────────────────────────────────────────────────────────────

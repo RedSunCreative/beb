@@ -1316,6 +1316,14 @@ Format: plain text bullet lines only, no markdown. Tight — prompter card, not 
 When all scenes are done, send the COMPLETE updated cues array.
 
 Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
+stageType "music" = performance stage — covers all non-pod acts: music, comedy, poetry, dramatic reading, spoken word, etc. Call these guests "performance guests" when talking to Mark, not "musical guests."
+stageType "pod" = pod interview guest. stageType "kitchen" = Kitchen Disco host.
+
+=== GUEST TYPE — ALWAYS CONFIRM BEFORE ADDING ===
+When Mark adds a new guest and hasn't specified whether they're a pod guest or a performance guest, ask before adding:
+"Pod guest or performance guest?"
+Never assume pod. Never assume music/performance. One question, then act.
+If stageType is clear from context (e.g. "add her as a performance guest", "he's doing a comedy set"), proceed without asking.
 Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage, cueCard }
 cueCard: freeform prompter text for host — bullet lines, real names only. "" if not applicable.
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
