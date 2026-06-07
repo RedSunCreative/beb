@@ -1674,15 +1674,23 @@ function updateAllDisplays() {
     const epNum = showData.epNum || '';
     const epTitle = showData.epTitle || '';
     const epDate = showData.epDate || '';
-    const msgBody = encodeURIComponent(`Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}. See you on set.`);
+    const showLine = `Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}`;
+    const bsmUrl = epNum ? `https://redsuncreative.github.io/beb/bsm-e${epNum}.html` : '';
+    const rosUrl = epNum ? `https://redsuncreative.github.io/beb/ros-e${epNum}.html` : '';
+    const bsmBody = encodeURIComponent(`${showLine}\nLive show script: ${bsmUrl}`);
+    const rosBody = encodeURIComponent(`${showLine}\nShow script: ${rosUrl}`);
+    const mailSubj = encodeURIComponent(`Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}`);
+    const mailBody = encodeURIComponent(`${showLine}\n\nLive: ${bsmUrl}\nScript: ${rosUrl}`);
     gl.innerHTML = showData.guests.map((g, i) => {
-      const smsHref = g.mobile ? `sms:${g.mobile}?body=${msgBody}` : '';
-      const mailHref = g.email ? `mailto:${g.email}?subject=${encodeURIComponent('Episode ' + epNum + (epTitle ? ' — ' + epTitle : ''))}&body=${msgBody}` : '';
+      const smsBsm  = g.mobile && bsmUrl ? `sms:${g.mobile}?body=${bsmBody}` : '';
+      const smsRos  = g.mobile && rosUrl ? `sms:${g.mobile}?body=${rosBody}` : '';
+      const mailHref = g.email ? `mailto:${g.email}?subject=${mailSubj}&body=${mailBody}` : '';
       return `<div class="crew-item">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
           <div><span class="guest-name">${esc(g.name||'')}</span><span style="font-size:10px;color:var(--muted);margin-left:6px;">${(g.stageType||'').toUpperCase()}</span></div>
-          <div style="display:flex;gap:5px;align-items:center;">
-            ${smsHref ? `<a class="crew-sms" href="${smsHref}">TEXT</a>` : ''}
+          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            ${smsBsm ? `<a class="crew-sms" href="${smsBsm}" title="Text BSM link">TEXT BSM</a>` : ''}
+            ${smsRos ? `<a class="crew-sms" href="${smsRos}" title="Text static show script" style="background:#5a6e2a;">TEXT SCRIPT</a>` : ''}
             ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
           </div>
         </div>
