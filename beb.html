@@ -400,7 +400,10 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
       <div class="data-section-body" id="guests-body">
         <div id="guest-list"><div style="font-size:12px;color:var(--muted)">Tell Boo about your guests...</div></div>
-        <div id="new-invite-wrap" style="margin-top:12px;">
+        <div style="margin-top:12px;margin-bottom:6px;">
+          <button onclick="copyGuestFormLink(this)" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">&#128279; COPY GUEST FORM LINK</button>
+        </div>
+        <div id="new-invite-wrap" style="margin-top:6px;">
           <button onclick="toggleNewInvite()" style="width:100%;background:transparent;border:1px dashed var(--teal);color:var(--teal);border-radius:6px;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">+ INVITE SOMEONE NEW</button>
           <div id="new-invite-panel" style="display:none;margin-top:8px;padding:12px;background:rgba(0,0,0,0.2);border-radius:6px;border:1px solid var(--teal);">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
@@ -550,6 +553,8 @@ const CLIENT_CONFIG = {
   qrUrl:             null,                         // URL for ROS QR code (e.g. BSM link or show page)
   githubPAT:         '',                           // GitHub fine-grained PAT — set via Settings or localStorage.setItem('beb_github_pat','...')
   githubRepo:        'RedSunCreative/beb',         // owner/repo for BSM auto-upload
+  guestFormBase:     'https://docs.google.com/forms/d/e/1FAIpQLSe31fXCufAY6yCwI2yUBOubTofgzjnmI8b9zmnC2o-Choff8w/viewform',
+  guestFormEpEntry:  'entry.582776690',            // Pre-fill field: Episode Number
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2668,6 +2673,18 @@ function refreshNewInviteText() {
   const fakeGuest = { name: name || 'there' };
   const ta = document.getElementById('new-invite-body');
   if (ta) ta.value = buildInviteText(fakeGuest, opener);
+}
+
+function copyGuestFormLink(btn) {
+  const ep = showData.epNum || '';
+  const url = `${CLIENT_CONFIG.guestFormBase}?usp=pp_url&${CLIENT_CONFIG.guestFormEpEntry}=${encodeURIComponent(ep)}`;
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ LINK COPIED';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+  });
 }
 
 function sendNewInviteSMS() {
