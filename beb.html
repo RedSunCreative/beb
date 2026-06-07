@@ -1488,12 +1488,18 @@ If showData.cues is empty, skip this rule.`;
     }
   }
 
+  // Strip markdown code fences (```json ... ```) before parsing
+  let rawForParse = fullText.trim();
+  if (rawForParse.startsWith('`')) {
+    rawForParse = rawForParse.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  }
+
   let parsed;
-  try { parsed = JSON.parse(fullText); }
+  try { parsed = JSON.parse(rawForParse); }
   catch(e) {
-    const match = fullText.match(/\{[\s\S]*\}/);
+    const match = rawForParse.match(/\{[\s\S]*\}/);
     try { parsed = match ? JSON.parse(match[0]) : null; } catch(e2) { parsed = null; }
-    if (!parsed) { console.error('[Boo] JSON parse failed', fullText.slice(0, 400)); parsed = { speech: fullText, display: fullText, updates: {} }; }
+    if (!parsed) { console.error('[Boo] JSON parse failed', rawForParse.slice(0, 400)); parsed = { speech: rawForParse, display: rawForParse, updates: {} }; }
   }
   return parsed;
 }
@@ -1563,7 +1569,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
 
     const rawDisplay = response.display || response.speech || '';
     const rawSpeech = response.speech || response.display || '';
-    const looksLikeJSON = rawDisplay.trimStart().startsWith('{');
+    const looksLikeJSON = rawDisplay.trimStart().startsWith('{') || rawDisplay.trimStart().startsWith('`');
     const safeDisplay = looksLikeJSON ? "Done — I've updated the show data. Check the panel!" : rawDisplay;
     const safeSpeech = looksLikeJSON ? "Done! I've updated the show data — check the panel." : rawSpeech;
 
@@ -1808,7 +1814,7 @@ function updateAllDisplays() {
           </div>
           <button class="cue-edit-btn" onclick="editScene(${i})">EDIT</button>
         </div>
-        <div class="cue-item-name">${c.scene || '(untitled)'}</div>
+        <div class="cue-item-name">${c.scene || '(untitled)'}${c.cueCard ? ' <span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--teal);background:rgba(59,184,201,0.12);border-radius:3px;padding:1px 5px;vertical-align:middle;">CC</span>' : ''}</div>
         <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
         ${c.booName ? `<div class="cue-item-boo">→ ${c.booName}</div>` : ''}
       </div>`).join('');
