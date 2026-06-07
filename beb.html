@@ -463,6 +463,36 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     <div id="scripts-share-panel" style="display:none;margin-top:8px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
     <button class="generate-btn" onclick="showROSEditPanel()" style="margin-top:4px;background:transparent;border:2px solid var(--teal);color:var(--teal);" data-tip="Review scene names, timings, and crew notes before you publish.">✏️ EDIT SHOW SCRIPT</button>
 
+    <div class="data-section" data-sec="docs" style="margin-top:8px;">
+      <div class="data-section-header" onclick="toggleSection('docs-body')">
+        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+        <div class="data-section-title">SHOW DOCS <span class="tip-q" data-tip="Generate Guest Welcome Kit and crew checklists from your show data. Preview in browser, print to PDF." onclick="event.stopPropagation()">?</span></div>
+      </div>
+      <div class="data-section-body" id="docs-body" style="display:none;">
+        <div style="margin-bottom:14px;">
+          <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">EPISODE THEME DESCRIPTION</div>
+          <textarea id="ep-theme-desc" rows="3" style="width:100%;background:var(--dark-2);border:1px solid var(--border);border-radius:6px;color:var(--white);font-size:13px;padding:8px 10px;resize:vertical;box-sizing:border-box;font-family:inherit;" placeholder="Write 2–3 sentences describing this episode's theme — used in the Guest Welcome Kit." oninput="showData.epThemeDesc=this.value;saveState()"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
+          <div style="background:var(--dark);border-radius:8px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">GUEST WELCOME KIT</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Sent by Guest Services to every guest</div>
+            <button onclick="openDocPreview(generateWelcomeKitHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
+          </div>
+          <div style="background:var(--dark);border-radius:8px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">HOSPITALITY CHECKLIST</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">For the Green Room Manager</div>
+            <button onclick="openDocPreview(generateHospHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
+          </div>
+          <div style="background:var(--dark);border-radius:8px;padding:12px;border:1px solid var(--border);">
+            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">FLOOR MANAGER CHECKLIST</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">For the Floor Manager — includes BSM link</div>
+            <button onclick="openDocPreview(generateFloorMgrHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -512,7 +542,7 @@ const CLIENT_CONFIG = {
 // ─── STATE ───
 let showData = {
   epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:90, pin:"5000",
-  prelivePerformer:"", preliveMsg:"",
+  prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com",
   guests:[], crew:[], cues:[], booMemory:[], crewReminderMsg:''
 };
 const parseDur = d => { if (!d) return 0; const s = String(d); if (s.includes(':')) { const [m,sec] = s.split(':'); return parseInt(m||0)+(parseInt(sec||0)/60); } return parseFloat(s)||0; };
@@ -733,7 +763,7 @@ async function handleSwitchEpisode(rowId) {
   if (rowId === currentEpRow) return;
   await saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
   conversationHistory = [];
   const loaded = await loadState(rowId);
   if (loaded) {
@@ -749,7 +779,7 @@ function handleNewEpisode() {
   document.getElementById('ep-list-panel').style.display = 'none';
   saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
   conversationHistory = [];
   currentEpRow = 0;
   localStorage.setItem('beb_current_ep_row', '0');
@@ -1319,9 +1349,13 @@ CRITICAL: Never write placeholders. Real names only. If you can't find info on a
 Format: plain text bullet lines only, no markdown. Tight — prompter card, not script.
 When all scenes are done, send the COMPLETE updated cues array.
 
-Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", songs: [{name, duration}] }
+Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", mobile, songs: [{name, duration}], confirmed: true|false, vip: true|false, floorNotes: "" }
+confirmed: true once attendance is confirmed. vip: true marks a guest as VIP. floorNotes: brief handling instruction for the Floor Manager (e.g. "hearing difficulty — use written notes").
+When Mark says "[guest] is confirmed" / "confirm [guest]" / "[guest] confirmed" — set confirmed:true. When Mark says "[guest] is VIP" — set vip:true. When Mark adds a floor note for a guest — set floorNotes.
 stageType "music" = performance stage — covers all non-pod acts: music, comedy, poetry, dramatic reading, spoken word, etc. Call these guests "performance guests" when talking to Mark, not "musical guests."
 stageType "pod" = pod interview guest. stageType "kitchen" = Kitchen Disco host.
+epThemeDesc: the descriptive paragraph for this episode's theme — set when Mark describes the theme in paragraph form.
+watchURL: the public watch link (default: https://littlebigvoices.com) — set if Mark gives a different URL.
 
 === GUEST TYPE — ALWAYS CONFIRM BEFORE ADDING ===
 When Mark adds a new guest and hasn't specified whether they're a pod guest or a performance guest, ask before adding:
@@ -1559,6 +1593,8 @@ document.getElementById('mic-btn').classList.remove('thinking');
       if (u.pin !== undefined) showData.pin = u.pin;
       if (u.prelivePerformer !== undefined) showData.prelivePerformer = u.prelivePerformer;
       if (u.preliveMsg !== undefined) showData.preliveMsg = u.preliveMsg;
+      if (u.epThemeDesc !== undefined) showData.epThemeDesc = u.epThemeDesc;
+      if (u.watchURL !== undefined) showData.watchURL = u.watchURL;
       if (u.guests?.length > 0) showData.guests = u.guests;
       if (u.crew?.length > 0) showData.crew = u.crew;
       if (u.cues?.length > 0) showData.cues = u.cues;
@@ -1744,6 +1780,8 @@ function updateAllDisplays() {
   setVal('d-eptime', showData.epTime ? formatShowTimeCT(showData.epTime) : '');
   setVal('d-eplen', showData.epLen ? showData.epLen + ' min' : '');
   setVal('d-eppin', showData.pin);
+  const themeDescEl = document.getElementById('ep-theme-desc');
+  if (themeDescEl && themeDescEl !== document.activeElement) themeDescEl.value = showData.epThemeDesc || '';
 
   const totalMins = Math.round(showData.cues.reduce((a, c) => a + (c.prelive ? 0 : parseDur(c.dur)), 0) * 10) / 10;
   const target = parseFloat(showData.epLen) || 90;
@@ -2517,6 +2555,325 @@ function generateSceneList() {
   showScriptsSharePanel('✓ Scene list ready — print or save as PDF', '', false);
 }
 
+// ─── SHOW DOCS ───────────────────────────────────────────────────────────────
+
+function shiftTime(timeHHMM, deltaMins) {
+  const [h, m] = (timeHHMM || '19:00').split(':').map(Number);
+  const total = h * 60 + m + deltaMins;
+  const nh = Math.floor(((total % 1440) + 1440) % 1440 / 60);
+  const nm = ((total % 60) + 60) % 60;
+  return `${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;
+}
+
+function formatDateLong(dateStr) {
+  if (!dateStr) return '—';
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const sfx = [1,21,31].includes(d) ? 'st' : [2,22].includes(d) ? 'nd' : [3,23].includes(d) ? 'rd' : 'th';
+  return `${months[mo-1]} ${d}${sfx}, ${y}`;
+}
+
+function crewByRole(...kws) {
+  return showData.crew.find(c => kws.some(k => (c.role||'').toLowerCase().includes(k.toLowerCase())));
+}
+
+function fmt12(t) { return formatShowTimeCT(t).replace(' CT',''); }
+
+function openDocPreview(html) {
+  const win = window.open('', '_blank');
+  if (!win) { alert('Please allow popups for this site to preview documents.'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+function docCSS(accentColor) {
+  const ac = accentColor || '#E07818';
+  return `<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Georgia,'Times New Roman',serif;color:#222;font-size:11pt;line-height:1.65;background:#fff;}
+.page{max-width:7.5in;margin:0 auto;padding:0.7in;}
+.lbv-logo{font-family:Arial,sans-serif;font-size:24pt;font-weight:900;letter-spacing:-0.5px;margin-bottom:20px;line-height:1;}
+.logo-l{color:#555;} .logo-b{color:#E07818;} .logo-v{color:#2E7D32;}
+.doc-title{font-size:17pt;color:${ac};font-weight:bold;margin-bottom:22px;line-height:1.2;}
+h2{font-size:12pt;color:${ac};font-weight:bold;margin:20px 0 6px 0;font-family:Arial,sans-serif;}
+h3{font-size:10.5pt;color:${ac};font-weight:bold;margin:14px 0 4px 0;font-family:Arial,sans-serif;letter-spacing:0.5px;}
+p{margin:0 0 10px 0;}
+ul{margin:0 0 10px 0;padding-left:20px;}
+li{margin-bottom:4px;}
+hr{border:none;border-top:1px solid #ddd;margin:14px 0;}
+.cb{display:inline-block;width:13px;height:13px;border:1.5px solid #666;border-radius:2px;vertical-align:middle;margin-right:8px;flex-shrink:0;margin-top:1px;}
+.ci{display:flex;align-items:flex-start;margin-bottom:7px;}
+.ci-text{flex:1;}
+b{font-weight:bold;}
+.muted{color:#888;font-size:10pt;}
+.print-btn{display:inline-block;background:${ac};color:#fff;padding:9px 22px;border-radius:5px;font-family:Arial;font-size:11pt;font-weight:bold;cursor:pointer;border:none;margin-bottom:18px;letter-spacing:0.5px;}
+.footer-line{font-size:9pt;color:#888;text-align:center;margin-top:36px;border-top:1px solid #eee;padding-top:10px;}
+@media print{.print-btn{display:none;}body{font-size:10.5pt;}.page{padding:0.5in;}}
+</style>`;
+}
+
+function generateWelcomeKitHTML() {
+  const ep = showData;
+  const goLive = ep.epTime || '19:00';
+  const dateStr = formatDateLong(ep.epDate);
+  const hospitality = crewByRole('hospitality','green room');
+  const floorMgr = crewByRole('floor manager','floor');
+  const guestSvc = crewByRole('guest services','guest service');
+  const hosName = (hospitality?.name||'').split(' ')[0] || 'Our Green Room Host';
+  const fmName  = (floorMgr?.name||'').split(' ')[0]   || 'Our Floor Manager';
+  const gsName  = (guestSvc?.name||'').split(' ')[0]   || 'Melissa';
+  const gsFullName = guestSvc?.name || 'Your Guest Services Contact';
+  const gsPhone = guestSvc?.mobile || '';
+  const watchURL = ep.watchURL || 'https://littlebigvoices.com';
+  const themeSection = ep.epTitle ? `<h2>The Theme: ${esc(ep.epTitle)}</h2><p>${esc(ep.epThemeDesc || '')}</p>` : '';
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>LBV Guest Welcome Kit — E${ep.epNum}</title>
+  ${docCSS('#E07818')}</head><body><div class="page">
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  <div class="lbv-logo"><span class="logo-l">little.</span> <span class="logo-b">big.</span> <span class="logo-v">voices.</span></div>
+  <div class="doc-title">Little Big Voices LIVE Guest Welcome Kit: Episode ${ep.epNum}!</div>
+
+  <h2>Welcome to Little Big Voices LIVE!</h2>
+  <p><b>What This Show Is About:</b> Little Big Voices creates understanding, compassion, and connection through authentic conversations and performances. We explore the fabric of our shared humanity—discovering that we have more in common than we have differences. This isn't about perfection or performance; it's about being genuinely seen and heard.</p>
+  <p><b>Why You're Here:</b> Mark invited you because often Spirit will whisper to him who to invite — and often because your story/energy/presence strikes a chord in him—you inspire him and strengthen him as he lives out his story and mission. Also, your experience may do the same for our audience as they navigate their own journeys. Your voice and story matter, and we're honored to hold space for you to share it.</p>
+
+  ${themeSection}
+  <hr>
+  <h2>Show Details:</h2>
+  <ul>
+    <li><b>Episode:</b> ${ep.epNum}</li>
+    <li><b>Date:</b> ${dateStr}</li>
+    <li><b>Location:</b> Little Big Studio<ul>
+      <li>Cloister's West Apartments — 1507 Kinney Ave. #109, Austin, TX</li>
+      <li>We're in the second building you pass as you enter off Kinney</li>
+      <li>Park in back of that building and walk back around to the courtyard between the first set of buildings</li>
+      <li>Look for us on the ground floor with the purple light</li></ul></li>
+    <li><b>Musical Guests Call Time:</b> ${fmt12(shiftTime(goLive,-60))}</li>
+    <li><b>Podcast Guests Call Time:</b> ${fmt12(shiftTime(goLive,-45))}</li>
+    <li><b>Show Circle:</b> ${fmt12(shiftTime(goLive,-20))} (we gather together before going live)</li>
+    <li><b>Go Live on YouTube:</b> ${fmt12(goLive)}</li>
+    <li><b>Happy Hour Celebration:</b> ${fmt12(shiftTime(goLive,90))}</li>
+  </ul>
+  <p><b><i>Early Arrival Hospitality:</i></b> Need to shower, do makeup, or get dressed after you arrive? Just let me know and plan to come before — we'll make it happen!</p>
+  <hr>
+  <h2>What to Bring:</h2>
+  <ul><li>Your stories, songs, and open mind and heart!</li><li>Your authentic self</li></ul>
+  <h2>What to Wear:</h2>
+  <ul><li>Clothes that help you feel peaceful and comfortable</li><li>Whatever best expresses who you are</li></ul>
+  <hr>
+  <p><b>Guest List for Audience:</b> We love your +1's and want them here — and space is limited, so if you could, please provide us the first and last names of any +1s you'd like to bring. We want them to have a great experience as well.</p>
+  <hr>
+  <h2>What to Expect:</h2>
+  <ul>
+    <li>An intimate space to be loved, supported, and 100% your true self.</li>
+    <li>It's natural to feel nervous or excited — we all do! You're going to do great!</li>
+  </ul>
+  <h2>Your Support Team:</h2>
+  <ul>
+    <li>Our Green Room Host, ${hosName}, will take care of you the moment you walk in.</li>
+    <li>Our Floor Manager, ${fmName}, will guide you every step of the way during the show.</li>
+    <li>And of course, I'll be around as well if you need anything at all!</li>
+  </ul>
+  <h2>Viewing Options:</h2>
+  <ul>
+    <li>Studio seats (limited)</li>
+    <li>Green room with live monitor</li>
+    <li>Courtyard with wifi — watch the show on our outdoor monitor or your phone!</li>
+  </ul>
+  <h2>Your Time on Camera:</h2>
+  <ul>
+    <li><b>Interview length:</b> 8–12 minutes</li>
+    <li><b>Option to stay:</b> We'd love for you to stay at the table for the interview following yours — Mark loves it when the guests start interacting!</li>
+    <li><b>Opportunity to engage:</b> Ask other guests questions that are on your heart</li>
+    <li><b>Kitchen Disco possibility:</b> You might even help our Show Chef in Kitchen Disco or be in there for the dance party during the show credits!</li>
+  </ul>
+  <hr>
+  <p><b>Share the Love!</b> You'll receive social media promotions to share if you'd like. In the meantime, invite people to watch live:</p>
+  <ul>
+    <li><b>Watch:</b> ${watchURL}</li>
+    <li><b>Time and Date:</b> ${fmt12(goLive)}, ${dateStr}</li>
+  </ul>
+  <hr>
+  <p><b>Remember:</b> This show is about cultivating community by creating space for genuine human connection. We're not here to convince anyone of anything — just curious about others' stories and experiences. Thank you for sharing yours!</p>
+  <hr>
+  <p>Mark and I are here for you anytime you have questions or need anything at all.</p>
+  <p style="margin-top:12px;">Peace,<br>${gsName}</p>
+  <p style="margin-top:16px;"><b>${gsFullName}</b><br>Guest Services, LBV LIVE!${gsPhone ? '<br>' + gsPhone : ''}</p>
+  <div class="footer-line">LBV LIVE! Welcome Kit &mdash; Episode ${ep.epNum}</div>
+  </div></body></html>`;
+}
+
+function generateHospHTML() {
+  const ep = showData;
+  const goLive = ep.epTime || '19:00';
+  const arrivals = fmt12(shiftTime(goLive, -150));
+  const headcount = (ep.guests||[]).length + (ep.crew||[]).length;
+  const podGuests  = (ep.guests||[]).filter(g => g.stageType === 'pod');
+  const perfGuests = (ep.guests||[]).filter(g => g.stageType === 'music');
+  const vipGuests  = (ep.guests||[]).filter(g => g.vip);
+
+  const guestRow = (g, idx) => {
+    const conf = g.confirmed ? ' (confirmed)' : '';
+    const phone = g.mobile ? ' &nbsp;' + g.mobile : '';
+    return `<li>${idx+1}. <b>${esc(g.name)}</b>${phone}${conf}</li>`;
+  };
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>LBV Hospitality Manager — E${ep.epNum}</title>
+  ${docCSS('#2E7D32')}</head><body><div class="page">
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  <div class="lbv-logo"><span class="logo-l">little.</span> <span class="logo-b">big.</span> <span class="logo-v">voices.</span></div>
+  <div class="doc-title">HOSPITALITY MANAGER — E${ep.epNum}<br><span style="font-size:12pt;font-weight:400;color:#555;">Green Room &bull; Warm-Up Band &bull; Confidence Builder</span></div>
+
+  <h2>THE HEART OF THE ROLE</h2>
+  <p>At Little Big Voices, we stand on community, connection, creativity, and ultimately, love. Our goal is simple and meaningful: to help every person feel seen, heard, and valued the moment they walk through the door. This role is essential to that mission.</p>
+  <p>Many of the people coming on this show have never been on camera or on a microphone before. They may feel nervous, uncertain, or unsure of what to expect. That's where you come in — you're not just supporting the green room, you're the warm-up audience before the interview or performance!</p>
+  <p>Through conversation, curiosity, and kindness, you help people loosen up, build confidence, and feel ready to walk to the table already warmed, welcomed, and grounded.</p>
+  <hr>
+  <div style="text-align:center;font-size:16pt;font-weight:bold;margin:18px 0;">CHECKLIST</div>
+
+  <h3>SHOPPING (REIMBURSED SAME DAY)</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Purchase green room food and drinks. Budget is $40–75 based on headcount — this episode, about ${headcount} people.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Pick up one bag of ice to chill the drinks in the green room.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Text the receipt and your Venmo ID to Mark for same-day reimbursement.</div></div>
+
+  <h3>BEFORE ARRIVAL</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Hold the heart of the role: help everyone feel seen, heard, and valued.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Plan to arrive 30 minutes before the larger crew — for Episode ${ep.epNum}: <b>arrive at ${arrivals}</b> so the crew can enjoy the green room treats as well!</div></div>
+
+  <h3>GREEN ROOM SETUP</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Use your creativity to arrange finger foods and organic snacks (berries, hummus, dark chocolate, cheese, etc.).</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Set out napkins, cups, utensils, cutting boards, and charcuterie boards (stored under the wooden dresser in the green room).</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Help make the space feel calm, welcoming, and cared for.</div></div>
+
+  <h3>CREW ARRIVAL (30 MINUTES BEFORE GUESTS)</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Welcome crew warmly as they arrive.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Introduce yourself, your role, and invite them to grab food or a drink.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Check in: "How are you doing?" "Can I get you anything?"</div></div>
+
+  <h3>GUEST &amp; TALENT ARRIVAL</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Greet guests and talent with warmth and ease.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Chat, listen, and help build confidence before they go on camera.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Help guests find phone charging stations, hair/makeup, wardrobe if needed.</div></div>
+
+  <h3>DURING THE SHOW</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Refresh food and drinks as needed.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Keep the green room tidy and inviting.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Help with light organization (coats, guitar cases — usually stored on the bed).</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Remain available for questions.</div></div>
+
+  <h2>FROM THE HEART</h2>
+  <p>Your voice matters, too. If you want to be out watching the show, soaking it in, or simply enjoying the energy in the room, say so. We truly want you to get what you came to give — and what you came to get.</p>
+  <p>Thank you for your presence, your care, and your creativity. This show is better because you're here.</p>
+  <p style="margin-top:10px;">Mark<br><span class="muted">Mark Caddell — Producer/Host, Little Big Voices<br>512.762.8511 | mark@littlebigvoices.com</span></p>
+  <hr>
+  ${podGuests.length ? `<h3>PODCAST GUESTS:</h3><ul>${podGuests.map(guestRow).join('')}</ul>` : ''}
+  ${perfGuests.length ? `<h3>PERFORMANCE GUESTS:</h3><ul>${perfGuests.map(guestRow).join('')}</ul>` : ''}
+  <h3>CREW:</h3>
+  <ul>${(ep.crew||[]).map((c,i) => `<li>${i+1}. <b>${esc(c.name)}</b> — ${esc(c.role||'')}${c.mobile ? ' &nbsp;' + c.mobile : ''}</li>`).join('')}</ul>
+  ${vipGuests.length ? `<h3>VIP LIST:</h3><ul>${vipGuests.map(g => `<li><b>${esc(g.name)}</b>${g.floorNotes ? ' — ' + esc(g.floorNotes) : ''}</li>`).join('')}</ul>` : ''}
+  <div class="footer-line">LBV Hospitality Manager Checklist &mdash; E${ep.epNum} &mdash; CREW ONLY</div>
+  </div></body></html>`;
+}
+
+function generateFloorMgrHTML() {
+  const ep = showData;
+  const goLive  = ep.epTime || '19:00';
+  const fmArrive = fmt12(shiftTime(goLive, -150));
+  const avArrive = fmt12(shiftTime(goLive, -120));
+  const perfCall = fmt12(shiftTime(goLive, -60));
+  const podCall  = fmt12(shiftTime(goLive, -45));
+  const circle   = fmt12(shiftTime(goLive, -20));
+  const goLiveFmt = fmt12(goLive);
+  const dateStr  = formatDateLong(ep.epDate);
+
+  const podGuests  = (ep.guests||[]).filter(g => g.stageType === 'pod');
+  const perfGuests = (ep.guests||[]).filter(g => g.stageType === 'music');
+  const vipGuests  = (ep.guests||[]).filter(g => g.vip);
+  const perfNames  = perfGuests.map(g => g.name).join(', ') || '—';
+  const podNames   = podGuests.map(g => g.name).join(', ') || '—';
+
+  const bsmUrl = `https://redsuncreative.github.io/beb/bsm-e${ep.epNum}.html`;
+  const pin = ep.pin || '5000';
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>LBV Floor Manager — E${ep.epNum}</title>
+  ${docCSS('#2E7D32')}</head><body><div class="page">
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  <div class="lbv-logo"><span class="logo-l">little.</span> <span class="logo-b">big.</span> <span class="logo-v">voices.</span></div>
+  <div class="doc-title">FLOOR MANAGER — E${ep.epNum}<br><span style="font-size:12pt;font-weight:400;color:#555;">Mark's Right Hand &bull; Boo's Eyes &bull; The Show's Steady Center</span></div>
+
+  <h2>THE HEART OF THE ROLE</h2>
+  <p>The Floor Manager is the connective tissue between what the audience sees and everything happening just off-camera. You keep the show moving, the people positioned, and Mark focused on hosting — not logistics.</p>
+  <p>You are trained on Boo Show Manager and can step in to adjust cues if Mark gets ahead of or behind the show. You're working with the Green Room Manager to move guests from the green room to their marks at exactly the right moment. And you're watching everything — calmly, attentively, and always a step ahead.</p>
+  <p>This is a hands-on role for someone who loves the craft behind a live show. Welcome to the crew.</p>
+  <hr>
+  <div style="text-align:center;font-size:16pt;font-weight:bold;margin:18px 0;">CHECKLIST</div>
+
+  <h3>E${ep.epNum} SHOW DETAILS</h3>
+  <p style="margin-left:16px;"><b>Episode:</b> E${ep.epNum} &middot; ${esc(ep.epTitle || '')}<br>
+  <b>Venue:</b> Little Big Studio &mdash; 1507 Kinney Ave #109, Austin TX<br>
+  <b>Floor Manager + Hospitality Manager Arrive:</b> ${fmArrive}<br>
+  <b>Audio, Video, Camera Operators Arrive:</b> ${avArrive}<br>
+  ${perfGuests.length ? `<b>Performance Guest Sound/Video Check:</b> ${perfCall} <span class="muted">(${esc(perfNames)})</span><br>` : ''}
+  <b>Pod Guests Sound/Video Checks:</b> ${podCall} <span class="muted">(${esc(podNames)})</span><br>
+  <b>Show Circle:</b> ${circle}<br>
+  <b>Go Live:</b> ${goLiveFmt}</p>
+
+  <h3>CREW ROSTER — E${ep.epNum}</h3>
+  <p style="margin-left:16px;">${(ep.crew||[]).map(c => `<b>${esc(c.role||'')}:</b> ${esc(c.name)}${c.mobile ? ' &nbsp;' + c.mobile : ''}`).join('<br>')}</p>
+
+  ${podGuests.length ? `<h3>PODCAST GUESTS — E${ep.epNum}</h3>
+  <p><i>Review every name before show day.</i></p>
+  ${podGuests.map((g,i) => `<p style="margin-left:16px;margin-bottom:10px;"><b>${i+1}. ${esc(g.name)}</b>${g.vip ? ' &mdash; VIP &#9733;' : ''}${g.mobile ? ' &nbsp;' + g.mobile : ''}<br>
+  <span class="muted">Pod Stage &mdash; Red X entry, motioned in by Mark${g.floorNotes ? '<br><b>NOTE: ' + esc(g.floorNotes) + '</b>' : ''}</span></p>`).join('')}` : ''}
+
+  ${perfGuests.length ? `<h3>PERFORMANCE GUESTS — E${ep.epNum}</h3>
+  ${perfGuests.map((g,i) => `<p style="margin-left:16px;"><b>${i+1}. ${esc(g.name)}</b>${g.mobile ? ' &nbsp;' + g.mobile : ''}<br>
+  <span class="muted">Music Stage &mdash; sound/video check at ${perfCall}${g.segment ? ' &mdash; ' + esc(g.segment) : ''}</span></p>`).join('')}` : ''}
+
+  ${vipGuests.length ? `<h3>VIP LIST — E${ep.epNum}</h3>
+  ${vipGuests.map(g => `<p style="margin-left:16px;"><b>&#9733; ${esc(g.name)}</b>${g.floorNotes ? '<br><span class="muted">' + esc(g.floorNotes) + '</span>' : ''}</p>`).join('')}` : ''}
+
+  <h3>BOO SHOW MANAGER — YOUR ACCESS</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Open Boo Show Manager: <a href="${bsmUrl}">${bsmUrl}</a></div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">View: HOST ONLY — tap HOST ONLY, enter PIN: <b>${pin}</b></div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Advancing a cue: only if Mark clearly missed it — wait 15–20 seconds first.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Adding time: tap +5 MIN or +3 MIN if a segment is running long.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">If unsure: catch Mark's eye and let him decide.</div></div>
+
+  <h3>BEFORE ARRIVAL</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Review every guest name, phone number, stage assignment, and order above.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Review Boo Show Manager — understand what each cue does.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Wear something you can move in — you'll be on your feet all show.</div></div>
+
+  <h3>AFTER SHOW CIRCLE — BEFORE GO LIVE (${circle}–${goLiveFmt})</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Have Boo Show Manager open and synced on your device.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Stand or sit in Mark's eye line in case he needs you.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Confirm Green Room Manager has guests settled and Guest Services is ready online.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Walk the floor — anything out of place, a trip hazard, or off-camera that needs moving?</div></div>
+
+  <h3>DURING THE SHOW — GUEST POSITIONING</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Watch Boo Show Manager for the STAND BY banner — that's your move cue.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Walk guests calmly to their Red X near the Pod Stage or Music Stage.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Remind them: Mark will motion them in — don't step forward until he does.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Stay close but out of camera frame at all times.</div></div>
+  ${vipGuests.map(g => `<div class="ci"><div class="cb"></div><div class="ci-text">VIP — ${esc(g.name)}${g.floorNotes ? ': ' + esc(g.floorNotes) : ''}</div></div>`).join('')}
+
+  <h3>HAND SIGNALS — ESTABLISH WITH MARK BEFORE SHOW CIRCLE</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">&#x1F44D; All good — stay the course</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">&#9995; Hold — don't move the guest yet</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">&#x1F449; Send them in — walk the guest to their mark now</div></div>
+
+  <h3>AFTER THE SHOW</h3>
+  <div class="ci"><div class="cb"></div><div class="ci-text">High-five the crew — you all just made something real!</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Find each guest and thank them personally — it matters.</div></div>
+  <div class="ci"><div class="cb"></div><div class="ci-text">Let guests know: happy hour is ready 10–15 minutes after the show.</div></div>
+
+  <h2>FROM THE HEART</h2>
+  <p>You're going to be right in the middle of it all — and that's a great place to be. If something feels off, trust that instinct and handle it or get Mark's attention. Thank you for being here. <b>The show is better with you on the floor.</b></p>
+  <p style="margin-top:12px;">Mark<br><span class="muted">Mark Caddell — Producer/Host, Little Big Voices<br>512.762.8511 | mark@littlebigvoices.com</span></p>
+  <div class="footer-line">LBV Floor Manager Checklist &mdash; E${ep.epNum} &mdash; CREW ONLY</div>
+  </div></body></html>`;
+}
 
 // ─── ROS EDIT PANEL ──────────────────────────────────────────────────────────
 function showROSEditPanel() {
