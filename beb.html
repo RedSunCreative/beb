@@ -367,6 +367,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
           <div class="ep-field"><div class="ep-label">DATE</div><div class="ep-val ep-editable" id="d-epdate" onclick="epEdit(this,'epDate')" title="Click to edit"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">TIME (CT)</div><div class="ep-val ep-editable" id="d-eptime" onclick="epEdit(this,'epTime')" title="Click to edit"><span class="empty">not set</span></div></div>
           <div class="ep-field" style="grid-column:1/-1"><div class="ep-label">TITLE</div><div class="ep-val ep-editable" id="d-eptitle" onclick="epEdit(this,'epTitle')" title="Click to edit"><span class="empty">not set</span></div></div>
+          <div class="ep-field" style="grid-column:1/-1"><div class="ep-label">THEME</div><textarea id="ep-theme-desc" rows="2" style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--white);font-size:13px;font-family:inherit;width:100%;resize:none;outline:none;padding:4px 0;line-height:1.5;box-sizing:border-box;" placeholder="Describe this episode's theme in 2-3 sentences..." oninput="showData.epThemeDesc=this.value;saveState()" onfocus="this.style.borderBottomColor='var(--teal)'" onblur="this.style.borderBottomColor='var(--border)'"></textarea></div>
           <div class="ep-field"><div class="ep-label">LENGTH</div><div class="ep-val ep-editable" id="d-eplen" onclick="epEdit(this,'epLen')" title="Click to edit"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">PIN</div><div class="ep-val ep-editable" id="d-eppin" onclick="epEdit(this,'pin')" title="Click to edit"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">SAVED</div><div class="ep-val" id="d-saved" style="font-size:11px;color:var(--muted)">—</div></div>
@@ -399,6 +400,23 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
       </div>
       <div class="data-section-body" id="guests-body">
         <div id="guest-list"><div style="font-size:12px;color:var(--muted)">Tell Boo about your guests...</div></div>
+        <div id="new-invite-wrap" style="margin-top:12px;">
+          <button onclick="toggleNewInvite()" style="width:100%;background:transparent;border:1px dashed var(--teal);color:var(--teal);border-radius:6px;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">+ INVITE SOMEONE NEW</button>
+          <div id="new-invite-panel" style="display:none;margin-top:8px;padding:12px;background:rgba(0,0,0,0.2);border-radius:6px;border:1px solid var(--teal);">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+              <input id="new-invite-name" type="text" class="crew-inp" placeholder="Name" oninput="refreshNewInviteText()">
+              <input id="new-invite-phone" type="tel" class="crew-inp" placeholder="Phone number">
+            </div>
+            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:5px;">PERSONAL OPENER <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></div>
+            <input id="new-invite-opener" type="text" class="crew-inp" placeholder="e.g. I loved your set at the community event last month." style="width:100%;box-sizing:border-box;margin-bottom:10px;" oninput="refreshNewInviteText()">
+            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:5px;">FULL MESSAGE <span style="font-weight:400;text-transform:none;letter-spacing:0;">(edit if needed)</span></div>
+            <textarea id="new-invite-body" rows="9" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:5px;color:var(--white);font-size:12px;padding:8px 10px;box-sizing:border-box;resize:vertical;line-height:1.6;font-family:inherit;"></textarea>
+            <div style="margin-top:8px;display:flex;gap:8px;">
+              <button onclick="sendNewInviteSMS()" style="background:var(--green);color:#1e2330;border:none;border-radius:5px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">TEXT</button>
+              <button onclick="toggleNewInvite()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:8px 12px;font-size:11px;cursor:pointer;">CLOSE</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -469,10 +487,6 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
         <div class="data-section-title">SHOW DOCS <span class="tip-q" data-tip="Generate Guest Welcome Kit and crew checklists from your show data. Preview in browser, print to PDF." onclick="event.stopPropagation()">?</span></div>
       </div>
       <div class="data-section-body" id="docs-body" style="display:none;">
-        <div style="margin-bottom:14px;">
-          <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:6px;">EPISODE THEME DESCRIPTION</div>
-          <textarea id="ep-theme-desc" rows="3" style="width:100%;background:var(--dark-2);border:1px solid var(--border);border-radius:6px;color:var(--white);font-size:13px;padding:8px 10px;resize:vertical;box-sizing:border-box;font-family:inherit;" placeholder="Write 2–3 sentences describing this episode's theme — used in the Guest Welcome Kit." oninput="showData.epThemeDesc=this.value;saveState()"></textarea>
-        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
           <div style="background:var(--dark);border-radius:8px;padding:12px;border:1px solid var(--border);">
             <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">GUEST WELCOME KIT</div>
@@ -1818,10 +1832,14 @@ function updateAllDisplays() {
       const smsBsm  = g.mobile && bsmUrl ? `sms:${g.mobile}?body=${bsmBody}` : '';
       const smsRos  = g.mobile && rosUrl ? `sms:${g.mobile}?body=${rosBody}` : '';
       const mailHref = g.email ? `mailto:${g.email}?subject=${mailSubj}&body=${mailBody}` : '';
+      const badges = (g.confirmed ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--green);background:rgba(74,222,128,0.12);border-radius:3px;padding:1px 5px;margin-left:5px;">CONFIRMED</span>` : '') +
+                     (g.vip ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:3px;padding:1px 5px;margin-left:3px;">VIP</span>` : '');
+      const firstName = esc((g.name||'').split(' ')[0].toUpperCase());
       return `<div class="crew-item">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <div><span class="guest-name">${esc(g.name||'')}</span><span style="font-size:10px;color:var(--muted);margin-left:6px;">${(g.stageType||'').toUpperCase()}</span></div>
+          <div><span class="guest-name">${esc(g.name||'')}</span><span style="font-size:10px;color:var(--muted);margin-left:6px;">${(g.stageType||'').toUpperCase()}</span>${badges}</div>
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+            ${!g.confirmed && g.mobile ? `<button onclick="toggleGuestInvite(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--teal);color:#fff;border:none;font-weight:700;cursor:pointer;">INVITE</button>` : ''}
             ${smsBsm ? `<a class="crew-sms" href="${smsBsm}" title="Text BSM link">TEXT BSM</a>` : ''}
             ${smsRos ? `<a class="crew-sms" href="${smsRos}" title="Text static show script" style="background:#5a6e2a;">TEXT SCRIPT</a>` : ''}
             ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
@@ -1831,6 +1849,16 @@ function updateAllDisplays() {
         <div class="crew-fields">
           <input class="crew-inp" placeholder="Mobile" value="${esc(g.mobile||'')}" onchange="updateGuest(${i},'mobile',this.value)">
           <input class="crew-inp" placeholder="Email" value="${esc(g.email||'')}" onchange="updateGuest(${i},'email',this.value)" style="grid-column:span 2;">
+        </div>
+        <div id="invite-panel-${i}" style="display:none;margin-top:10px;padding:10px;background:rgba(0,0,0,0.2);border-radius:6px;border:1px solid var(--teal);">
+          <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">PERSONAL OPENER <span style="font-weight:400;text-transform:none;letter-spacing:0;">(optional — prepended to message)</span></div>
+          <input id="invite-opener-${i}" type="text" class="crew-inp" placeholder="e.g. I loved your set at the community event last month." style="width:100%;box-sizing:border-box;margin-bottom:8px;" oninput="refreshInviteText(${i})">
+          <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">FULL MESSAGE <span style="font-weight:400;text-transform:none;letter-spacing:0;">(edit if needed)</span></div>
+          <textarea id="invite-body-${i}" rows="9" style="width:100%;background:var(--dark);border:1px solid var(--border);border-radius:5px;color:var(--white);font-size:12px;padding:8px 10px;box-sizing:border-box;resize:vertical;line-height:1.6;font-family:inherit;">${esc(buildInviteText(g, ''))}</textarea>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+            <button onclick="sendInviteSMS(${i})" style="background:var(--green);color:#1e2330;border:none;border-radius:5px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">TEXT ${firstName}</button>
+            <button onclick="toggleGuestInvite(${i})" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:8px 12px;font-size:11px;cursor:pointer;">CLOSE</button>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -2571,6 +2599,76 @@ function formatDateLong(dateStr) {
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const sfx = [1,21,31].includes(d) ? 'st' : [2,22].includes(d) ? 'nd' : [3,23].includes(d) ? 'rd' : 'th';
   return `${months[mo-1]} ${d}${sfx}, ${y}`;
+}
+
+// ─── GUEST INVITE ─────────────────────────────────────────────────────────────
+
+function buildInviteText(g, opener) {
+  const ep = showData;
+  const firstName = (g.name || 'there').split(' ')[0];
+  const parts = [];
+  if (opener && opener.trim()) parts.push(opener.trim());
+  let main = `Hi ${firstName}! I'd love to have you on Little Big Voices LIVE`;
+  if (ep.epNum) main += ` — Episode ${ep.epNum}`;
+  if (ep.epTitle) main += `, "${ep.epTitle}"`;
+  if (ep.epDate) main += `, on ${formatDateLong(ep.epDate)}`;
+  if (ep.epTime) main += ` at ${formatShowTimeCT(ep.epTime)}`;
+  main += '.';
+  parts.push(main);
+  if (ep.epThemeDesc && ep.epThemeDesc.trim()) parts.push(ep.epThemeDesc.trim());
+  parts.push(`You can check out the ethos of the show and watch a previous episode at ${ep.watchURL || 'https://littlebigvoices.com'}`);
+  parts.push('Feel free to text or call me anytime to chat about it or to set up an in-person meeting!');
+  parts.push('— Mark');
+  return parts.join('\n\n');
+}
+
+function refreshInviteText(idx) {
+  const g = showData.guests[idx];
+  if (!g) return;
+  const opener = document.getElementById(`invite-opener-${idx}`)?.value || '';
+  const ta = document.getElementById(`invite-body-${idx}`);
+  if (ta) ta.value = buildInviteText(g, opener);
+}
+
+function toggleGuestInvite(idx) {
+  const panel = document.getElementById(`invite-panel-${idx}`);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const ta = document.getElementById(`invite-body-${idx}`);
+    if (ta) ta.value = buildInviteText(showData.guests[idx], '');
+  }
+}
+
+function sendInviteSMS(idx) {
+  const g = showData.guests[idx];
+  if (!g?.mobile) return;
+  const body = document.getElementById(`invite-body-${idx}`)?.value || '';
+  window.location.href = `sms:${g.mobile}?body=${encodeURIComponent(body)}`;
+}
+
+function toggleNewInvite() {
+  const panel = document.getElementById('new-invite-panel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) refreshNewInviteText();
+}
+
+function refreshNewInviteText() {
+  const name = document.getElementById('new-invite-name')?.value?.trim() || '';
+  const opener = document.getElementById('new-invite-opener')?.value || '';
+  const fakeGuest = { name: name || 'there' };
+  const ta = document.getElementById('new-invite-body');
+  if (ta) ta.value = buildInviteText(fakeGuest, opener);
+}
+
+function sendNewInviteSMS() {
+  const phone = (document.getElementById('new-invite-phone')?.value || '').replace(/\s/g,'');
+  if (!phone) { alert('Enter a phone number first.'); return; }
+  const body = document.getElementById('new-invite-body')?.value || '';
+  window.location.href = `sms:${phone}?body=${encodeURIComponent(body)}`;
 }
 
 function crewByRole(...kws) {
