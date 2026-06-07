@@ -225,6 +225,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
     <div class="show-countdown" id="show-countdown" title="Countdown to show date">
       <div class="show-countdown-label">NEXT SHOW</div>
       <div class="show-countdown-time empty" id="show-countdown-time">— —</div>
+      <div id="show-countdown-sub" style="font-size:9px;color:var(--muted);letter-spacing:1px;text-align:right;line-height:1;margin-top:1px;"></div>
     </div>
     <div style="position:relative;display:inline-block;" id="ep-switcher">
       <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()" data-tip="Switch between saved episodes or start a new one.">EP ▾</button>
@@ -344,7 +345,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
           <img id="mic-img" class="mic-img" src="speakaboo-off.png" alt="SpeakaBoo">
         </button>
         <div class="mic-text-wrap">
-          <textarea class="mic-text" id="mic-text" placeholder="Type here..." onkeydown="handleKey(event)"></textarea>
+          <textarea class="mic-text" id="mic-text" placeholder="Type here..." onkeydown="handleKey(event)" spellcheck="true"></textarea>
         </div>
         <button class="send-btn" id="send-btn" onclick="sendText()" data-tip="Send your message — or just press Enter.">SEND</button>
       </div>
@@ -363,6 +364,7 @@ body{background:var(--dark);min-height:100vh;font-family:'Barlow',sans-serif;col
         <div class="ep-grid">
           <div class="ep-field"><div class="ep-label">EPISODE</div><div class="ep-val" id="d-epnum"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">DATE</div><div class="ep-val" id="d-epdate"><span class="empty">not set</span></div></div>
+          <div class="ep-field"><div class="ep-label">TIME (CT)</div><div class="ep-val" id="d-eptime"><span class="empty">not set</span></div></div>
           <div class="ep-field" style="grid-column:1/-1"><div class="ep-label">TITLE</div><div class="ep-val" id="d-eptitle"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">LENGTH</div><div class="ep-val" id="d-eplen"><span class="empty">not set</span></div></div>
           <div class="ep-field"><div class="ep-label">PIN</div><div class="ep-val" id="d-eppin"><span class="empty">not set</span></div></div>
@@ -508,7 +510,7 @@ const CLIENT_CONFIG = {
 
 // ─── STATE ───
 let showData = {
-  epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:90, pin:"5000",
+  epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:90, pin:"5000",
   prelivePerformer:"", preliveMsg:"",
   guests:[], crew:[], cues:[], booMemory:[], crewReminderMsg:''
 };
@@ -730,7 +732,7 @@ async function handleSwitchEpisode(rowId) {
   if (rowId === currentEpRow) return;
   await saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
   conversationHistory = [];
   const loaded = await loadState(rowId);
   if (loaded) {
@@ -746,7 +748,7 @@ function handleNewEpisode() {
   document.getElementById('ep-list-panel').style.display = 'none';
   saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
   conversationHistory = [];
   currentEpRow = 0;
   localStorage.setItem('beb_current_ep_row', '0');
@@ -1163,6 +1165,7 @@ When Mark wants to think out loud, explore ideas, or problem-solve — go there 
 
 === RUNTIME ===
 Target = showData.epLen (default 90 min). Total = sum of cue durations WHERE prelive is not true. Countdown does not count. If off target, suggest a specific fix — never just flag it.
+showData.epTime stores the show start time in 24h format ("19:00" = 7pm CT). When Mark sets a show time, store it as "HH:MM". Default is "19:00".
 
 === CREW INSTRUCTIONS MODE ===
 When Mark says he wants to work on crew instructions (audio, video, cameras, lighting), go scene by scene through the cues array. For each scene:
@@ -1544,6 +1547,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
       if (u.epTitle !== undefined) showData.epTitle = u.epTitle;
       if (u.epSubtitle !== undefined) showData.epSubtitle = u.epSubtitle;
       if (u.epDate !== undefined) showData.epDate = u.epDate;
+      if (u.epTime !== undefined) showData.epTime = u.epTime;
       if (u.epLen !== undefined) showData.epLen = u.epLen;
       if (u.pin !== undefined) showData.pin = u.pin;
       if (u.prelivePerformer !== undefined) showData.prelivePerformer = u.prelivePerformer;
@@ -1605,16 +1609,51 @@ document.getElementById('mic-btn').classList.remove('thinking');
 }
 
 // ─── COUNTDOWN ───
+// Returns a Date object for dateStr + timeHHMM in America/Chicago (handles DST correctly)
+function makeShowTimeCT(dateStr, timeHHMM) {
+  const [h, m] = (timeHHMM || '19:00').split(':').map(Number);
+  // Build an approximate UTC candidate
+  const approx = new Date(`${dateStr}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`);
+  if (isNaN(approx)) return null;
+  // Ask what CT thinks this UTC moment is
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago', hour: 'numeric', minute: 'numeric', hour12: false
+  }).formatToParts(approx);
+  const ctH = parseInt(parts.find(p => p.type === 'hour')?.value ?? h);
+  const ctM = parseInt(parts.find(p => p.type === 'minute')?.value ?? m);
+  // Offset: shift approx by the difference between target and CT-read time
+  const diffMs = ((h - (ctH % 24)) * 60 + (m - ctM)) * 60000;
+  return new Date(approx.getTime() + diffMs);
+}
+
+// Returns a human-readable CT time string, e.g. "7:00 PM CT"
+function formatShowTimeCT(timeHHMM) {
+  const [h, m] = (timeHHMM || '19:00').split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm} CT`;
+}
+
 function updateCountdown() {
   const el = document.getElementById('show-countdown-time');
+  const subEl = document.getElementById('show-countdown-sub');
   if (!el) return;
   const dateStr = showData.epDate;
-  if (!dateStr) { el.textContent = '— —'; el.className = 'show-countdown-time empty'; return; }
+  if (!dateStr) {
+    el.textContent = '— —'; el.className = 'show-countdown-time empty';
+    if (subEl) subEl.textContent = '';
+    return;
+  }
 
-  // Parse date; assume 7pm local if no time specified
-  const raw = new Date(dateStr);
-  if (isNaN(raw)) { el.textContent = '— —'; el.className = 'show-countdown-time empty'; return; }
-  const show = new Date(raw.getFullYear(), raw.getMonth(), raw.getDate(), 19, 0, 0);
+  const timeStr = showData.epTime || '19:00';
+  const show = makeShowTimeCT(dateStr, timeStr);
+  if (!show || isNaN(show)) {
+    el.textContent = '— —'; el.className = 'show-countdown-time empty';
+    if (subEl) subEl.textContent = '';
+    return;
+  }
+
+  if (subEl) subEl.textContent = formatShowTimeCT(timeStr);
 
   const diff = show - Date.now();
   if (diff <= 0) { el.textContent = 'SHOWTIME'; el.className = 'show-countdown-time urgent'; return; }
@@ -1647,6 +1686,7 @@ function updateAllDisplays() {
   const epBadge = document.getElementById('d-ep-badge');
   if (epBadge) epBadge.textContent = showData.epNum ? `— E${showData.epNum}` : '';
   setVal('d-epdate', showData.epDate);
+  setVal('d-eptime', showData.epTime ? formatShowTimeCT(showData.epTime) : '');
   setVal('d-eplen', showData.epLen ? showData.epLen + ' min' : '');
   setVal('d-eppin', showData.pin);
 
