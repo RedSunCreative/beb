@@ -1414,10 +1414,13 @@ If showData.cues is empty, skip this rule.`;
     return '';
   })();
   const answeringClarification = lastBooText.includes('?');
+  const hasGuestsWithData = showData.guests.some(g => g.bio || g.socials || g.contactMethod);
   const needsFullOutput =
     answeringClarification ||                 // reply to a Boo clarifying question
+    hasGuestsWithData ||                      // guests have bios — array too large for Haiku
     /\b(build|generate|rebuild|redo|restructure|reorder)\b/.test(msg) ||
     /\b(add|insert|remove|delete|move|rename|change|update|set|edit|note|record|save|remember)\b/.test(msg) ||
+    /\b(confirm|confirmed|vip)\b/.test(msg) || // guest status ops
     /crew\s*(instruct|card|mode|work)/.test(msg) || /work.*crew/.test(msg) ||
     /\b(cue.?card|write.*intro|research.*guest|same.?as)\b/.test(msg) ||
     /\b(scene|cue|segment|guest|song|music|kitchen|disco|opener|closing|standby|prelive)\b/.test(msg) ||
