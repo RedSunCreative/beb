@@ -1405,7 +1405,17 @@ If showData.cues is empty, skip this rule.`;
 
   // Use full token budget only when a cue/data change is likely; simple questions get a fast path.
   const msg = userMessage.toLowerCase();
+  // If Boo just asked a clarifying question, this reply needs full output to complete the original op.
+  const lastBooText = (() => {
+    const last = [...conversationHistory].reverse().find(m => m.role === 'assistant');
+    if (!last) return '';
+    if (typeof last.content === 'string') return last.content;
+    if (Array.isArray(last.content)) return last.content.map(b => b.text || '').join(' ');
+    return '';
+  })();
+  const answeringClarification = lastBooText.includes('?');
   const needsFullOutput =
+    answeringClarification ||                 // reply to a Boo clarifying question
     /\b(build|generate|rebuild|redo|restructure|reorder)\b/.test(msg) ||
     /\b(add|insert|remove|delete|move|rename|change|update|set|edit|note|record|save|remember)\b/.test(msg) ||
     /crew\s*(instruct|card|mode|work)/.test(msg) || /work.*crew/.test(msg) ||
@@ -1632,7 +1642,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
 
     // Auto-correct: if speech implies a cue change but no cues came through, ask Boo silently
     const speechLower = (rawSpeech + ' ' + rawDisplay).toLowerCase();
-    const impliesCueChange = /\b(added|adding|add|scene|cue|removed|removing|deleted|moved|reorder|renamed|closing|opening|inserted|insert|changed|dropped|cut|trimm|shorten|credits|updated|new scene)\b/.test(speechLower);
+    const impliesCueChange = /\b(scene|cue|segment|reorder|renamed|closing|opening|inserted|dropped|trimm|shorten|credits|new scene)\b/.test(speechLower);
     const cuesMissing = !(response.updates?.cues?.length > 0);
     if (impliesCueChange && cuesMissing) {
       conversationHistory.push({ role: 'user', content: "Your last response didn't include updates.cues. Send the complete updated cues array now. No speech needed — just the JSON." });
@@ -1645,6 +1655,22 @@ document.getElementById('mic-btn').classList.remove('thinking');
           response.updates.cues = fix.updates.cues;
         }
       } catch(e) { console.error('[cue auto-correct]', e); }
+    }
+
+    // Auto-correct: if the request implied a guest change but no guests came through, retry
+    const impliesGuestChange = /\b(guest|confirm|vip|pod|performance|music|kitchen|stageType)\b/i.test(userMessage) || answeringClarification;
+    const guestsMissing = !(response.updates?.guests?.length > 0);
+    if (impliesGuestChange && guestsMissing) {
+      conversationHistory.push({ role: 'user', content: "Your last response didn't include updates.guests. Send the complete updated guests array now. No speech needed — just the JSON." });
+      try {
+        const fix = await callClaude("Your last response didn't include updates.guests. Send the complete updated guests array now. No speech needed — just the JSON.");
+        if (fix?.updates?.guests?.length > 0) {
+          showData.guests = fix.updates.guests;
+          conversationHistory.push(buildHistoryEntry(fix));
+          response.updates = response.updates || {};
+          response.updates.guests = fix.updates.guests;
+        }
+      } catch(e) { console.error('[guest auto-correct]', e); }
     }
 
     // Show what was actually updated so missed updates are visible
