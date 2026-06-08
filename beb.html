@@ -1463,11 +1463,11 @@ If showData.cues is empty, skip this rule.`;
   }
   clearTimeout(claudeTimeout);
 
-  if (!res.ok && !useStream) {
-    const data = await res.json();
-    const errMsg = data.error?.message || data.error?.type || `HTTP ${res.status}`;
-    console.error('[Boo API error]', errMsg, data);
-    return { speech: "Didn't get a clean response — give it a moment and try again.", display: `<em>Didn't get a clean response. (${errMsg}) Give it a moment and try again.</em>`, updates: {} };
+  if (!res.ok) {
+    let errMsg = `HTTP ${res.status}`;
+    try { const d = await res.json(); errMsg = d.error?.message || d.error?.type || errMsg; } catch(_) {}
+    console.error('[Boo API error]', res.status, errMsg);
+    return { speech: "Didn't get a clean response — give it a moment and try again.", display: `<em>API error ${res.status}: ${errMsg}</em>`, updates: {} };
   }
 
   let fullText;
@@ -1693,7 +1693,8 @@ document.getElementById('mic-btn').classList.remove('thinking');
     hideThinking();
     document.getElementById('mic-btn').classList.remove('thinking');
     console.error('[Boo processUserInput error]', e);
-    addBooMessage("<em>Ran into something — try that again.</em>");
+    const eMsg = e?.message || String(e) || '';
+    addBooMessage(`<em>Ran into something — try that again.${eMsg ? ' (' + eMsg.slice(0,80) + ')' : ''}</em>`);
     await speakBoo("Ran into something. Try that again.");
   }
 
