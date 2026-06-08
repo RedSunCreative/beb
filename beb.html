@@ -1874,6 +1874,7 @@ function updateAllDisplays() {
           <div><span class="guest-name">${esc(g.name||'')}</span><span style="font-size:10px;color:var(--muted);margin-left:6px;">${(g.stageType||'').toUpperCase()}</span>${badges}</div>
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
             ${!g.confirmed && g.mobile ? `<button onclick="toggleGuestInvite(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--teal);color:#fff;border:none;font-weight:700;cursor:pointer;">INVITE</button>` : ''}
+            ${g.email ? `<button onclick="toggleGuestWelcome(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;border:none;font-weight:700;cursor:pointer;">EMAIL WELCOME</button>` : ''}
             ${smsBsm ? `<a class="crew-sms" href="${smsBsm}" title="Text BSM link">TEXT BSM</a>` : ''}
             ${smsRos ? `<a class="crew-sms" href="${smsRos}" title="Text static show script" style="background:#5a6e2a;">TEXT SCRIPT</a>` : ''}
             ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
@@ -1894,6 +1895,21 @@ function updateAllDisplays() {
           <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
             <button onclick="sendInviteSMS(${i})" style="background:var(--green);color:#1e2330;border:none;border-radius:5px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">TEXT ${firstName}</button>
             <button onclick="toggleGuestInvite(${i})" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:8px 12px;font-size:11px;cursor:pointer;">CLOSE</button>
+          </div>
+        </div>
+        <div id="welcome-panel-${i}" style="display:none;margin-top:10px;padding:10px;background:rgba(99,102,241,0.08);border-radius:6px;border:1px solid #6366f1;">
+          <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:5px;">SUBJECT</div>
+          <input id="welcome-subj-${i}" type="text" class="crew-inp" style="width:100%;box-sizing:border-box;margin-bottom:10px;" value="${esc(buildWelcomeSubject())}">
+          <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:5px;">EMAIL PREVIEW <span style="font-weight:400;text-transform:none;letter-spacing:0;">(HTML sent to ${esc(g.email||'')})</span></div>
+          <div style="background:var(--dark);border:1px solid var(--border);border-radius:5px;padding:10px;font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:8px;">
+            Hi ${esc(firstName)}! Thank you for agreeing to be on the show — we are so excited to have you on Little Big Voices LIVE!
+            We're looking forward to it. To get everything ready, please complete our quick guest form.
+            ${showData.epThemeDesc ? '<br><br><em>' + esc(showData.epThemeDesc.slice(0,120)) + '…</em>' : ''}
+            <br><br>Melissa will be in touch with your Guest Welcome Kit. Thanks! — Mark
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button id="welcome-send-btn-${i}" onclick="sendWelcomeEmail(${i})" style="background:#6366f1;color:#fff;border:none;border-radius:5px;padding:8px 16px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">SEND EMAIL</button>
+            <button onclick="toggleGuestWelcome(${i})" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:8px 12px;font-size:11px;cursor:pointer;">CLOSE</button>
           </div>
         </div>
       </div>`;
@@ -2711,6 +2727,103 @@ function copyGuestFormLink(btn) {
     btn.style.borderColor = 'var(--green)';
     setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
   });
+}
+
+// ─── WELCOME EMAIL ────────────────────────────────────────────────────────────
+
+function buildWelcomeSubject() {
+  const ep = showData;
+  return `Welcome to Little Big Voices${ep.epNum ? ' — Episode ' + ep.epNum : ''}${ep.epTitle ? ': ' + ep.epTitle : ''}!`;
+}
+
+function generateWelcomeEmailHTML(g) {
+  const ep = showData;
+  const firstName = (g.name || 'there').split(' ')[0];
+  const formUrl = (CLIENT_CONFIG.guestFormBase && ep.epNum)
+    ? `${CLIENT_CONFIG.guestFormBase}?usp=pp_url&${CLIENT_CONFIG.guestFormEpEntry}=${encodeURIComponent(ep.epNum)}`
+    : CLIENT_CONFIG.guestFormBase || '';
+  const episodeLine = [
+    ep.epNum ? `Episode ${ep.epNum}` : '',
+    ep.epTitle ? `"${ep.epTitle}"` : '',
+    ep.epDate ? formatDateLong(ep.epDate) : '',
+    ep.epTime ? `at ${formatShowTimeCT(ep.epTime)}` : '',
+  ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{margin:0;padding:0;background:#f0f2f5;font-family:Arial,sans-serif;}
+.wrap{max-width:600px;margin:0 auto;background:#ffffff;}
+.hdr{background:#1e2330;padding:32px 24px;text-align:center;}
+.hdr-title{color:#3BB8C9;font-size:24px;font-weight:900;margin:0;letter-spacing:3px;}
+.hdr-sub{color:#8a96a8;font-size:13px;margin:10px 0 0;line-height:1.6;}
+.body{padding:32px 28px;}
+p{color:#333;font-size:15px;line-height:1.7;margin:0 0 18px;}
+.btn{display:inline-block;background:#3BB8C9;color:#ffffff !important;padding:14px 28px;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;margin:4px 0;}
+.divider{border:none;border-top:1px solid #eee;margin:24px 0;}
+.footer{background:#f0f2f5;padding:20px 24px;text-align:center;}
+.footer p{color:#aaa;font-size:12px;margin:3px 0;}
+</style></head>
+<body><div class="wrap">
+  <div class="hdr">
+    <div class="hdr-title">LITTLE BIG VOICES</div>
+    ${episodeLine ? `<div class="hdr-sub">${episodeLine}</div>` : ''}
+  </div>
+  <div class="body">
+    <p>Hi ${firstName}!</p>
+    <p>Thank you for agreeing to be on the show — we are so excited to have you on Little Big Voices LIVE!</p>
+    <p>We're looking forward to it. To get everything ready for your appearance, please take a moment to complete our quick guest form — it helps us nail the spelling of your name, prepare your intro, and get your graphics set up:</p>
+    ${formUrl ? `<p><a href="${formUrl}" class="btn">Complete Your Guest Form</a></p>` : ''}
+    ${ep.epThemeDesc ? `<hr class="divider"><p><em>${ep.epThemeDesc}</em></p>` : ''}
+    <hr class="divider">
+    <p>Melissa from our Guest Services team will be in touch with your Guest Welcome Kit and all the show details as we get closer to the date.</p>
+    <p>In the meantime, don't hesitate to text or call me anytime at <strong>512-762-8511</strong> or email <strong>mark@littlebigvoices.com</strong>.</p>
+    <p>Thanks!<br><strong>— Mark</strong><br>
+    <span style="color:#8a96a8;font-size:13px;">Little Big Voices &nbsp;·&nbsp; littlebigvoices.com</span></p>
+  </div>
+  <div class="footer">
+    <p>Little Big Voices &nbsp;·&nbsp; Austin, TX</p>
+    <p>512-762-8511 &nbsp;·&nbsp; mark@littlebigvoices.com</p>
+  </div>
+</div></body></html>`;
+}
+
+function toggleGuestWelcome(idx) {
+  const panel = document.getElementById(`welcome-panel-${idx}`);
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const subj = document.getElementById(`welcome-subj-${idx}`);
+    if (subj) subj.value = buildWelcomeSubject();
+  }
+}
+
+async function sendWelcomeEmail(idx) {
+  const g = showData.guests[idx];
+  if (!g?.email) return;
+  const btn = document.getElementById(`welcome-send-btn-${idx}`);
+  const subjEl = document.getElementById(`welcome-subj-${idx}`);
+  const subject = subjEl?.value || buildWelcomeSubject();
+  const html = generateWelcomeEmailHTML(g);
+  if (btn) { btn.textContent = 'SENDING...'; btn.disabled = true; }
+  try {
+    const resp = await fetch(`${SB_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SB_KEY}` },
+      body: JSON.stringify({ to: g.email, subject, html, fromName: 'Mark Caddell — Little Big Voices', fromEmail: 'mark@littlebigvoices.com' }),
+    });
+    const data = await resp.json();
+    if (resp.ok && !data.error) {
+      if (btn) { btn.textContent = '✓ SENT'; btn.style.background = 'var(--green)'; btn.style.color = '#1e2330'; }
+    } else {
+      console.error('[send-email]', data);
+      if (btn) { btn.textContent = 'FAILED — see console'; btn.style.background = '#e53e3e'; btn.disabled = false; }
+    }
+  } catch(e) {
+    console.error('[send-email]', e);
+    if (btn) { btn.textContent = 'ERROR'; btn.style.background = '#e53e3e'; btn.disabled = false; }
+  }
 }
 
 function sendNewInviteSMS() {
