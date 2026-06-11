@@ -28,9 +28,15 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Inject wrong variable name into impliesGuestChange (simulates the userMessage scope bug)
   sed -i '' 's/\.test(text) || answeringClarification/.test(userMessage) || answeringClarification/' "$BEB"
   echo "  Injected: 'userMessage' instead of 'text' in impliesGuestChange"
-  # Remove normalizeGuest call so raw Claude output bypasses coercion (simulates the socials.slice bug)
+  # Remove normalizeGuest from primary ingestion (simulates the socials.slice bug)
   sed -i '' 's/u\.guests\.map(normalizeGuest)/u.guests/' "$BEB"
-  echo "  Injected: removed normalizeGuest call (simulates socials.slice crash)"
+  echo "  Injected: removed normalizeGuest from primary ingestion"
+  # Remove normalizeGuest from auto-correct ingestion
+  sed -i '' 's/fix\.updates\.guests\.map(normalizeGuest)/fix.updates.guests/' "$BEB"
+  echo "  Injected: removed normalizeGuest from auto-correct ingestion"
+  # Replace normalizeGuest coercion with a no-op (simulates function that doesn't actually coerce)
+  sed -i '' "s/g\.socials = Array\.isArray(g\.socials) ? g\.socials\.join(', ') : Object\.values(g\.socials)\.join(', ');/g.socials = String(g.socials);/" "$BEB"
+  echo "  Injected: replaced normalizeGuest coercion with String() no-op"
   # Remove answeringClarification from processUserInput (simulates the not-defined scope bug)
   sed -i '' 's/const answeringClarification = lastBooPI.includes/const _answeringClarification_REMOVED = lastBooPI.includes/' "$BEB"
   echo "  Injected: removed answeringClarification from processUserInput (simulates ReferenceError)"
@@ -273,34 +279,38 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
-# TEST 8: normalizeGuest is applied at guest ingestion points
+# TEST 8: normalizeGuest is applied at BOTH guest ingestion points
 # ──────────────────────────────────────────────────────────────
 echo ""
-echo "--- Test 8: normalizeGuest applied at guest ingestion ---"
+echo "--- Test 8: normalizeGuest applied at both guest ingestion points ---"
 python3 - > /tmp/beb_normalize.txt 2>&1 <<'PYEOF'
 import re, sys
 
 with open('beb.html') as f:
     content = f.read()
 
-# normalizeGuest function must exist
 if 'function normalizeGuest(' not in content:
     print("FAIL: normalizeGuest function not found")
     sys.exit(0)
 
-# Both ingestion points must use .map(normalizeGuest)
-maps = re.findall(r'u\.guests\.map\(normalizeGuest\)', content)
-if len(maps) < 1:
-    print(f"FAIL: normalizeGuest not applied at guest ingestion (found {len(maps)} uses, need at least 1)")
-else:
-    print("OK")
+errors = []
+
+# Primary ingestion: u.guests.map(normalizeGuest)
+if not re.search(r'u\.guests\.map\(normalizeGuest\)', content):
+    errors.append("FAIL: normalizeGuest not applied at primary ingestion (u.guests)")
+
+# Auto-correct ingestion: fix.updates.guests.map(normalizeGuest)
+if not re.search(r'fix\.updates\.guests\.map\(normalizeGuest\)', content):
+    errors.append("FAIL: normalizeGuest not applied at auto-correct ingestion (fix.updates.guests)")
+
+print('\n'.join(errors) if errors else "OK")
 PYEOF
 
 NORM_RESULT=$(cat /tmp/beb_normalize.txt)
 if [[ "$NORM_RESULT" == "OK" ]]; then
-  pass "normalizeGuest applied at guest ingestion"
+  pass "normalizeGuest applied at both ingestion points"
 else
-  fail "$NORM_RESULT"
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_normalize.txt
 fi
 
 # ──────────────────────────────────────────────────────────────
@@ -335,12 +345,58 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 10: normalizeGuest actually coerces non-string fields
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 10: normalizeGuest coerces object/array socials to string ---"
+python3 - > /tmp/beb_normfn.txt 2>&1 <<'PYEOF'
+import re, sys, json
+
+with open('beb.html') as f:
+    content = f.read()
+
+# Extract normalizeGuest function body
+m = re.search(r'function normalizeGuest\(g\)\s*\{([\s\S]*?)\n\}', content)
+if not m:
+    print("FAIL: normalizeGuest function body not found")
+    sys.exit(0)
+
+body = m.group(1)
+
+# Must handle Array.isArray branch for socials
+if 'Array.isArray' not in body:
+    print("FAIL: normalizeGuest missing Array.isArray branch for socials coercion")
+    sys.exit(0)
+
+# Must handle object branch (Object.values or similar)
+if 'Object.values' not in body and 'Object.keys' not in body and 'JSON.stringify' not in body:
+    print("FAIL: normalizeGuest missing object coercion branch for socials")
+    sys.exit(0)
+
+# Must handle bio coercion
+if 'g.bio' not in body:
+    print("FAIL: normalizeGuest missing bio coercion")
+    sys.exit(0)
+
+print("OK")
+PYEOF
+
+NORMFN_RESULT=$(cat /tmp/beb_normfn.txt)
+if [[ "$NORMFN_RESULT" == "OK" ]]; then
+  pass "normalizeGuest coerces object/array socials and bio to string"
+else
+  fail "$NORMFN_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/HOW TO VERIFY: Check every `cue/HOW TO VERIFY: Check every cue/' "$BEB"
   sed -i '' 's/\.test(userMessage) || answeringClarification/.test(text) || answeringClarification/' "$BEB"
   sed -i '' 's/showData\.guests = u\.guests;/showData.guests = u.guests.map(normalizeGuest);/' "$BEB"
+  sed -i '' 's/fix\.updates\.guests;/fix.updates.guests.map(normalizeGuest);/' "$BEB"
+  sed -i '' "s/g\.socials = String(g\.socials);/g.socials = Array.isArray(g.socials) ? g.socials.join(', ') : Object.values(g.socials).join(', ');/" "$BEB"
   sed -i '' 's/const _answeringClarification_REMOVED = lastBooPI.includes/const answeringClarification = lastBooPI.includes/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
