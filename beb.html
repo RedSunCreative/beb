@@ -1661,7 +1661,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
     }
 
     // Auto-correct: if the request implied a guest change but no guests came through, retry
-    const impliesGuestChange = /\b(guest|confirm|vip|pod|performance|music|kitchen|stageType)\b/i.test(userMessage) || answeringClarification;
+    const impliesGuestChange = /\b(guest|confirm|vip|pod|performance|music|kitchen|stageType)\b/i.test(text) || answeringClarification;
     const guestsMissing = !(response.updates?.guests?.length > 0);
     if (impliesGuestChange && guestsMissing) {
       conversationHistory.push({ role: 'user', content: "Your last response didn't include updates.guests. Send the complete updated guests array now. No speech needed — just the JSON." });
