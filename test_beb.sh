@@ -28,6 +28,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Inject wrong variable name into impliesGuestChange (simulates the userMessage scope bug)
   sed -i '' 's/\.test(text) || answeringClarification/.test(userMessage) || answeringClarification/' "$BEB"
   echo "  Injected: 'userMessage' instead of 'text' in impliesGuestChange"
+  # Remove normalizeGuest call so raw Claude output bypasses coercion (simulates the socials.slice bug)
+  sed -i '' 's/u\.guests\.map(normalizeGuest)/u.guests/' "$BEB"
+  echo "  Injected: removed normalizeGuest call (simulates socials.slice crash)"
   echo ""
 fi
 
@@ -267,11 +270,43 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 8: normalizeGuest is applied at guest ingestion points
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 8: normalizeGuest applied at guest ingestion ---"
+python3 - > /tmp/beb_normalize.txt 2>&1 <<'PYEOF'
+import re, sys
+
+with open('beb.html') as f:
+    content = f.read()
+
+# normalizeGuest function must exist
+if 'function normalizeGuest(' not in content:
+    print("FAIL: normalizeGuest function not found")
+    sys.exit(0)
+
+# Both ingestion points must use .map(normalizeGuest)
+maps = re.findall(r'u\.guests\.map\(normalizeGuest\)', content)
+if len(maps) < 1:
+    print(f"FAIL: normalizeGuest not applied at guest ingestion (found {len(maps)} uses, need at least 1)")
+else:
+    print("OK")
+PYEOF
+
+NORM_RESULT=$(cat /tmp/beb_normalize.txt)
+if [[ "$NORM_RESULT" == "OK" ]]; then
+  pass "normalizeGuest applied at guest ingestion"
+else
+  fail "$NORM_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/HOW TO VERIFY: Check every `cue/HOW TO VERIFY: Check every cue/' "$BEB"
   sed -i '' 's/\.test(userMessage) || answeringClarification/.test(text) || answeringClarification/' "$BEB"
+  sed -i '' 's/showData\.guests = u\.guests;/showData.guests = u.guests.map(normalizeGuest);/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

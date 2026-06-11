@@ -1370,7 +1370,7 @@ When all scenes are done, send the COMPLETE updated cues array.
 
 Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", mobile, email, bio, socials, contactMethod, songs: [{name, duration}], confirmed: true|false, vip: true|false, floorNotes: "" }
 confirmed: true once attendance is confirmed. vip: true marks a guest as VIP. floorNotes: brief handling instruction for the Floor Manager (e.g. "hearing difficulty — use written notes").
-bio: guest's self-written biography from their intake form — use to write cueCard introductions. socials: social platforms and links they want promoted. contactMethod: how the audience can reach them after the show.
+bio: guest's self-written biography from their intake form — use to write cueCard introductions. socials: MUST be a plain string (comma-separated handles/URLs) — never an object or array. contactMethod: how the audience can reach them after the show — also a plain string.
 When Mark says "[guest] is confirmed" / "confirm [guest]" / "[guest] confirmed" — set confirmed:true. When Mark says "[guest] is VIP" — set vip:true. When Mark adds a floor note for a guest — set floorNotes.
 When Mark says "write intro cue cards" or "generate cue card intros" — for each guest scene whose guest has a bio, write a cueCard that gives Mark a punchy host introduction: 3-5 bullet lines, real names only, drawn from their bio. Scenes with no matching guest bio get cueCard "".
 stageType "music" = performance stage — covers all non-pod acts: music, comedy, poetry, dramatic reading, spoken word, etc. Call these guests "performance guests" when talking to Mark, not "musical guests."
@@ -1629,7 +1629,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
       if (u.preliveMsg !== undefined) showData.preliveMsg = u.preliveMsg;
       if (u.epThemeDesc !== undefined) showData.epThemeDesc = u.epThemeDesc;
       if (u.watchURL !== undefined) showData.watchURL = u.watchURL;
-      if (u.guests?.length > 0) showData.guests = u.guests;
+      if (u.guests?.length > 0) showData.guests = u.guests.map(normalizeGuest);
       if (u.crew?.length > 0) showData.crew = u.crew;
       if (u.cues?.length > 0) showData.cues = u.cues;
     }
@@ -1668,7 +1668,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
       try {
         const fix = await callClaude("Your last response didn't include updates.guests. Send the complete updated guests array now. No speech needed — just the JSON.");
         if (fix?.updates?.guests?.length > 0) {
-          showData.guests = fix.updates.guests;
+          showData.guests = fix.updates.guests.map(normalizeGuest);
           conversationHistory.push(buildHistoryEntry(fix));
           response.updates = response.updates || {};
           response.updates.guests = fix.updates.guests;
@@ -2041,6 +2041,15 @@ function removeCrew(idx) {
   document.getElementById('crew-count').textContent = showData.crew.length;
   saveState();
   renderCrewList();
+}
+
+function normalizeGuest(g) {
+  if (g.socials != null && typeof g.socials !== 'string') {
+    g.socials = Array.isArray(g.socials) ? g.socials.join(', ') : Object.values(g.socials).join(', ');
+  }
+  if (g.bio != null && typeof g.bio !== 'string') g.bio = String(g.bio);
+  if (g.contactMethod != null && typeof g.contactMethod !== 'string') g.contactMethod = String(g.contactMethod);
+  return g;
 }
 
 function updateGuest(idx, field, value) {
