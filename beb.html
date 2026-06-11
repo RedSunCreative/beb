@@ -22,12 +22,12 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .header-sub{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;letter-spacing:0.05em;margin-top:2px;}
 .header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
 .show-countdown{display:flex;flex-direction:column;align-items:flex-end;margin-right:4px;}
-.show-countdown-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;line-height:1;}
-.show-countdown-time{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--teal);letter-spacing:1px;line-height:1.2;}
+.show-countdown-label{font-size:0.75rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;line-height:1;}
+.show-countdown-time{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--teal);letter-spacing:0.02em;line-height:1.2;}
 .show-countdown-time.urgent{color:var(--gold);}
 .show-countdown-time.empty{color:var(--border);font-size:13px;letter-spacing:1px;}
-.save-badge{font-size:22px;color:var(--teal);letter-spacing:2px;font-family:'Syne',sans-serif;font-weight:400;}
-.ep-switch-btn{font-family:'Syne',sans-serif;font-size:22px;font-weight:400;color:var(--gold);background:rgba(245,208,58,0.1);border:2px solid var(--gold);border-radius:6px;padding:6px 14px;cursor:pointer;letter-spacing:2px;white-space:nowrap;}
+.save-badge{font-size:0.72rem;color:var(--teal);letter-spacing:0.12em;font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;}
+.ep-switch-btn{font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;color:var(--gold);background:rgba(245,208,58,0.1);border:2px solid var(--gold);border-radius:6px;padding:4px 10px;cursor:pointer;letter-spacing:2px;white-space:nowrap;}
 .ep-switch-btn:hover{background:rgba(245,208,58,0.2);}
 .ep-list-panel{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:170px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;}
 .ep-list-item{display:block;width:100%;text-align:left;background:none;border:none;padding:10px 14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--white);letter-spacing:1px;cursor:pointer;border-bottom:1px solid var(--border);}
@@ -108,7 +108,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .drag-handle:hover{opacity:1;color:var(--teal);}
 .drag-handle:active{cursor:grabbing;}
 .data-section-header{background:var(--panel);padding:10px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
-.data-section-title{font-family:'Arial Black','Franklin Gothic Heavy','Impact',sans-serif;font-size:0.8rem;font-weight:800;color:#F0A500;letter-spacing:0.04em;text-transform:none;flex:1;}
+.data-section-title{font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;color:#F5A623;letter-spacing:0.08em;text-transform:uppercase;flex:1;}
 .data-section-count{font-size:10px;color:var(--teal);letter-spacing:2px;}
 .data-section-body{padding:14px 16px;}
 
@@ -161,7 +161,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .thinking-dot:nth-child(3){animation-delay:0.4s;}
 @keyframes think{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-6px);opacity:1;}}
 
-.generate-btn{width:100%;padding:16px;background:#0a2a0a;border:2px solid #2d6a2d;color:var(--green);border-radius:10px;cursor:pointer;font-family:'Arial Black','Franklin Gothic Heavy','Impact',sans-serif;font-size:0.85rem;font-weight:800;letter-spacing:0.04em;margin-top:6px;transition:all 0.2s;}
+.generate-btn{width:100%;padding:16px;background:#0a2a0a;border:2px solid #2d6a2d;color:var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-top:6px;transition:all 0.2s;}
 .generate-btn:hover{background:#0f3a20;}
 .generate-btn.ros{background:#0a1a2a;border-color:#1a4a6a;color:var(--teal);}
 .generate-btn.ros:hover{background:#0f2a3a;}
