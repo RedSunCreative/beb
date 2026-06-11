@@ -25,6 +25,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Inject an unescaped backtick into the systemPrompt (simulates the crash bug)
   sed -i '' 's/HOW TO VERIFY: Check every cue/HOW TO VERIFY: Check every `cue/' "$BEB"
   echo "  Injected: backtick before 'cue' on HOW TO VERIFY line"
+  # Inject wrong variable name into impliesGuestChange (simulates the userMessage scope bug)
+  sed -i '' 's/\.test(text) || answeringClarification/.test(userMessage) || answeringClarification/' "$BEB"
+  echo "  Injected: 'userMessage' instead of 'text' in impliesGuestChange"
   echo ""
 fi
 
@@ -229,12 +232,48 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 7: Variable scope — guest auto-correct uses 'text' not 'userMessage'
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 7: Variable scope in guest auto-correct ---"
+python3 - > /tmp/beb_scope.txt 2>&1 <<'PYEOF'
+import re, sys
+
+with open('beb.html') as f:
+    content = f.read()
+
+# Find the impliesGuestChange line
+m = re.search(r'const impliesGuestChange\s*=\s*(.+)', content)
+if not m:
+    print("ERROR: impliesGuestChange not found")
+    sys.exit(1)
+
+line = m.group(1)
+
+# Must use 'text', must NOT use 'userMessage'
+if 'userMessage' in line:
+    print(f"FAIL: impliesGuestChange uses 'userMessage' (wrong scope): {line[:100]}")
+elif 'text' not in line and 'answeringClarification' not in line:
+    print(f"FAIL: impliesGuestChange doesn't reference 'text': {line[:100]}")
+else:
+    print("OK")
+PYEOF
+
+SCOPE_RESULT=$(cat /tmp/beb_scope.txt)
+if [[ "$SCOPE_RESULT" == "OK" ]]; then
+  pass "impliesGuestChange uses correct variable 'text' (not 'userMessage')"
+else
+  fail "$SCOPE_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/HOW TO VERIFY: Check every `cue/HOW TO VERIFY: Check every cue/' "$BEB"
+  sed -i '' 's/\.test(userMessage) || answeringClarification/.test(text) || answeringClarification/' "$BEB"
   echo ""
-  echo "  (break-test injection removed — file restored)"
+  echo "  (break-test injections removed — file restored)"
 fi
 
 # ──────────────────────────────────────────────────────────────
