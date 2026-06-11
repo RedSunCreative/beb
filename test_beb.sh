@@ -31,6 +31,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Remove normalizeGuest call so raw Claude output bypasses coercion (simulates the socials.slice bug)
   sed -i '' 's/u\.guests\.map(normalizeGuest)/u.guests/' "$BEB"
   echo "  Injected: removed normalizeGuest call (simulates socials.slice crash)"
+  # Remove answeringClarification from processUserInput (simulates the not-defined scope bug)
+  sed -i '' 's/const answeringClarification = lastBooPI.includes/const _answeringClarification_REMOVED = lastBooPI.includes/' "$BEB"
+  echo "  Injected: removed answeringClarification from processUserInput (simulates ReferenceError)"
   echo ""
 fi
 
@@ -301,12 +304,44 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 9: answeringClarification defined in processUserInput scope
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 9: answeringClarification defined in processUserInput ---"
+python3 - > /tmp/beb_ac.txt 2>&1 <<'PYEOF'
+import re, sys
+
+with open('beb.html') as f:
+    content = f.read()
+
+# Find processUserInput function body
+m = re.search(r'async function processUserInput\(text\)([\s\S]*?)(?=\nasync function |\nfunction )', content)
+if not m:
+    print("ERROR: processUserInput not found")
+    sys.exit(1)
+
+body = m.group(1)
+if 'const answeringClarification' not in body:
+    print("FAIL: answeringClarification not defined inside processUserInput")
+else:
+    print("OK")
+PYEOF
+
+AC_RESULT=$(cat /tmp/beb_ac.txt)
+if [[ "$AC_RESULT" == "OK" ]]; then
+  pass "answeringClarification defined in processUserInput scope"
+else
+  fail "$AC_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/HOW TO VERIFY: Check every `cue/HOW TO VERIFY: Check every cue/' "$BEB"
   sed -i '' 's/\.test(userMessage) || answeringClarification/.test(text) || answeringClarification/' "$BEB"
   sed -i '' 's/showData\.guests = u\.guests;/showData.guests = u.guests.map(normalizeGuest);/' "$BEB"
+  sed -i '' 's/const _answeringClarification_REMOVED = lastBooPI.includes/const answeringClarification = lastBooPI.includes/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

@@ -1590,6 +1590,14 @@ async function processUserInput(text) {
 
   try {
     const wantsWebSearch = /cue.?card|research.*guest|guest.*research|intro.*bullet|guest.*bio/i.test(text);
+    const lastBooPI = (() => {
+      const last = [...conversationHistory].reverse().find(m => m.role === 'assistant');
+      if (!last) return '';
+      if (typeof last.content === 'string') return last.content;
+      if (Array.isArray(last.content)) return last.content.map(b => b.text || '').join(' ');
+      return '';
+    })();
+    const answeringClarification = lastBooPI.includes('?');
     const response = await callClaude(text, { webSearch: wantsWebSearch });
     hideThinking();
 document.getElementById('mic-btn').classList.remove('thinking');
