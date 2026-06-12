@@ -18,16 +18,16 @@
 body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;color:var(--white);overflow-x:hidden;}
 
 .header{background:var(--card);border-bottom:2px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50;}
-.header-title{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:#F5A623;letter-spacing:0.05em;text-transform:none;line-height:1.3;}
-.header-sub{font-family:'Courier New','Courier',monospace;font-size:0.72rem;font-weight:400;color:#8A8A9A;letter-spacing:0.15em;text-transform:uppercase;margin-top:2px;}
+.header-title{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;color:#F5A623;letter-spacing:0.03em;text-transform:none;line-height:1.3;}
+.header-sub{font-family:'DM Mono',monospace;font-size:0.68rem;font-weight:400;color:#8A8A9A;letter-spacing:0.15em;text-transform:uppercase;margin-top:2px;}
 .header-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
 .show-countdown{display:flex;flex-direction:column;align-items:flex-end;margin-right:4px;}
-.show-countdown-label{font-size:0.75rem;color:var(--muted);letter-spacing:2px;text-transform:uppercase;line-height:1;}
-.show-countdown-time{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:var(--teal);letter-spacing:0.02em;line-height:1.2;}
+.show-countdown-label{font-family:'DM Mono',monospace;font-size:0.6rem;font-weight:400;color:#8A8A9A;letter-spacing:0.15em;text-transform:uppercase;line-height:1;}
+.show-countdown-time{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;color:#4FC3F7;letter-spacing:0.02em;line-height:1.2;}
 .show-countdown-time.urgent{color:var(--gold);}
 .show-countdown-time.empty{color:var(--border);font-size:13px;letter-spacing:1px;}
-.save-badge{font-size:0.72rem;color:var(--teal);letter-spacing:0.12em;font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;}
-.ep-switch-btn{font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;color:var(--gold);background:rgba(245,208,58,0.1);border:2px solid var(--gold);border-radius:6px;padding:4px 10px;cursor:pointer;letter-spacing:2px;white-space:nowrap;}
+.save-badge{font-family:'DM Mono',monospace;font-size:0.68rem;font-weight:400;color:var(--teal);letter-spacing:0.12em;text-transform:uppercase;}
+.ep-switch-btn{font-family:'Syne',sans-serif;font-size:0.82rem;font-weight:700;color:#F5A623;background:rgba(245,208,58,0.1);border:2px solid var(--gold);border-radius:6px;padding:4px 10px;cursor:pointer;letter-spacing:0.08em;white-space:nowrap;}
 .ep-switch-btn:hover{background:rgba(245,208,58,0.2);}
 .ep-list-panel{position:absolute;right:0;top:calc(100% + 6px);background:var(--card);border:1px solid var(--border);border-radius:6px;min-width:170px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden;}
 .ep-list-item{display:block;width:100%;text-align:left;background:none;border:none;padding:10px 14px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--white);letter-spacing:1px;cursor:pointer;border-bottom:1px solid var(--border);}
@@ -65,7 +65,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .mic-text-wrap{flex:1;}
 .mic-text{width:100%;background:var(--dark);border:1px solid var(--border);color:var(--white);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'DM Sans',sans-serif;resize:none;height:64px;outline:none;transition:border-color 0.2s;}
 .mic-text:focus{border-color:var(--teal);}
-.send-btn{padding:10px 18px;background:var(--teal);color:#003a40;border:none;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer;white-space:nowrap;font-family:'Syne',sans-serif;}
+.send-btn{padding:10px 18px;background:var(--teal);color:#003a40;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:700;font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;white-space:nowrap;}
 .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
 
 /* SETTINGS MODAL */
@@ -108,14 +108,14 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .drag-handle:hover{opacity:1;color:var(--teal);}
 .drag-handle:active{cursor:grabbing;}
 .data-section-header{background:var(--panel);padding:10px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
-.data-section-title{font-family:'DM Sans',sans-serif;font-size:0.85rem;font-weight:700;color:#F5A623;letter-spacing:0.08em;text-transform:uppercase;flex:1;}
-.data-section-count{font-size:0.82rem;font-weight:500;color:#FFFFFF;letter-spacing:0.02em;}
+.data-section-title{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;color:#F5A623;letter-spacing:0.1em;text-transform:uppercase;flex:1;}
+.data-section-count{font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:500;color:#FFFFFF;letter-spacing:0.02em;}
 .data-section-body{padding:14px 16px;}
 
 .ep-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .ep-field{background:var(--dark);border-radius:6px;padding:8px 10px;}
-.ep-label{font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;}
-.ep-val{font-size:18px;color:var(--white);font-weight:700;}
+.ep-label{font-family:'DM Mono',monospace;font-size:0.62rem;font-weight:400;color:#8A8A9A;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;}
+.ep-val{font-family:'DM Sans',sans-serif;font-size:0.92rem;font-weight:600;color:#FFFFFF;}
 .ep-val.empty{color:var(--border);font-style:italic;font-size:14px;}
 .ep-editable{cursor:pointer;}
 .ep-editable:hover{opacity:0.8;}
@@ -126,17 +126,17 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .cue-item.kitchen{border-left-color:var(--orange);}
 .cue-item.dragging{opacity:0.35;}
 .cue-item.drag-over{outline:2px solid var(--teal);outline-offset:1px;}
-.cue-num-label{font-size:12px;color:var(--gold);letter-spacing:2px;font-weight:bold;}
+.cue-num-label{font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;color:#F5A623;letter-spacing:0.1em;text-transform:uppercase;}
 .drag-handle{font-size:13px;color:var(--muted);cursor:grab;user-select:none;line-height:1;padding:1px 4px 0 0;flex-shrink:0;}
 .drag-handle:active{cursor:grabbing;}
-.cue-item-name{font-size:14px;font-weight:600;color:var(--white);margin:2px 0;}
-.cue-item-dur{font-size:11px;color:var(--teal);}
+.cue-item-name{font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;color:#FFFFFF;margin:2px 0;}
+.cue-item-dur{font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:400;color:#8A8A9A;letter-spacing:0.08em;}
 .cue-item-boo{font-size:11px;color:var(--gold);margin-top:4px;line-height:1.5;}
 
 .guest-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .guest-item:last-child{border-bottom:none;}
-.guest-name{color:var(--white);font-weight:600;}
-.guest-type{font-size:10px;color:var(--teal);letter-spacing:2px;}
+.guest-name{font-family:'Syne',sans-serif;font-size:0.9rem;font-weight:600;color:#FFFFFF;}
+.guest-type{font-family:'DM Mono',monospace;font-size:0.62rem;font-weight:400;color:#8A8A9A;letter-spacing:0.1em;text-transform:uppercase;}
 .crew-item{padding:8px 0;border-bottom:1px solid var(--border);}
 .crew-item:last-child{border-bottom:none;}
 .crew-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-bottom:5px;}
@@ -149,11 +149,11 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .crew-remove{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 4px;line-height:1;}
 .crew-remove:hover{color:var(--white);}
 .crew-footer{display:flex;gap:8px;margin-top:10px;}
-.crew-add-btn{font-size:10px;letter-spacing:1px;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;}
+.crew-add-btn{font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:500;letter-spacing:0.06em;padding:5px 10px;border-radius:4px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;}
 .crew-add-btn:hover{border-color:var(--teal);color:var(--teal);}
 .runtime-bar{background:var(--dark);border-radius:6px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
-.runtime-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:500;}
-.runtime-label{font-size:9px;color:var(--muted);letter-spacing:2px;}
+.runtime-val{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;color:#F5A623;}
+.runtime-label{font-family:'DM Mono',monospace;font-size:0.62rem;font-weight:400;color:#8A8A9A;letter-spacing:0.12em;text-transform:uppercase;}
 
 .thinking{display:flex;gap:5px;align-items:center;padding:14px 16px;}
 .thinking-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:think 1.2s ease-in-out infinite;}
@@ -170,23 +170,23 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .ros-menu-item{padding:11px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.07);}
 .ros-menu-item:last-child{border-bottom:none;}
 .ros-menu-item:hover{background:rgba(0,196,74,0.12);}
-.ros-item-name{font-size:13px;font-weight:700;letter-spacing:1px;color:var(--white);}
-.ros-item-desc{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:0.5px;line-height:1.4;}
-.cue-edit-btn{font-size:9px;color:var(--muted);letter-spacing:1px;background:none;border:1px solid var(--border);border-radius:3px;padding:2px 6px;cursor:pointer;float:right;margin-top:2px;font-family:'Syne',sans-serif;}
+.ros-item-name{font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;color:#FFFFFF;}
+.ros-item-desc{font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:400;color:#8A8A9A;margin-top:3px;line-height:1.4;}
+.cue-edit-btn{font-family:'DM Sans',sans-serif;font-size:0.68rem;font-weight:600;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;background:none;border:1px solid var(--border);border-radius:3px;padding:2px 6px;cursor:pointer;float:right;margin-top:2px;}
 .cue-edit-btn:hover{color:var(--teal);border-color:var(--teal);}
 .scene-edit-panel{background:var(--panel);border-radius:8px;padding:14px;margin-top:10px;border:1px solid var(--teal);}
-.scene-edit-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--teal);letter-spacing:3px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.scene-edit-title{font-family:'Syne',sans-serif;font-size:0.72rem;font-weight:700;color:#F5A623;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
 .edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
 .edit-field{display:flex;flex-direction:column;}
 .edit-field.full{grid-column:1/-1;}
-.edit-lbl{font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:3px;}
-.edit-inp{background:var(--dark);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--white);font-size:12px;font-family:'DM Sans',sans-serif;width:100%;}
+.edit-lbl{font-family:'DM Mono',monospace;font-size:0.62rem;font-weight:400;color:#8A8A9A;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:3px;}
+.edit-inp{background:var(--dark);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:#FFFFFF;font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;width:100%;}
 .edit-inp:focus{outline:none;border-color:var(--teal);}
-.edit-ta{background:var(--dark);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:var(--white);font-size:11px;font-family:'DM Sans',sans-serif;width:100%;resize:vertical;min-height:44px;line-height:1.5;}
+.edit-ta{background:var(--dark);border:1px solid var(--border);border-radius:4px;padding:6px 8px;color:#FFFFFF;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:400;width:100%;resize:vertical;min-height:44px;line-height:1.5;}
 .edit-ta:focus{outline:none;border-color:var(--teal);}
 .edit-section-head{font-size:9px;color:var(--gold);letter-spacing:3px;margin:10px 0 6px;grid-column:1/-1;border-top:1px solid var(--border);padding-top:8px;}
-.edit-save-btn{background:var(--teal);color:#003a40;border:none;border-radius:4px;padding:7px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;cursor:pointer;margin-top:4px;}
-.edit-close-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:7px 12px;font-family:'Syne',sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer;margin-top:4px;margin-left:6px;}
+.edit-save-btn{background:var(--teal);color:#003a40;border:none;border-radius:4px;padding:7px 16px;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;margin-top:4px;}
+.edit-close-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;margin-top:4px;margin-left:6px;}
 
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -227,7 +227,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
     <div class="show-countdown" id="show-countdown" title="Countdown to show date">
       <div class="show-countdown-label">NEXT SHOW</div>
       <div class="show-countdown-time empty" id="show-countdown-time">— —</div>
-      <div id="show-countdown-sub" style="font-size:9px;color:var(--muted);letter-spacing:1px;text-align:right;line-height:1;margin-top:1px;"></div>
+      <div id="show-countdown-sub" style="font-family:'DM Mono',monospace;font-size:0.62rem;font-weight:400;color:#8A8A9A;letter-spacing:0.08em;text-align:right;line-height:1;margin-top:1px;"></div>
     </div>
     <div style="position:relative;display:inline-block;" id="ep-switcher">
       <button class="ep-switch-btn" id="ep-switch-btn" onclick="toggleEpList()" data-tip="Switch between saved episodes or start a new one.">EP ▾</button>
@@ -401,10 +401,10 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
       <div class="data-section-body" id="guests-body">
         <div id="guest-list"><div style="font-size:12px;color:var(--muted)">Tell Boo about your guests...</div></div>
         <div style="margin-top:12px;margin-bottom:6px;">
-          <button onclick="copyGuestFormLink(this)" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">&#128279; COPY GUEST FORM LINK</button>
+          <button onclick="copyGuestFormLink(this)" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">&#128279; COPY GUEST FORM LINK</button>
         </div>
         <div id="new-invite-wrap" style="margin-top:6px;">
-          <button onclick="toggleNewInvite()" style="width:100%;background:transparent;border:1px dashed var(--teal);color:var(--teal);border-radius:6px;padding:8px 12px;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;">+ INVITE SOMEONE NEW</button>
+          <button onclick="toggleNewInvite()" style="width:100%;background:transparent;border:1px dashed var(--teal);color:var(--teal);border-radius:6px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">+ INVITE SOMEONE NEW</button>
           <div id="new-invite-panel" style="display:none;margin-top:8px;padding:12px;background:rgba(0,0,0,0.2);border-radius:6px;border:1px solid var(--teal);">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
               <input id="new-invite-name" type="text" class="crew-inp" placeholder="Name" oninput="refreshNewInviteText()">
@@ -431,7 +431,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
       </div>
       <div class="data-section-body" id="crew-body">
         <div id="crew-msg-wrap" style="display:none;margin-bottom:10px;">
-          <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">REMINDER MESSAGE</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.62rem;font-weight:400;color:#8A8A9A;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">REMINDER MESSAGE</div>
           <textarea class="crew-inp" id="crew-msg-inp" rows="2" style="resize:vertical;width:100%;box-sizing:border-box;" placeholder="What Boo sends when you tap TEXT..." onchange="updateCrewMsg(this.value)"></textarea>
         </div>
         <div id="crew-list"><div style="font-size:12px;color:var(--muted)">Tell Boo your crew members, or add one below.</div></div>
@@ -492,19 +492,19 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
       <div class="data-section-body" id="docs-body" style="display:none;">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;">
           <div style="background:var(--dark);border-radius:8px;padding:12px;border:1px solid var(--border);">
-            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">GUEST WELCOME KIT</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Sent by Guest Services to every guest</div>
-            <button onclick="openDocPreview(generateWelcomeKitHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
+            <div style="font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;color:#FFFFFF;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">GUEST WELCOME KIT</div>
+            <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:400;color:#8A8A9A;margin-bottom:10px;">Sent by Guest Services to every guest</div>
+            <button onclick="openDocPreview(generateWelcomeKitHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
           </div>
           <div style="background:var(--dark);border-radius:8px;padding:12px;border:1px solid var(--border);">
-            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">HOSPITALITY CHECKLIST</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">For the Green Room Manager</div>
-            <button onclick="openDocPreview(generateHospHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
+            <div style="font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;color:#FFFFFF;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">HOSPITALITY CHECKLIST</div>
+            <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:400;color:#8A8A9A;margin-bottom:10px;">For the Green Room Manager</div>
+            <button onclick="openDocPreview(generateHospHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
           </div>
           <div style="background:var(--dark);border-radius:8px;padding:12px;border:1px solid var(--border);">
-            <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">FLOOR MANAGER CHECKLIST</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">For the Floor Manager — includes BSM link</div>
-            <button onclick="openDocPreview(generateFloorMgrHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
+            <div style="font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;color:#FFFFFF;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">FLOOR MANAGER CHECKLIST</div>
+            <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:400;color:#8A8A9A;margin-bottom:10px;">For the Floor Manager — includes BSM link</div>
+            <button onclick="openDocPreview(generateFloorMgrHTML())" style="background:var(--teal);color:#fff;border:none;border-radius:5px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;width:100%;">PREVIEW + PRINT</button>
           </div>
         </div>
       </div>
@@ -517,13 +517,13 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 <div id="ros-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:2000;overflow-y:auto;padding:20px;">
   <div style="max-width:880px;margin:0 auto;background:#0f1520;border-radius:12px;padding:24px;border:1px solid rgba(59,184,201,0.2);">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:14px;">
-      <div style="font-size:13px;color:var(--teal);letter-spacing:4px;font-weight:900;">✏️ EDIT RUN OF SHOW</div>
-      <button onclick="closeROSEditPanel()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;font-size:11px;padding:6px 14px;border-radius:4px;cursor:pointer;letter-spacing:1px;">✕ CLOSE</button>
+      <div style="font-family:'Syne',sans-serif;font-size:0.95rem;font-weight:700;color:#F5A623;letter-spacing:0.1em;text-transform:uppercase;">✏️ EDIT RUN OF SHOW</div>
+      <button onclick="closeROSEditPanel()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:600;padding:6px 14px;border-radius:4px;cursor:pointer;letter-spacing:0.08em;text-transform:uppercase;">✕ CLOSE</button>
     </div>
     <div id="ros-edit-all"></div>
     <div style="margin-top:16px;display:flex;gap:10px;position:sticky;bottom:0;background:#0f1520;padding:12px 0 4px;">
-      <button onclick="saveROSEditAll()" style="flex:1;background:var(--teal);border:none;color:#000;font-size:13px;font-weight:900;padding:12px;border-radius:6px;cursor:pointer;letter-spacing:2px;">SAVE ALL CHANGES</button>
-      <button onclick="closeROSEditPanel()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;font-size:12px;padding:12px 18px;border-radius:6px;cursor:pointer;letter-spacing:1px;">CANCEL</button>
+      <button onclick="saveROSEditAll()" style="flex:1;background:var(--teal);border:none;color:#000;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;padding:12px;border-radius:6px;cursor:pointer;letter-spacing:0.12em;text-transform:uppercase;">SAVE ALL CHANGES</button>
+      <button onclick="closeROSEditPanel()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#aaa;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:600;padding:12px 18px;border-radius:6px;cursor:pointer;letter-spacing:0.08em;text-transform:uppercase;">CANCEL</button>
     </div>
   </div>
 </div>
@@ -1883,7 +1883,7 @@ function updateAllDisplays() {
       const firstName = esc((g.name||'').split(' ')[0].toUpperCase());
       return `<div class="crew-item">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <div><span class="guest-name">${esc(g.name||'')}</span><span style="font-size:10px;color:var(--muted);margin-left:6px;">${(g.stageType||'').toUpperCase()}</span>${badges}</div>
+          <div><span class="guest-name">${esc(g.name||'')}</span><span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;margin-left:6px;">${(g.stageType||'').toUpperCase()}</span>${badges}</div>
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
             ${!g.confirmed && g.mobile ? `<button onclick="toggleGuestInvite(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--teal);color:#fff;border:none;font-weight:700;cursor:pointer;">INVITE</button>` : ''}
             ${g.email ? `<button onclick="toggleGuestWelcome(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;border:none;font-weight:700;cursor:pointer;">EMAIL WELCOME</button>` : ''}
@@ -1892,7 +1892,7 @@ function updateAllDisplays() {
             ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
           </div>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">${esc(g.segment||'')}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">${esc(g.segment||'')}</div>
         ${g.bio ? `<div style="font-size:11px;color:var(--muted);margin-bottom:5px;line-height:1.4;font-style:italic;">${esc(g.bio.slice(0,160))}${g.bio.length>160?'…':''}</div>` : ''}
         ${g.socials ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">&#128279; ${esc(g.socials.slice(0,100))}</div>` : ''}
         <div class="crew-fields">
