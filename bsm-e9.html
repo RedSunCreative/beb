@@ -306,7 +306,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
         <path d="M34 82 Q28 95 36 102" stroke="#444" stroke-width="3" fill="none" stroke-linecap="round"/>
         <ellipse cx="37" cy="104" rx="5" ry="4" fill="#666"/><ellipse cx="37" cy="104" rx="3" ry="2.5" fill="#E8431A"/>
       </svg>
-      <div class="boo-name"><div class="boo-name-main">I'M BOO! 👋 HOST ONLY VIEW</div><div class="boo-name-sub">YOUR LITTLE BIG SHOW MANAGER</div></div>
+      <div class="boo-name"><div class="boo-name-main">I'M BOO! 👋 PRODUCER VIEW</div><div class="boo-name-sub">YOUR LITTLE BIG SHOW MANAGER</div></div>
     </div>
     <div style="background:#4a5260;border-radius:8px;padding:16px;font-size:15px;color:#C4B9A8;line-height:1.7;text-align:center;">Show Circle is in progress.<br>When stations are confirmed and everyone is ready —</div>
     <button onclick="startShowCircle()" style="width:100%;padding:20px 0;background:#0a2a0a;border:2px solid #2d6a2d;color:#4ade80;font-size:18px;font-weight:bold;border-radius:10px;cursor:pointer;">▶ START SHOW CIRCLE — 20 MIN</button>
@@ -582,7 +582,7 @@ const BASE_CUES = [
   {
     dur: 20, scene: "COUNTDOWN VIDEO", liveLabel: "NOW LIVE: COUNTDOWN VIDEO",
     prelive: true,
-    booName: null, booTpl: "Welcome to Little Big Voices Episode 9 — Little Big Resilience! The show circle is happening now. We go live in {M}! Please keep your attention on Mark — he'll bring you in when it's time. Thank you!",
+    booName: null, booTpl: "Welcome to Little Big Voices Episode 9 — Little Big Resilience! The show circle is happening now. We go live in {M}! Please gather in a circle in the main studio now - thank you!",
     w5: "5 minutes — What Can I Do coming up.", w2: "2 minutes — What Can I Do up next.",
     next: "COLD OPEN — What Can I Do", nextScene: "COLD OPEN — What Can I Do",
     audio: ["Please prep ambient + audience mics", "Confirm ALL RECORDS ON (L-20, L-8, ATEM). TY!", "Stand by on music mics"],
@@ -632,7 +632,7 @@ const BASE_CUES = [
     prelive: false,
     booName: "Karly Pittman", booTpl: "You have about {M} before you are on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
     w5: "5 minutes — wrapping up, Kitchen Disco is next.", w2: "2 minutes — heading to Kitchen Disco.",
-    next: "Karly Pittman", nextScene: "KITCHEN DISCO #1",
+    next: "KITCHEN DISCO #1", nextScene: "KITCHEN DISCO #1",
     audio: ["Host mics — Mark live", "Audience mics"],
     video: ["CAM 3, 4 — Pod Stage"],
     cameras: ["CAM 3: Pod wide", "CAM 4: Mark"],
@@ -644,15 +644,31 @@ const BASE_CUES = [
     cueCard: null
   },
   {
-    dur: 4, scene: "KITCHEN DISCO #1", liveLabel: "NOW LIVE: KITCHEN DISCO #1",
+    dur: 3, scene: "KITCHEN DISCO #1", liveLabel: "NOW LIVE: KITCHEN DISCO #1",
     prelive: false,
-    booName: "Karly Pittman", booTpl: "You have about {M} before you are on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
-    w5: "5 minutes — Karly Pittman, please head to the Pod Stage.", w2: "2 minutes — Karly Pittman, to the Pod Stage now.",
-    next: "David Rothgeb", nextScene: "INTERVIEW — Karly Pittman",
+    booName: null, booTpl: null,
+    w5: "5 minutes — Missing In Our Kissing coming up.", w2: "2 minutes — Missing In Our Kissing up next.",
+    next: "Karly Pittman", nextScene: "PERFORMANCE — Missing In Our Kissing",
     audio: ["Kitchen mics live", "Audience mics"],
     video: ["CAM 6: Kitchen Disco Stage"],
     cameras: ["CAM 6: Kitchen wide and close"],
     lighting: ["Kitchen Disco Stage lighting"],
+    audioNext: ["Music mics + reverb/delay", "Audience mics"],
+    videoNext: ["CAM 1, 2, 3 — Music Stage"],
+    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
+    lightingNext: ["Music Stage performance lighting"],
+    cueCard: null
+  },
+  {
+    dur: 4, scene: "PERFORMANCE — Missing In Our Kissing", liveLabel: "NOW LIVE: PERFORMANCE — Missing In Our Kissing",
+    prelive: false,
+    booName: "Karly Pittman", booTpl: "You have about {M} before you are on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
+    w5: "5 minutes — Karly Pittman, please head to the Pod Stage.", w2: "2 minutes — Karly Pittman, to the Pod Stage now.",
+    next: "David Rothgeb", nextScene: "INTERVIEW — Karly Pittman",
+    audio: ["Music mics + reverb/delay", "Audience mics"],
+    video: ["CAM 1, 2, 3 — Music Stage"],
+    cameras: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
+    lighting: ["Music Stage performance lighting"],
     audioNext: ["Podcast faders — Mark primary", "Audience mics live"],
     videoNext: ["CAM 3, 4, 5 — Pod Stage"],
     camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Karly Pittman"],
@@ -660,11 +676,11 @@ const BASE_CUES = [
     cueCard: null
   },
   {
-    dur: 12, scene: "INTERVIEW — Karly Pittman", liveLabel: "NOW LIVE: INTERVIEW — Karly Pittman",
+    dur: 20, scene: "INTERVIEW — Karly Pittman", liveLabel: "NOW LIVE: INTERVIEW — Karly Pittman",
     prelive: false,
-    booName: "David Rothgeb", booTpl: "You have about {M} before Missing In Our Kissing. Please head to the Music Stage when you are ready. Thank you!",
-    w5: "5 minutes — Missing In Our Kissing coming up.", w2: "2 minutes — Missing In Our Kissing up next.",
-    next: "Kyndle Lee", nextScene: "PERFORMANCE — Missing In Our Kissing",
+    booName: "David Rothgeb", booTpl: "You have about {M} before Straight From the Hip. Please head to the Music Stage when you are ready. Thank you!",
+    w5: "5 minutes — Straight From the Hip coming up.", w2: "2 minutes — Straight From the Hip up next.",
+    next: "Kyndle Lee", nextScene: "PERFORMANCE — Straight From the Hip",
     audio: ["Podcast faders — Mark primary", "Audience mics live"],
     video: ["CAM 3, 4, 5 — Pod Stage"],
     cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Karly Pittman"],
@@ -676,9 +692,9 @@ const BASE_CUES = [
     cueCard: null
   },
   {
-    dur: 4, scene: "PERFORMANCE — Missing In Our Kissing", liveLabel: "NOW LIVE: PERFORMANCE — Missing In Our Kissing",
+    dur: 4, scene: "PERFORMANCE — Straight From the Hip", liveLabel: "NOW LIVE: PERFORMANCE — Straight From the Hip",
     prelive: false,
-    booName: "Kyndle Lee", booTpl: "You have about {M} before you join us on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
+    booName: "Kyndle Lee", booTpl: "You have about {M} before you are on the Pod Stage. Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
     w5: "5 minutes — Kyndle Lee, please head to the Pod Stage.", w2: "2 minutes — Kyndle Lee, to the Pod Stage now.",
     next: "INTERVIEW — Kyndle Lee", nextScene: "INTERVIEW — Kyndle Lee",
     audio: ["Music mics + reverb/delay", "Audience mics"],
@@ -692,11 +708,11 @@ const BASE_CUES = [
     cueCard: null
   },
   {
-    dur: 12, scene: "INTERVIEW — Kyndle Lee", liveLabel: "NOW LIVE: INTERVIEW — Kyndle Lee",
+    dur: 20, scene: "INTERVIEW — Kyndle Lee", liveLabel: "NOW LIVE: INTERVIEW — Kyndle Lee",
     prelive: false,
     booName: null, booTpl: null,
     w5: "5 minutes — wrapping up, Kitchen Disco is next.", w2: "2 minutes — heading to Kitchen Disco.",
-    next: "Surprise Guest", nextScene: "KITCHEN DISCO #2 — Mimi & Michael / Happy Hour Treats",
+    next: "KITCHEN DISCO #2", nextScene: "KITCHEN DISCO #2",
     audio: ["Podcast faders — Mark primary", "Audience mics live"],
     video: ["CAM 3, 4, 5 — Pod Stage"],
     cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Kyndle Lee"],
@@ -708,47 +724,15 @@ const BASE_CUES = [
     cueCard: null
   },
   {
-    dur: 5, scene: "KITCHEN DISCO #2 — Mimi & Michael / Happy Hour Treats", liveLabel: "NOW LIVE: KITCHEN DISCO #2 — Mimi & Happy Hour Treats",
+    dur: 4, scene: "KITCHEN DISCO #2", liveLabel: "NOW LIVE: KITCHEN DISCO #2",
     prelive: false,
-    booName: "Surprise Guest", booTpl: "You are up next! Please move to the Red X near the Pod Stage and wait for Mark to motion you in. Thank you!",
-    w5: "5 minutes — Surprise Guest, please head to the Pod Stage.", w2: "2 minutes — Surprise Guest, to the Pod Stage now.",
-    next: "David Rothgeb", nextScene: "INTERVIEW — Surprise Guest",
+    booName: null, booTpl: null,
+    w5: "5 minutes — SHOW CLOSE, please head to the Pod Stage.", w2: "2 minutes — SHOW CLOSE, to the Pod Stage now.",
+    next: "SHOW CLOSE", nextScene: "SHOW CLOSE",
     audio: ["Kitchen mics live", "Audience mics"],
     video: ["CAM 6: Kitchen Disco Stage"],
     cameras: ["CAM 6: Kitchen wide and close"],
     lighting: ["Kitchen Disco Stage lighting"],
-    audioNext: ["Podcast faders — Mark primary", "Audience mics live"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Surprise Guest"],
-    lightingNext: ["Pod Stage interview lighting"],
-    cueCard: null
-  },
-  {
-    dur: 5, scene: "INTERVIEW — Surprise Guest", liveLabel: "NOW LIVE: INTERVIEW — Surprise Guest",
-    prelive: false,
-    booName: "David Rothgeb", booTpl: "You have about {M} before Straight From the Hip. Please head to the Music Stage when you are ready. Thank you!",
-    w5: "5 minutes — Straight From the Hip coming up.", w2: "2 minutes — Straight From the Hip up next.",
-    next: "PERFORMANCE — Straight From the Hip", nextScene: "PERFORMANCE — Straight From the Hip",
-    audio: ["Podcast faders — Mark primary", "Audience mics live"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 5: Surprise Guest"],
-    lighting: ["Pod Stage interview lighting"],
-    audioNext: ["Music mics + reverb/delay", "Audience mics"],
-    videoNext: ["CAM 1, 2, 3 — Music Stage"],
-    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
-    lightingNext: ["Music Stage performance lighting"],
-    cueCard: null
-  },
-  {
-    dur: 4, scene: "PERFORMANCE — Straight From the Hip", liveLabel: "NOW LIVE: PERFORMANCE — Straight From the Hip",
-    prelive: false,
-    booName: null, booTpl: "Everyone — please gather on stage and in the Kitchen Disco! It's time to dance!",
-    w5: "5 minutes — SHOW CLOSE, please head to the Pod Stage.", w2: "2 minutes — SHOW CLOSE, to the Pod Stage now.",
-    next: "SHOW CLOSE", nextScene: "SHOW CLOSE",
-    audio: ["Music mics + reverb/delay", "Audience mics"],
-    video: ["CAM 1, 2, 3 — Music Stage"],
-    cameras: ["CAM 1: Music Stage wide", "CAM 2: David close", "CAM 3: wide studio"],
-    lighting: ["Music Stage performance lighting"],
     audioNext: ["Host mics — Mark live", "Audience mics"],
     videoNext: ["CAM 3, 4 — Pod Stage"],
     camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark"],
@@ -758,7 +742,7 @@ const BASE_CUES = [
   {
     dur: 1, scene: "SHOW CLOSE", liveLabel: "NOW LIVE: SHOW CLOSE",
     prelive: false,
-    booName: null, booTpl: "Everyone — please gather on the Music Stage and Kitchen Disco for the ending credits!",
+    booName: null, booTpl: "Everyone — please gather on the Music Stage for the ending credits!",
     w5: "5 minutes — All Guests Dance coming up.", w2: "2 minutes — All Guests Dance up next.",
     next: "ENDING CREDITS — All Guests Dance", nextScene: "ENDING CREDITS — All Guests Dance",
     audio: ["Host mics — Mark live", "Audience mics"],
@@ -789,7 +773,19 @@ const BASE_CUES = [
   }
 ];
 
-const STANDBY_DEFS = [null, null, null, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Kyndle Lee", stage: "Pod Stage", isPod: true}, {who: "Kyndle Lee", stage: "Pod Stage", isPod: true}, {who: "Surprise Guest", stage: "Pod Stage", isPod: true}, {who: "Surprise Guest", stage: "Pod Stage", isPod: true}, null, null, null, null];
+const STANDBY_DEFS = [null, null, null, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Karly Pittman", stage: "Pod Stage", isPod: true}, {who: "Kyndle Lee", stage: "Pod Stage", isPod: true}, {who: "Kyndle Lee", stage: "Pod Stage", isPod: true}, null, null, null, null];
+
+const QUICK_MESSAGES = {
+  studio: [
+  {label:"QUIET",text:"QUIET ON THE SET, PRETTY PLEASE!"},
+  {label:"ENOUGH",text:"YOU ARE ENOUGH!"},
+  {label:"TINKLE",text:"It's TINKLE TIME!"},
+  {label:"DANCE",text:"Dance Like None's Watching!"}
+  ],
+  crew: [
+
+  ]
+};
 // ─── END BEB OUTPUT ────────────────────────────────────────────────────────────
 
 const INSERT_DEFS={
