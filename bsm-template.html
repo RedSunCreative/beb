@@ -168,14 +168,16 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 </head>
 <body>
 <div class="wrap">
-  <div class="toggle" id="main-toggle">
-    <button class="toggle-btn" id="btn-tv" onclick="setView('tv')">📺 TV</button>
-    <button class="toggle-btn" id="btn-tech" onclick="setView('tech')">🎛️ TECH</button>
-    <button class="toggle-btn" id="btn-host" onclick="tryHost()">🎙️ HOST ONLY</button>
-  </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <div class="sync-badge" id="sync-badge" style="color:#F5D03A;">● CONNECTING...</div>
-    <a id="beb-link" href="#" target="_blank" style="font-size:11px;color:#8a96a8;letter-spacing:2px;text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:4px 8px;border:1px solid #404858;border-radius:4px;">⚡ OPEN BEB</a>
+  <div id="top-nav" style="position:relative;z-index:10000;">
+    <div class="toggle" id="main-toggle">
+      <button class="toggle-btn" id="btn-tv" onclick="setView('tv')">📺 TV</button>
+      <button class="toggle-btn" id="btn-tech" onclick="setView('tech')">🎛️ TECH</button>
+      <button class="toggle-btn" id="btn-host" onclick="tryHost()">🎙️ HOST ONLY</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="sync-badge" id="sync-badge" style="color:#F5D03A;">● CONNECTING...</div>
+      <a id="beb-link" href="#" target="_blank" style="font-size:11px;color:#8a96a8;letter-spacing:2px;text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;padding:4px 8px;border:1px solid #404858;border-radius:4px;">⚡ OPEN BEB</a>
+    </div>
   </div>
 
   <!-- TV WELCOME -->
