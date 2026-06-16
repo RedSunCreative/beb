@@ -15,7 +15,7 @@ body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:r
 body.tv-mode .card{height:calc(100vw - 32px);display:flex;flex-direction:column;}
 body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 .toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid #464d59;}
-.toggle-btn{flex:1;padding:10px 4px;border:none;font-size:11px;letter-spacing:1px;cursor:pointer;font-weight:bold;transition:background 0.2s;}
+.toggle-btn{flex:1;padding:10px 4px;border:none;font-size:11px;letter-spacing:1px;cursor:pointer;font-weight:bold;transition:background 0.2s;touch-action:manipulation;}
 .now-live-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 18px;background:#1a0000;border-radius:8px;border:2px solid #cc0000;box-shadow:0 0 14px #ff000044;}
 .nl-dot{width:11px;height:11px;border-radius:50%;background:#E8431A;flex-shrink:0;}
 .nl-label{font-size:19px;font-weight:900;letter-spacing:2px;color:#E8431A;font-family:'Helvetica Neue',Arial,sans-serif;}
@@ -34,10 +34,10 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 .scene-name{font-size:24px;color:#fff;font-weight:bold;margin-bottom:2px;}
 .boo-card{background:#4a5260;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:14px 16px;}
 .boo-tag{display:flex;align-items:center;gap:6px;font-size:13px;color:#E8431A;letter-spacing:3px;margin-bottom:6px;font-weight:bold;}
-.room-msg-banner{position:fixed;top:0;left:0;right:0;bottom:0;background:#080300;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px;text-align:center;animation:roomFlash 0.9s ease-in-out infinite;}
+.room-msg-banner{position:fixed;top:80px;left:0;right:0;bottom:0;background:#080300;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px;text-align:center;animation:roomFlash 0.9s ease-in-out infinite;}
 .room-msg-banner .boo-tag{font-size:18px;color:#E8431A;letter-spacing:4px;margin-bottom:20px;}
 .room-msg-text{font-size:52px;color:#fff;line-height:1.3;font-weight:bold;max-width:900px;}
-.crew-msg-banner{position:fixed;top:0;left:0;right:0;bottom:0;background:#00060a;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px;text-align:center;animation:crewFlash 0.9s ease-in-out infinite;}
+.crew-msg-banner{position:fixed;top:80px;left:0;right:0;bottom:0;background:#00060a;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:48px;text-align:center;animation:crewFlash 0.9s ease-in-out infinite;}
 .crew-msg-label{font-size:18px;color:#3BB8C9;letter-spacing:4px;font-weight:bold;margin-bottom:20px;}
 .crew-msg-text{font-size:52px;color:#fff;font-weight:bold;line-height:1.3;max-width:900px;}
 @keyframes roomFlash{0%,100%{box-shadow:inset 0 0 0 8px #E8431A,0 0 60px #E8431A55;}50%{box-shadow:inset 0 0 0 8px #F5D03A,0 0 60px #F5D03A55;}}
@@ -132,7 +132,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 .pin-screen{background:#464d59;border-radius:12px;border:2px solid #5a6270;padding:30px 20px;display:flex;flex-direction:column;align-items:center;gap:16px;}
 .pin-display{font-size:36px;font-weight:900;letter-spacing:12px;color:#fff;min-height:50px;text-align:center;}
 .pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;}
-.pin-btn{padding:18px 0;background:#5a6270;border:1px solid #6a7280;border-radius:8px;color:#fff;font-size:20px;font-weight:bold;cursor:pointer;}
+.pin-btn{padding:18px 0;background:#5a6270;border:1px solid #6a7280;border-radius:8px;color:#fff;font-size:20px;font-weight:bold;cursor:pointer;touch-action:manipulation;}
 .pin-error{font-size:12px;color:#E8431A;letter-spacing:2px;min-height:18px;}
 .welcome-card{background:#5a6270;border-radius:12px;border:3px solid #464d59;overflow:hidden;display:flex;flex-direction:column;align-items:center;padding:24px 22px;gap:16px;text-align:center;}
 .welcome-show{font-size:34px;color:#fff;font-weight:900;line-height:1.2;}
@@ -599,6 +599,7 @@ let tvRotation=0,zoomLevel=100;
 let view="tv",techTab="audio";
 let scheduleOffset=0,showLive=false,standbyActive=false,preLiveActive=false,preLiveFired=false;
 let roomMsgTimer=null,roomCountTimer=null,crewMsgTimer=null,crewCountTimer=null;
+let _roomBannerTimer=null,_crewBannerTimer=null;
 let showTimerStarted=false;
 let currentInsertStandby=null;
 const PIN=EPISODE.pin,PIN_DURATION=24*60*60*1000;
@@ -863,12 +864,16 @@ function applyRemoteState(state){
     const txt=rmsg.slice(7);
     const rb=document.getElementById("room-msg-banner"),rt=document.getElementById("room-msg-text");
     if(rb&&rt){rt.textContent=txt;rb.style.display="flex";}
+    if(_roomBannerTimer) clearTimeout(_roomBannerTimer);
+    _roomBannerTimer=setTimeout(()=>{const el=document.getElementById("room-msg-banner");if(el) el.style.display="none";_roomBannerTimer=null;},15000);
     const cb=document.getElementById("crew-msg-banner");if(cb) cb.style.display="none";
     const rbc=document.getElementById("ros-change-banner");if(rbc) rbc.style.display="none";
   } else if(rmsg.startsWith("__CREW:")){
     const txt=rmsg.slice(7);
     const cb=document.getElementById("crew-msg-banner"),ct=document.getElementById("crew-msg-text");
     if(cb&&ct){ct.textContent=txt;cb.style.display="flex";}
+    if(_crewBannerTimer) clearTimeout(_crewBannerTimer);
+    _crewBannerTimer=setTimeout(()=>{const el=document.getElementById("crew-msg-banner");if(el) el.style.display="none";_crewBannerTimer=null;},15000);
     const rb=document.getElementById("room-msg-banner");if(rb) rb.style.display="none";
     const rbc=document.getElementById("ros-change-banner");if(rbc) rbc.style.display="none";
   } else if(rmsg&&rmsg.length>2){
@@ -877,6 +882,8 @@ function applyRemoteState(state){
     const rb=document.getElementById("room-msg-banner");if(rb) rb.style.display="none";
     const cb=document.getElementById("crew-msg-banner");if(cb) cb.style.display="none";
   } else {
+    if(_roomBannerTimer){clearTimeout(_roomBannerTimer);_roomBannerTimer=null;}
+    if(_crewBannerTimer){clearTimeout(_crewBannerTimer);_crewBannerTimer=null;}
     const banner=document.getElementById("ros-change-banner");if(banner) banner.style.display="none";
     const appl=document.getElementById("applause-banner");if(appl&&rmsg==="") appl.style.display="none";
     const rb=document.getElementById("room-msg-banner");if(rb) rb.style.display="none";
