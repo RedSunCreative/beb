@@ -15,7 +15,7 @@ body.tv-mode .wrap{max-width:100vh;width:100vh;height:100vw;margin:0;transform:r
 body.tv-mode .card{height:calc(100vw - 32px);display:flex;flex-direction:column;}
 body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 .toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid #464d59;}
-.toggle-btn{flex:1;padding:10px 2px;border:none;font-size:10px;letter-spacing:0;cursor:pointer;font-weight:bold;transition:background 0.2s;touch-action:manipulation;}
+.toggle-btn{flex:1;padding:10px 2px;border:none;font-size:13px;letter-spacing:0;cursor:pointer;font-weight:bold;transition:background 0.2s;touch-action:manipulation;}
 .now-live-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 18px;background:#1a0000;border-radius:8px;border:2px solid #cc0000;box-shadow:0 0 14px #ff000044;}
 .nl-dot{width:11px;height:11px;border-radius:50%;background:#E8431A;flex-shrink:0;}
 .nl-label{font-size:19px;font-weight:900;letter-spacing:2px;color:#E8431A;font-family:'Helvetica Neue',Arial,sans-serif;}
@@ -171,9 +171,9 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 <div class="wrap">
   <div id="top-nav" style="position:relative;z-index:10000;">
     <div class="toggle" id="main-toggle">
-      <button class="toggle-btn" id="btn-tv" onclick="setView('tv')">STUDIO VIEW</button>
-      <button class="toggle-btn" id="btn-tech" onclick="setView('tech')">CREW VIEW</button>
-      <button class="toggle-btn" id="btn-host" onclick="tryHost()">PRODUCER VIEW</button>
+      <button class="toggle-btn" id="btn-tv" onclick="setView('tv')">STUDIO</button>
+      <button class="toggle-btn" id="btn-tech" onclick="setView('tech')">CREW</button>
+      <button class="toggle-btn" id="btn-host" onclick="tryHost()">PRODUCER</button>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div class="sync-badge" id="sync-badge" style="color:#F5D03A;">● CONNECTING...</div>
