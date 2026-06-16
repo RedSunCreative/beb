@@ -1099,7 +1099,7 @@ function applyRemoteState(state){
     const cb=document.getElementById("crew-msg-banner"),ct=document.getElementById("crew-msg-text");
     if(cb&&ct){ct.textContent=txt;cb.style.display="flex";}
     if(_crewBannerTimer) clearTimeout(_crewBannerTimer);
-    _crewBannerTimer=setTimeout(()=>{const el=document.getElementById("crew-msg-banner");if(el) el.style.display="none";_crewBannerTimer=null;},15000);
+    _crewBannerTimer=setTimeout(()=>{const el=document.getElementById("crew-msg-banner");if(el) el.style.display="none";_crewBannerTimer=null;},5000);
     const rb=document.getElementById("room-msg-banner");if(rb) rb.style.display="none";
     const rbc=document.getElementById("ros-change-banner");if(rbc) rbc.style.display="none";
   } else if(rmsg&&rmsg.length>2){
@@ -1266,7 +1266,7 @@ function renderQuickBtns(){
   const cb=document.getElementById('quick-crew-btns'),cr=document.getElementById('quick-crew-row');
   if(cb&&(_QM.crew||[]).length>0){cb.innerHTML=(_QM.crew||[]).map((m,i)=>`<button class="quick-btn" style="border-color:#3BB8C9;color:#3BB8C9;" onclick="sendQuickCrewMsg(${i})">${m.label}</button>`).join('');if(cr)cr.style.display='';}
 }
-function sendQuickRoomMsg(i){const el=document.getElementById("room-msg-input");if(el)el.value=(_QM.studio||[])[i].text;sendRoomMsg();}
+function sendQuickRoomMsg(i){const el=document.getElementById("room-msg-input");if(el){el.value=(_QM.studio||[])[i].text;el.focus();}}
 function sendQuickCrewMsg(i){const el=document.getElementById("crew-msg-input");if(el)el.value=(_QM.crew||[])[i].text;sendCrewMsg();}
 function sendRoomMsg(){
   const msg=document.getElementById("room-msg-input")?.value.trim();
@@ -1299,7 +1299,7 @@ function sendCrewMsg(){
   const s=document.getElementById("crew-msg-status");
   if(s) s.textContent=`On crew screen — auto-clears in ${remaining}s`;
   crewCountTimer=setInterval(()=>{remaining--;if(s) s.textContent=remaining>0?`On crew screen — auto-clears in ${remaining}s`:"";if(remaining<=0){clearInterval(crewCountTimer);crewCountTimer=null;}},1000);
-  crewMsgTimer=setTimeout(()=>{clearCrewMsg();crewMsgTimer=null;},15000);
+  crewMsgTimer=setTimeout(()=>{clearCrewMsg();crewMsgTimer=null;},5000);
   const btn=document.getElementById("crew-send-btn");
   if(btn){const t=btn.textContent;btn.textContent="✓ SENT";btn.style.borderColor="#4ade80";btn.style.color="#4ade80";setTimeout(()=>{btn.textContent=t;btn.style.borderColor="";btn.style.color="";},2500);}
 }
