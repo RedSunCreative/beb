@@ -590,7 +590,12 @@ let showData = {
       {label:"TINKLE",text:"It's TINKLE TIME!"},
       {label:"DANCE",text:"Everybody keep dancing - you're doing great!!!"}
     ],
-    crew:[]
+    crew:[
+      {label:"RECORD",text:"Roll Audio and Video Records"},
+      {label:"STAND BY",text:"Stand by to Fade UP"},
+      {label:"HEADS UP",text:"Heads Up: Switching Run of Show"},
+      {label:"FADE OUT",text:"Fade Audio and Video"}
+    ]
   }
 };
 const parseDur = d => { if (!d) return 0; const s = String(d); if (s.includes(':')) { const [m,sec] = s.split(':'); return parseInt(m||0)+(parseInt(sec||0)/60); } return parseFloat(s)||0; };
