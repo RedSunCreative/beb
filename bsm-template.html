@@ -1150,6 +1150,7 @@ function setView(v){
   const tabMap={"tv":"tv","tv-welcome":"tv","tech":"tech","tech-welcome":"tech","host":"host","host-welcome":"host"};
   ["tv","tech","host"].forEach(id=>{const btn=document.getElementById(`btn-${id}`);if(btn){btn.style.background=tabMap[v]===id?"#464d59":"#5a6270";btn.style.color=tabMap[v]===id?"#fff":"#C4B9A8";}});
   if(v!=="pin"&&showLive) render();
+  if(v!=="host"&&v!=="host-welcome"&&v!=="pin") sbGet().then(s=>{if(s) applyRemoteState(s);});
 }
 
 // ─── KEEP SCREEN AWAKE ───────────────────────────────────────────────────────
