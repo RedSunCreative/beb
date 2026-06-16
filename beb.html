@@ -441,6 +441,26 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
       </div>
     </div>
 
+    <div class="data-section" data-sec="quickmsgs">
+      <div class="data-section-header" onclick="toggleSection('quickmsgs-body')">
+        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+        <div class="data-section-title">Quick Messages <span class="tip-q" data-tip="Pre-written messages for the Producer. Studio messages go to all TV screens; Crew messages go to the tech screen only. Sent from the BOO CAST section in the Producer View." onclick="event.stopPropagation()">?</span></div>
+        <div class="data-section-count" id="quickmsgs-count">—</div>
+      </div>
+      <div class="data-section-body" id="quickmsgs-body" style="display:none;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Studio Messages — sent to all TV screens</div>
+        <div id="qm-studio-list"></div>
+        <div style="margin-top:6px;margin-bottom:14px;">
+          <button onclick="addQuickMsg('studio')" style="width:100%;background:transparent;border:1px dashed var(--orange);color:var(--orange);border-radius:6px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">+ ADD STUDIO MESSAGE</button>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Crew Messages — sent to the tech screen only</div>
+        <div id="qm-crew-list"></div>
+        <div style="margin-top:6px;">
+          <button onclick="addQuickMsg('crew')" style="width:100%;background:transparent;border:1px dashed var(--teal);color:var(--teal);border-radius:6px;padding:8px 12px;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">+ ADD CREW MESSAGE</button>
+        </div>
+      </div>
+    </div>
+
     <div class="data-section" data-sec="cues">
       <div class="data-section-header" onclick="toggleSection('cues-body')">
         <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
@@ -562,7 +582,16 @@ const CLIENT_CONFIG = {
 let showData = {
   epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:90, pin:"5000",
   prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com",
-  guests:[], crew:[], cues:[], booMemory:[], crewReminderMsg:''
+  guests:[], crew:[], cues:[], booMemory:[], crewReminderMsg:'',
+  quickMessages:{
+    studio:[
+      {label:"QUIET",text:"QUIET ON THE SET, PRETTY PLEASE!"},
+      {label:"ENOUGH",text:"YOU ARE ENOUGH!"},
+      {label:"TINKLE",text:"It's TINKLE TIME!"},
+      {label:"DANCE",text:"Everybody keep dancing - you're doing great!!!"}
+    ],
+    crew:[]
+  }
 };
 const parseDur = d => { if (!d) return 0; const s = String(d); if (s.includes(':')) { const [m,sec] = s.split(':'); return parseInt(m||0)+(parseInt(sec||0)/60); } return parseFloat(s)||0; };
 let conversationHistory = [];
@@ -782,7 +811,8 @@ async function handleSwitchEpisode(rowId) {
   if (rowId === currentEpRow) return;
   await saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
+  const savedQM = showData.quickMessages;
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'', quickMessages: savedQM };
   conversationHistory = [];
   const loaded = await loadState(rowId);
   if (loaded) {
@@ -798,7 +828,8 @@ function handleNewEpisode() {
   document.getElementById('ep-list-panel').style.display = 'none';
   saveState();
   const savedMemory = [...(showData.booMemory || [])];
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'' };
+  const savedQM2 = showData.quickMessages;
+  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'', quickMessages: savedQM2 };
   conversationHistory = [];
   currentEpRow = 0;
   localStorage.setItem('beb_current_ep_row', '0');
@@ -1930,6 +1961,8 @@ function updateAllDisplays() {
 
   renderCrewList();
 
+  renderQuickMsgs();
+
   renderMemory();
 
   const cl = document.getElementById('cue-list-display');
@@ -2027,6 +2060,39 @@ function renderCrewList() {
       }).join('');
 }
 
+function renderQuickMsgs() {
+  if (!showData.quickMessages) showData.quickMessages = {studio:[], crew:[]};
+  const qm = showData.quickMessages;
+  const renderList = (items, type) => items.length === 0
+    ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">None yet — add one below.</div>`
+    : items.map((m, i) => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+        <input class="crew-inp" style="width:22%;flex-shrink:0;" placeholder="Label" value="${esc(m.label||'')}" onchange="updateQuickMsg('${type}',${i},'label',this.value)" title="Button label shown in BSM">
+        <input class="crew-inp" style="flex:1;" placeholder="Full message text..." value="${esc(m.text||'')}" onchange="updateQuickMsg('${type}',${i},'text',this.value)">
+        <button class="crew-remove" onclick="removeQuickMsg('${type}',${i})" title="Remove">✕</button>
+      </div>`).join('');
+  const stEl = document.getElementById('qm-studio-list');
+  const crEl = document.getElementById('qm-crew-list');
+  if (stEl) stEl.innerHTML = renderList(qm.studio||[], 'studio');
+  if (crEl) crEl.innerHTML = renderList(qm.crew||[], 'crew');
+  const count = (qm.studio||[]).length + (qm.crew||[]).length;
+  const el = document.getElementById('quickmsgs-count');
+  if (el) el.textContent = count || '—';
+}
+function addQuickMsg(type) {
+  if (!showData.quickMessages) showData.quickMessages = {studio:[], crew:[]};
+  showData.quickMessages[type].push({label:'', text:''});
+  saveState(); renderQuickMsgs();
+  setTimeout(() => { const inputs = document.querySelectorAll('#qm-' + type + '-list .crew-inp'); if (inputs.length) inputs[inputs.length-2].focus(); }, 50);
+}
+function removeQuickMsg(type, idx) {
+  showData.quickMessages[type].splice(idx, 1);
+  saveState(); renderQuickMsgs();
+}
+function updateQuickMsg(type, idx, field, val) {
+  if (!showData.quickMessages?.[type]?.[idx]) return;
+  showData.quickMessages[type][idx][field] = val;
+  saveState();
+}
 function updateCrewMsg(value) {
   showData.crewReminderMsg = value;
   saveState();
@@ -2207,8 +2273,12 @@ async function generateBSM() {
     return `{who: ${q(sb.standbyWho)}, stage: "${isPod ? 'Pod Stage' : sb.standbyStage === 'music' ? 'Music Stage' : 'Kitchen Disco'}", isPod: ${isPod}}`;
   }).join(', ');
 
+  const qmStudio = (showData.quickMessages?.studio || []).map(m => `  {label:${q(m.label)},text:${q(m.text)}}`).join(',\n');
+  const qmCrew = (showData.quickMessages?.crew || []).map(m => `  {label:${q(m.label)},text:${q(m.text)}}`).join(',\n');
+  const quickMsgsBlock = `const QUICK_MESSAGES = {\n  studio: [\n${qmStudio}\n  ],\n  crew: [\n${qmCrew}\n  ]\n};`;
+
   const configBlock =
-    `${episodeBlock}\n\nconst BASE_CUES = [\n${cueLines || '  // no cues yet'}\n];\n\nconst STANDBY_DEFS = [${standbyLines}];`;
+    `${episodeBlock}\n\nconst BASE_CUES = [\n${cueLines || '  // no cues yet'}\n];\n\nconst STANDBY_DEFS = [${standbyLines}];\n\n${quickMsgsBlock}`;
 
   try {
     const res = await fetch('bsm-template.html');

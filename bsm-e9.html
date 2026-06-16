@@ -466,14 +466,13 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
         </div>
         <div id="crew-msg-status" style="font-size:10px;color:#4ade80;letter-spacing:1px;min-height:14px;margin-top:4px;"></div>
       </div>
-      <div class="bcast-row" style="margin-bottom:0;">
+      <div class="bcast-row" id="quick-studio-row" style="margin-bottom:0;">
         <div class="bcast-lbl">⚡ QUICK SEND — to room</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;">
-          <button onclick="sendQuickMsg('quiet')" class="quick-btn">QUIET</button>
-          <button onclick="sendQuickMsg('enough')" class="quick-btn">ENOUGH</button>
-          <button onclick="sendQuickMsg('tinkle')" class="quick-btn">TINKLE</button>
-          <button onclick="sendQuickMsg('dance')" class="quick-btn">DANCE</button>
-        </div>
+        <div id="quick-studio-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;"></div>
+      </div>
+      <div class="bcast-row" id="quick-crew-row" style="margin-bottom:0;display:none;">
+        <div class="bcast-lbl">⚡ QUICK TO CREW</div>
+        <div id="quick-crew-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;"></div>
       </div>
     </div>
   </div>
@@ -860,6 +859,7 @@ window.addEventListener('load',async()=>{
     const el=document.getElementById(id);
     if(el) new QRCode(el,{text:window.location.href,width:100,height:100,colorDark:"#3a3f4a",colorLight:"#ffffff"});
   });
+  renderQuickBtns();
   startRealtime();
   const state=await sbGet();
   if(state){
@@ -1263,8 +1263,15 @@ function resetShow(){
   setView("host-welcome");
 }
 
-const QUICK_MSGS={quiet:'QUIET ON THE SET, PRETTY PLEASE!',enough:'YOU ARE ENOUGH!',tinkle:"It's TINKLE TIME!",dance:"Everybody keep dancing - you're doing great!!!"};
-function sendQuickMsg(key){const el=document.getElementById("room-msg-input");if(el) el.value=QUICK_MSGS[key]||key;sendRoomMsg();}
+const _QM=(typeof QUICK_MESSAGES!=='undefined')?QUICK_MESSAGES:{studio:[{label:'QUIET',text:'QUIET ON THE SET, PRETTY PLEASE!'},{label:'ENOUGH',text:'YOU ARE ENOUGH!'},{label:'TINKLE',text:"It's TINKLE TIME!"},{label:'DANCE',text:"Everybody keep dancing - you're doing great!!!"}],crew:[]};
+function renderQuickBtns(){
+  const sb=document.getElementById('quick-studio-btns');
+  if(sb) sb.innerHTML=(_QM.studio||[]).map((m,i)=>`<button class="quick-btn" onclick="sendQuickRoomMsg(${i})">${m.label}</button>`).join('');
+  const cb=document.getElementById('quick-crew-btns'),cr=document.getElementById('quick-crew-row');
+  if(cb&&(_QM.crew||[]).length>0){cb.innerHTML=(_QM.crew||[]).map((m,i)=>`<button class="quick-btn" style="border-color:#3BB8C9;color:#3BB8C9;" onclick="sendQuickCrewMsg(${i})">${m.label}</button>`).join('');if(cr)cr.style.display='';}
+}
+function sendQuickRoomMsg(i){const el=document.getElementById("room-msg-input");if(el)el.value=(_QM.studio||[])[i].text;sendRoomMsg();}
+function sendQuickCrewMsg(i){const el=document.getElementById("crew-msg-input");if(el)el.value=(_QM.crew||[])[i].text;sendCrewMsg();}
 function sendRoomMsg(){
   const msg=document.getElementById("room-msg-input")?.value.trim();
   if(!msg) return;
