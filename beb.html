@@ -102,11 +102,6 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 /* RIGHT — SHOW DATA */
 .data-panel{overflow-y:auto;height:calc(100vh - 60px);padding:20px;}
 .data-section{background:var(--card);border-radius:10px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden;transition:border-color 0.15s,opacity 0.15s;}
-.data-section.drag-over{border-color:var(--teal);}
-.data-section.dragging{opacity:0.4;}
-.drag-handle{font-size:16px;color:var(--muted);opacity:0.35;cursor:grab;padding-right:6px;flex-shrink:0;user-select:none;line-height:1;}
-.drag-handle:hover{opacity:1;color:var(--teal);}
-.drag-handle:active{cursor:grabbing;}
 .data-section-header{background:var(--panel);padding:10px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
 .data-section-title{font-family:'Syne',sans-serif;font-size:0.8rem;font-weight:700;color:#F5A623;letter-spacing:0.1em;text-transform:uppercase;flex:1;}
 .data-section-count{font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:500;color:#FFFFFF;letter-spacing:0.02em;}
@@ -359,7 +354,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="ep">
       <div class="data-section-header" onclick="toggleSection('ep-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Episode Info <span id="d-ep-badge" style="color:var(--teal);font-weight:900;"></span><span class="tip-q" data-tip="Episode basics — number, title, date, runtime. Boo fills these in as you talk." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="ep-complete">—</div>
       </div>
@@ -379,7 +374,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="runtime">
       <div class="data-section-header" onclick="toggleSection('runtime-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Runtime <span class="tip-q" data-tip="Scenes against your target runtime. Green is on time, orange is long, gold means room to breathe." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="runtime-status">0 min</div>
       </div>
@@ -395,7 +390,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="guests">
       <div class="data-section-header" onclick="toggleSection('guests-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Guests <span class="tip-q" data-tip="Everyone on the show this episode. Tell Boo who's coming — he logs the details." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="guest-count">0</div>
       </div>
@@ -426,7 +421,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="crew">
       <div class="data-section-header" onclick="toggleSection('crew-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Crew <span class="tip-q" data-tip="Your crew — name, role, mobile. Referenced in shoutouts and the run of show." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="crew-count">0</div>
       </div>
@@ -444,7 +439,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="quickmsgs">
       <div class="data-section-header" onclick="toggleSection('quickmsgs-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Quick Messages <span class="tip-q" data-tip="Pre-written messages for the Producer. Studio messages go to all TV screens; Crew messages go to the tech screen only. Sent from the BOO CAST section in the Producer View." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="quickmsgs-count">—</div>
       </div>
@@ -464,7 +459,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="cues">
       <div class="data-section-header" onclick="toggleSection('cues-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Cue List <span class="tip-q" data-tip="Your run of show, scene by scene. Drag to reorder. EDIT to change any scene's details." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="cue-count-badge">0 cues</div>
       </div>
@@ -476,7 +471,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="memory">
       <div class="data-section-header" onclick="toggleSection('memory-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Boo's Memory <span class="tip-q" data-tip="How you like things done. Boo keeps notes so you don't have to say it twice." onclick="event.stopPropagation()">?</span></div>
         <div class="data-section-count" id="memory-count">0</div>
       </div>
@@ -491,7 +486,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="scripts">
       <div class="data-section-header" onclick="toggleSection('scripts-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Show Scripts <span class="tip-q" data-tip="Publish or print your show scripts. Edit scenes before you publish." onclick="event.stopPropagation()">?</span></div>
       </div>
       <div class="data-section-body" id="scripts-body" style="display:none;">
@@ -517,7 +512,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 
     <div class="data-section" data-sec="docs" style="margin-top:8px;">
       <div class="data-section-header" onclick="toggleSection('docs-body')">
-        <span class="drag-handle" draggable="true" onclick="event.stopPropagation()" title="Drag to reorder">⠿</span>
+
         <div class="data-section-title">Show Docs <span class="tip-q" data-tip="Generate Guest Welcome Kit and crew checklists from your show data. Preview in browser, print to PDF." onclick="event.stopPropagation()">?</span></div>
       </div>
       <div class="data-section-body" id="docs-body" style="display:none;">
@@ -3515,68 +3510,6 @@ window.addEventListener('load', async () => {
   });
 })();
 
-// ─── PANEL DRAG-TO-REORDER ───────────────────────────────────────────────────
-(function() {
-  const ORDER_KEY = 'beb_panel_order';
-  const panel = document.querySelector('.data-panel');
-  if (!panel) return;
-
-  function savePanelOrder() {
-    const order = [...panel.querySelectorAll('.data-section[data-sec]')].map(s => s.dataset.sec);
-    localStorage.setItem(ORDER_KEY, JSON.stringify(order));
-  }
-
-  function restorePanelOrder() {
-    const saved = localStorage.getItem(ORDER_KEY);
-    if (!saved) return;
-    try {
-      const order = JSON.parse(saved);
-      const map = {};
-      panel.querySelectorAll('.data-section[data-sec]').forEach(el => map[el.dataset.sec] = el);
-      order.forEach(key => { if (map[key]) panel.appendChild(map[key]); });
-    } catch(e) {}
-  }
-
-  restorePanelOrder();
-
-  let dragSrc = null;
-  panel.querySelectorAll('.data-section[data-sec]').forEach(section => {
-    const handle = section.querySelector('.drag-handle');
-    if (!handle) return;
-
-    handle.addEventListener('dragstart', e => {
-      dragSrc = section;
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', section.dataset.sec);
-      setTimeout(() => section.classList.add('dragging'), 0);
-    });
-    handle.addEventListener('dragend', () => {
-      section.classList.remove('dragging');
-      panel.querySelectorAll('.data-section').forEach(s => s.classList.remove('drag-over'));
-      dragSrc = null;
-      savePanelOrder();
-    });
-    section.addEventListener('dragover', e => {
-      if (!dragSrc || dragSrc === section) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      panel.querySelectorAll('.data-section').forEach(s => s.classList.remove('drag-over'));
-      section.classList.add('drag-over');
-    });
-    section.addEventListener('dragleave', () => section.classList.remove('drag-over'));
-    section.addEventListener('drop', e => {
-      if (!dragSrc || dragSrc === section) return;
-      e.preventDefault();
-      const rect = section.getBoundingClientRect();
-      if (e.clientY < rect.top + rect.height / 2) {
-        panel.insertBefore(dragSrc, section);
-      } else {
-        section.after(dragSrc);
-      }
-      panel.querySelectorAll('.data-section').forEach(s => s.classList.remove('drag-over'));
-    });
-  });
-})();
 </script>
 </body>
 </html>
