@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LBV Guest Welcome Kit</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Georgia,'Times New Roman',serif;color:#222;font-size:11pt;line-height:1.65;background:#fff;}
+    .page{max-width:7.5in;margin:0 auto;padding:0.7in;}
+    .lbv-logo{font-family:Arial,sans-serif;font-size:24pt;font-weight:900;letter-spacing:-0.5px;margin-bottom:20px;line-height:1;}
+    .logo-l{color:#555;} .logo-b{color:#E07818;} .logo-v{color:#2E7D32;}
+    .doc-title{font-family:Arial,sans-serif;font-size:18pt;font-weight:900;color:#E07818;letter-spacing:-0.3px;border-bottom:3px solid #E07818;padding-bottom:10px;margin-bottom:20px;line-height:1.3;}
+    h2{font-family:Arial,sans-serif;font-size:13pt;font-weight:700;color:#E07818;margin:22px 0 10px;text-transform:uppercase;letter-spacing:0.5px;}
+    ul{padding-left:1.2in;}
+    li{margin-bottom:5px;}
+    p{margin-bottom:12px;}
+    hr{border:none;border-top:1px solid #ddd;margin:22px 0;}
+    .print-btn{display:block;margin:0 auto 24px;background:#E07818;color:#fff;border:none;border-radius:6px;padding:10px 28px;font-family:Arial,sans-serif;font-size:11pt;font-weight:700;cursor:pointer;letter-spacing:0.5px;}
+    .print-btn:hover{background:#c46614;}
+    .footer-line{font-family:Arial,sans-serif;font-size:9pt;color:#999;border-top:1px solid #eee;margin-top:40px;padding-top:10px;text-align:center;}
+    @media print{.print-btn{display:none;}}
+  </style>
+</head>
+<body>
+<div class="page" id="content">
+  <p style="text-align:center;color:#888;padding:60px 0;">Loading welcome kit...</p>
+</div>
+<script>
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmt12(t){if(!t)return'—';const[hS,mS]=t.split(':');let h=parseInt(hS,10);const m=parseInt(mS||'0',10);const ap=h>=12?'PM':'AM';h=h%12||12;return`${h}:${String(m).padStart(2,'0')} ${ap} CT`;}
+function shiftTime(t,d){const[h,m]=(t||'19:00').split(':').map(Number);const tot=h*60+m+d;const nh=Math.floor(((tot%1440)+1440)%1440/60);const nm=((tot%60)+60)%60;return`${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;}
+function fmtDate(ds){if(!ds)return'—';const[y,mo,d]=ds.split('-').map(Number);const M=['January','February','March','April','May','June','July','August','September','October','November','December'];const sfx=[1,21,31].includes(d)?'st':[2,22].includes(d)?'nd':[3,23].includes(d)?'rd':'th';return`${M[mo-1]} ${d}${sfx}, ${y}`;}
+
+(function(){
+  const raw=new URLSearchParams(location.search).get('d');
+  if(!raw){document.getElementById('content').innerHTML='<p style="color:red;padding:60px 0;text-align:center;">No kit data found in URL.</p>';return;}
+  let data;
+  try{data=JSON.parse(decodeURIComponent(raw));}
+  catch(e){document.getElementById('content').innerHTML='<p style="color:red;padding:60px 0;text-align:center;">Could not load kit data.</p>';return;}
+
+  const{epNum,epTitle,epDate,epTime,epThemeDesc,watchURL,guestName,stageType,gsName,gsPhone}=data;
+  const goLive=epTime||'19:00';
+  const isMusic=stageType==='music';
+  const callTime=isMusic?fmt12(shiftTime(goLive,-60)):fmt12(shiftTime(goLive,-45));
+  const circle=fmt12(shiftTime(goLive,-20));
+  const goLiveFmt=fmt12(goLive);
+  const happyHour=fmt12(shiftTime(goLive,90));
+  const dateStr=fmtDate(epDate);
+  const firstName=(guestName||'Guest').split(' ')[0];
+  const gs=gsName||'Melissa';
+  const themeSection=epTitle?`<h2>The Theme: ${esc(epTitle)}</h2><p>${esc(epThemeDesc||'')}</p>`:'';
+  const watchLink=watchURL||'https://littlebigvoices.com';
+
+  document.title=`LBV Guest Welcome Kit — E${epNum}`;
+
+  document.getElementById('content').innerHTML=`
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+    <div class="lbv-logo"><span class="logo-l">little.</span> <span class="logo-b">big.</span> <span class="logo-v">voices.</span></div>
+    <div class="doc-title">Little Big Voices LIVE Guest Welcome Kit: Episode ${esc(epNum)}!</div>
+
+    <h2>Welcome to Little Big Voices LIVE!</h2>
+    <p><b>What This Show Is About:</b> Little Big Voices creates understanding, compassion, and connection through authentic conversations and performances. We explore the fabric of our shared humanity—discovering that we have more in common than we have differences. This isn't about perfection or performance; it's about being genuinely seen and heard.</p>
+    <p><b>Why You're Here:</b> Mark invited you because often Spirit will whisper to him who to invite — and often because your story/energy/presence strikes a chord in him. Your voice and story matter, and we're honored to hold space for you to share it.</p>
+
+    ${themeSection}
+    <hr>
+    <h2>Show Details</h2>
+    <ul>
+      <li><b>Episode:</b> ${esc(epNum)}</li>
+      <li><b>Date:</b> ${dateStr}</li>
+      <li><b>Location:</b> Little Big Studio<ul>
+        <li>Cloister's West Apartments — 1507 Kinney Ave. #109, Austin, TX</li>
+        <li>We're in the second building you pass as you enter off Kinney</li>
+        <li>Park in back of that building and walk back around to the courtyard</li>
+        <li>Look for us on the ground floor with the purple light</li></ul></li>
+      ${isMusic?`<li><b>Musical Guests Call Time:</b> ${callTime}</li>`:`<li><b>Podcast Guests Call Time:</b> ${callTime}</li>`}
+      <li><b>Show Circle:</b> ${circle} (we gather together before going live)</li>
+      <li><b>Go Live on YouTube:</b> ${goLiveFmt}</li>
+      <li><b>Happy Hour Celebration:</b> ${happyHour}</li>
+    </ul>
+    <p><b><i>Early Arrival Hospitality:</i></b> Need to shower, do makeup, or get dressed after you arrive? Just let me know and plan to come before — we'll make it happen!</p>
+    <hr>
+    <h2>What to Bring</h2>
+    <ul><li>Your stories, songs, and open mind and heart!</li><li>Your authentic self</li></ul>
+    <h2>What to Wear</h2>
+    <ul><li>Clothes that help you feel peaceful and comfortable</li><li>Whatever best expresses who you are</li></ul>
+    <hr>
+    <p><b>Guest List for Audience:</b> We love your +1's — space is limited, so please provide first and last names of any guests you'd like to bring.</p>
+    <hr>
+    <h2>What to Expect</h2>
+    <ul>
+      <li>An intimate space to be loved, supported, and 100% your true self.</li>
+      <li>It's natural to feel nervous or excited — we all do! You're going to do great!</li>
+    </ul>
+    <h2>Your Support Team</h2>
+    <ul>
+      <li>Our Green Room Host will take care of you the moment you walk in.</li>
+      <li>Our Floor Manager will guide you every step of the way during the show.</li>
+      <li>And of course, I'll be around as well if you need anything at all!</li>
+    </ul>
+    <h2>Viewing Options</h2>
+    <ul>
+      <li>Studio seats (limited)</li>
+      <li>Green room with live monitor</li>
+      <li>Courtyard with wifi — watch on the outdoor monitor or your phone!</li>
+    </ul>
+    <h2>Your Time on Camera</h2>
+    <ul>
+      <li><b>Interview length:</b> 8–12 minutes</li>
+      <li><b>Option to stay:</b> We'd love for you to stay at the table for the interview following yours!</li>
+      <li><b>Opportunity to engage:</b> Ask other guests questions that are on your heart</li>
+      <li><b>Kitchen Disco possibility:</b> You might even help our Show Chef or join the dance party!</li>
+    </ul>
+    <hr>
+    <p><b>Share the Love!</b> Invite people to watch live:</p>
+    <ul>
+      <li><b>Watch:</b> <a href="${esc(watchLink)}">${esc(watchLink)}</a></li>
+      <li><b>Time and Date:</b> ${goLiveFmt}, ${dateStr}</li>
+    </ul>
+    <hr>
+    <p><b>Remember:</b> This show is about cultivating community by creating space for genuine human connection. Thank you for sharing yours!</p>
+    <hr>
+    <p>Mark and ${gs} are here for you anytime you have questions or need anything at all.</p>
+    <p style="margin-top:12px;">Peace,<br>${esc(gs)}</p>
+    ${gsPhone?`<p style="margin-top:16px;"><b>Guest Services, LBV LIVE!</b><br>${esc(gsPhone)}</p>`:''}
+    <div class="footer-line">LBV LIVE! Welcome Kit &mdash; Episode ${esc(epNum)}</div>`;
+})();
+</script>
+</body>
+</html>
