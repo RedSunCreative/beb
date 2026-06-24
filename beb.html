@@ -490,21 +490,21 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
         <div class="data-section-title">Show Scripts <span class="tip-q" data-tip="Publish or print your show scripts. Edit scenes before you publish." onclick="event.stopPropagation()">?</span></div>
       </div>
       <div class="data-section-body" id="scripts-body" style="display:none;">
-        <div class="ros-menu-item" onclick="generateBSM()" style="margin:-14px -16px 0;border-radius:0;">
-          <div class="ros-item-name">⚡ Publish Live Show Script</div>
-          <div class="ros-item-desc">Publishes Boo Show Manager to the web</div>
-        </div>
-        <div class="ros-menu-item" onclick="generateROS()" style="margin:0 -16px;">
-          <div class="ros-item-name">📄 Print Static Show Script</div>
-          <div class="ros-item-desc">Formatted static show script for browser or print</div>
-        </div>
-        <div class="ros-menu-item" onclick="generateSceneList()" style="margin:0 -16px;">
-          <div class="ros-item-name">📋 Print Static Scene List</div>
-          <div class="ros-item-desc">Simple one-page scene list with names and durations</div>
-        </div>
-        <div class="ros-menu-item" onclick="showROSEditPanel()" style="margin:0 -16px -14px;border-radius:0;border-bottom:none;">
+        <div class="ros-menu-item" onclick="showROSEditPanel()" style="margin:-14px -16px 0;border-radius:0;">
           <div class="ros-item-name">✏️ Edit Show Script</div>
           <div class="ros-item-desc">Review and adjust scene names, timings, and notes before publishing</div>
+        </div>
+        <div class="ros-menu-item" onclick="generateBSM()" style="margin:0 -16px;">
+          <div class="ros-item-name">⚡ Publish Script to Boo Show Manager</div>
+          <div class="ros-item-desc">Publishes live show script to the Boo Show Manager</div>
+        </div>
+        <div class="ros-menu-item" onclick="generateROS()" style="margin:0 -16px;">
+          <div class="ros-item-name">🔗🖨️ Share / Print Full Show Script</div>
+          <div class="ros-item-desc">Formatted full show script — share link or print to PDF</div>
+        </div>
+        <div class="ros-menu-item" onclick="generateSceneList()" style="margin:0 -16px -14px;border-radius:0;border-bottom:none;">
+          <div class="ros-item-name">🔗🖨️ Share / Print Show Outline</div>
+          <div class="ros-item-desc">Simple one-page scene outline — share link or print to PDF</div>
         </div>
         <div id="scripts-share-panel" style="display:none;margin-top:12px;background:var(--dark);border:1px solid var(--teal);border-radius:8px;padding:12px;font-size:12px;"></div>
       </div>
