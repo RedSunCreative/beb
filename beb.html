@@ -2065,8 +2065,11 @@ function renderCrewList() {
   list.innerHTML = crew.length === 0
     ? '<div style="font-size:12px;color:var(--muted)">Tell Boo your crew members, or add one below.</div>'
     : crew.map((m, i) => {
+        const subject = encodeURIComponent('Episode ' + (showData.epNum||'') + (showData.epTitle ? ' — ' + showData.epTitle : ''));
+        const callTimeStr = m.callTime ? '\nCall time: ' + m.callTime : '';
+        const emailBody = encodeURIComponent(msg + callTimeStr);
         const smsHref = m.mobile ? `sms:${m.mobile}?body=${msgBody}` : '';
-        const mailHref = m.email ? `mailto:${m.email}?subject=${encodeURIComponent('Episode ' + (showData.epNum||'') + (showData.epTitle ? ' — ' + showData.epTitle : ''))}&body=${msgBody}` : '';
+        const gmailHref = m.email ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m.email)}&su=${subject}&body=${emailBody}` : '';
         return `<div class="crew-item">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <label style="display:flex;align-items:center;gap:5px;cursor:pointer;" title="${m.confirmed ? 'Mark unconfirmed' : 'Mark confirmed'}">
@@ -2081,12 +2084,13 @@ function renderCrewList() {
             <input class="crew-inp" placeholder="Mobile" value="${esc(m.mobile||'')}" onchange="updateCrew(${i},'mobile',this.value)">
           </div>
           <div class="crew-fields" style="margin-top:4px;">
-            <input class="crew-inp" placeholder="Email" value="${esc(m.email||'')}" onchange="updateCrew(${i},'email',this.value)" style="grid-column:span 3;">
+            <input class="crew-inp" placeholder="Email" value="${esc(m.email||'')}" onchange="updateCrew(${i},'email',this.value)" style="grid-column:span 2;">
+            <input class="crew-inp" placeholder="Call time" value="${esc(m.callTime||'')}" onchange="updateCrew(${i},'callTime',this.value)" title="Call time for this crew member">
           </div>
           <div class="crew-actions" style="margin-top:4px;">
             ${smsHref ? `<a class="crew-sms" href="${smsHref}">TEXT</a>` : ''}
-            ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
-            ${!smsHref && !mailHref ? '<span style="font-size:10px;color:var(--muted)">no contact</span>' : ''}
+            ${gmailHref ? `<a class="crew-sms" href="${gmailHref}" target="_blank" style="background:var(--teal);">EMAIL</a>` : ''}
+            ${!smsHref && !gmailHref ? '<span style="font-size:10px;color:var(--muted)">no contact</span>' : ''}
           </div>
         </div>`;
       }).join('');
