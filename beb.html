@@ -1918,25 +1918,26 @@ function updateAllDisplays() {
                      (g.bio ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--teal);background:rgba(59,184,201,0.12);border-radius:3px;padding:1px 5px;margin-left:3px;">FORM</span>` : '');
       const firstName = esc((g.name||'').split(' ')[0].toUpperCase());
       return `<div class="crew-item">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
           <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
             <label style="display:flex;align-items:center;gap:5px;cursor:pointer;flex-shrink:0;" title="${g.confirmed ? 'Mark unconfirmed' : 'Mark confirmed'}">
               <input type="checkbox" ${g.confirmed ? 'checked' : ''} onchange="toggleGuestConfirmed(${i})" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0;">
               <span style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:${g.confirmed ? 'var(--green)' : 'var(--muted)'};">${g.confirmed ? 'CONFIRMED' : 'UNCONFIRMED'}</span>
             </label>
-            <div style="min-width:0;overflow:hidden;">
-              <span class="guest-name">${esc(g.name||'')}</span><span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;margin-left:6px;">${(g.stageType||'').toUpperCase()}</span>${badges.replace(/<span[^>]*>CONFIRMED<\/span>/, '')}
-            </div>
+            <span class="guest-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(g.name||'')}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;flex-shrink:0;">${(g.stageType||'').toUpperCase()}</span>
+            ${badges.replace(/<span[^>]*>CONFIRMED<\/span>/, '')}
           </div>
-          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0;">
-            ${!g.confirmed && g.mobile ? `<button onclick="toggleGuestInvite(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--teal);color:#fff;border:none;font-weight:700;cursor:pointer;">INVITE</button>` : ''}
-            ${g.email ? `<button onclick="toggleGuestWelcome(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;border:none;font-weight:700;cursor:pointer;">EMAIL WELCOME</button>` : ''}
-            ${smsBsm ? `<a class="crew-sms" href="${smsBsm}" title="Text BSM link">TEXT BSM</a>` : ''}
-            ${smsRos ? `<a class="crew-sms" href="${smsRos}" title="Text static show script" style="background:#5a6e2a;">TEXT SCRIPT</a>` : ''}
-            ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
-            <button onclick="removeGuest(${i})" title="Remove guest" style="font-size:13px;line-height:1;padding:3px 7px;border-radius:4px;background:transparent;color:rgba(232,67,26,0.6);border:1px solid rgba(232,67,26,0.25);cursor:pointer;flex-shrink:0;" onmouseover="this.style.color='var(--orange)';this.style.borderColor='var(--orange)';" onmouseout="this.style.color='rgba(232,67,26,0.6)';this.style.borderColor='rgba(232,67,26,0.25)';">✕</button>
-          </div>
+          <button onclick="removeGuest(${i})" title="Remove guest" style="font-size:13px;line-height:1;padding:3px 7px;border-radius:4px;background:transparent;color:rgba(232,67,26,0.6);border:1px solid rgba(232,67,26,0.25);cursor:pointer;flex-shrink:0;margin-left:8px;" onmouseover="this.style.color='var(--orange)';this.style.borderColor='var(--orange)';" onmouseout="this.style.color='rgba(232,67,26,0.6)';this.style.borderColor='rgba(232,67,26,0.25)';">✕</button>
         </div>
+        ${(smsBsm || smsRos || mailHref || (!g.confirmed && g.mobile) || g.email) ? `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:4px;">
+          ${!g.confirmed && g.mobile ? `<button onclick="toggleGuestInvite(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--teal);color:#fff;border:none;font-weight:700;cursor:pointer;">INVITE</button>` : ''}
+          ${g.email ? `<button onclick="toggleGuestWelcome(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;border:none;font-weight:700;cursor:pointer;">EMAIL WELCOME</button>` : ''}
+          ${smsBsm ? `<a class="crew-sms" href="${smsBsm}">TEXT BSM</a>` : ''}
+          ${smsRos ? `<a class="crew-sms" href="${smsRos}" style="background:#5a6e2a;">TEXT SCRIPT</a>` : ''}
+          ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
+        </div>` : ''}
+
         <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">${esc(g.segment||'')}</div>
         ${g.bio ? `<div style="font-size:11px;color:var(--muted);margin-bottom:5px;line-height:1.4;font-style:italic;">${esc(g.bio.slice(0,160))}${g.bio.length>160?'…':''}</div>` : ''}
         ${g.socials ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">&#128279; ${esc(g.socials.slice(0,100))}</div>` : ''}
@@ -2056,6 +2057,13 @@ function renderCrewList() {
         const smsHref = m.mobile ? `sms:${m.mobile}?body=${msgBody}` : '';
         const mailHref = m.email ? `mailto:${m.email}?subject=${encodeURIComponent('Episode ' + (showData.epNum||'') + (showData.epTitle ? ' — ' + showData.epTitle : ''))}&body=${msgBody}` : '';
         return `<div class="crew-item">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;" title="${m.confirmed ? 'Mark unconfirmed' : 'Mark confirmed'}">
+              <input type="checkbox" ${m.confirmed ? 'checked' : ''} onchange="toggleCrewConfirmed(${i})" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer;">
+              <span style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:${m.confirmed ? 'var(--green)' : 'var(--muted)'};">${m.confirmed ? 'CONFIRMED' : 'UNCONFIRMED'}</span>
+            </label>
+            <button class="crew-remove" onclick="removeCrew(${i})" title="Remove">✕</button>
+          </div>
           <div class="crew-fields">
             <input class="crew-inp" placeholder="Name" value="${esc(m.name||'')}" onchange="updateCrew(${i},'name',this.value)">
             <input class="crew-inp" placeholder="Role" value="${esc(m.role||'')}" onchange="updateCrew(${i},'role',this.value)">
@@ -2068,7 +2076,6 @@ function renderCrewList() {
             ${smsHref ? `<a class="crew-sms" href="${smsHref}">TEXT</a>` : ''}
             ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
             ${!smsHref && !mailHref ? '<span style="font-size:10px;color:var(--muted)">no contact</span>' : ''}
-            <button class="crew-remove" onclick="removeCrew(${i})" title="Remove">✕</button>
           </div>
         </div>`;
       }).join('');
@@ -2161,6 +2168,13 @@ function toggleGuestConfirmed(idx) {
   showData.guests[idx].confirmed = !showData.guests[idx].confirmed;
   saveState();
   updateAllDisplays();
+}
+
+function toggleCrewConfirmed(idx) {
+  if (!showData.crew || !showData.crew[idx]) return;
+  showData.crew[idx].confirmed = !showData.crew[idx].confirmed;
+  saveState();
+  renderCrewList();
 }
 
 function addCrewMember() {
