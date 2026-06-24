@@ -2824,6 +2824,13 @@ function formatDateLong(dateStr) {
 
 // ─── KIT / CHECKLIST SHARE URL + CLICK HANDLERS ──────────────────────────────
 
+function toBase64Url(obj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  let s = '';
+  bytes.forEach(b => s += String.fromCharCode(b));
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
 function generateGuestKitShareUrl(idx) {
   const ep = showData;
   const g = ep.guests[idx];
@@ -2837,7 +2844,7 @@ function generateGuestKitShareUrl(idx) {
     gsName: guestSvc ? (guestSvc.name || '').split(' ')[0] || 'Melissa' : 'Melissa',
     gsPhone: (guestSvc && guestSvc.mobile) || ''
   };
-  return `https://redsuncreative.github.io/beb/kit-view.html?d=${encodeURIComponent(JSON.stringify(data))}`;
+  return `https://redsuncreative.github.io/beb/kit-view.html?d=${toBase64Url(data)}`;
 }
 
 function openGuestKitEmail(idx) {
@@ -2847,7 +2854,7 @@ function openGuestKitEmail(idx) {
   const url = generateGuestKitShareUrl(idx);
   const firstName = (g.name || 'there').split(' ')[0];
   const subject = encodeURIComponent(`Your Guest Welcome Kit — LBV LIVE! Episode ${ep.epNum || ''}`);
-  const body = encodeURIComponent(`Hi ${firstName}!\n\nHere is your Guest Welcome Kit for Little Big Voices LIVE! Episode ${ep.epNum || ''}:\n\n${url}\n\nLet us know if you have any questions!\n\nPeace,\nMark + the LBV Team`);
+  const body = encodeURIComponent(`Hi ${firstName}!\n\nHere is your Guest Welcome Kit for Little Big Voices LIVE! Episode ${ep.epNum || ''}. Open the link below to view and print your kit:\n\n${url}\n\nLet us know if you have any questions!\n\nPeace,\nMark + the LBV Team`);
   window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(g.email)}&su=${subject}&body=${body}`, '_blank');
 }
 
@@ -2859,7 +2866,7 @@ function openGuestKitSMS(idx) {
   const firstName = (g.name || 'there').split(' ')[0];
   const goLive = ep.epTime || '19:00';
   const callTime = g.stageType === 'music' ? fmt12(shiftTime(goLive, -60)) : fmt12(shiftTime(goLive, -45));
-  const msg = `Hi ${firstName}! Your LBV LIVE! Ep ${ep.epNum || ''} Welcome Kit: ${url} — Call time: ${callTime}`;
+  const msg = `Hi ${firstName}! Your LBV LIVE! Episode ${ep.epNum || ''} Guest Welcome Kit is ready. Your call time is ${callTime}. View and print your kit here: ${url}`;
   window.open(`sms:${g.mobile}?body=${encodeURIComponent(msg)}`, '_self');
 }
 
@@ -2873,7 +2880,7 @@ function generateCrewChecklistShareUrl(idx) {
     callTime: m.callTime || '',
     crew: (ep.crew || []).filter((_, j) => j !== idx).map(c => ({name: c.name || '', role: c.role || ''}))
   };
-  return `https://redsuncreative.github.io/beb/checklist-view.html?d=${encodeURIComponent(JSON.stringify(data))}`;
+  return `https://redsuncreative.github.io/beb/checklist-view.html?d=${toBase64Url(data)}`;
 }
 
 function openCrewChecklistEmail(idx) {
@@ -2885,7 +2892,7 @@ function openCrewChecklistEmail(idx) {
   const role = m.role || 'Crew';
   const subject = encodeURIComponent(`${role} Checklist — LBV LIVE! Episode ${ep.epNum || ''}`);
   const callLine = m.callTime ? `\nYour call time: ${m.callTime}` : '';
-  const body = encodeURIComponent(`Hi ${firstName}!\n\nHere is your ${role} Checklist for LBV LIVE! Episode ${ep.epNum || ''}.${callLine}\n\n${url}\n\nLet us know if you have any questions!\n\nThank you,\nMark + the LBV Team`);
+  const body = encodeURIComponent(`Hi ${firstName}!\n\nHere is your ${role} Checklist for Little Big Voices LIVE! Episode ${ep.epNum || ''}.${callLine}\n\nOpen the link below to view and print your checklist:\n\n${url}\n\nLet us know if you have any questions!\n\nThank you,\nMark + the LBV Team`);
   window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m.email)}&su=${subject}&body=${body}`, '_blank');
 }
 
@@ -2895,9 +2902,9 @@ function openCrewChecklistSMS(idx) {
   if (!m || !m.mobile) return;
   const url = generateCrewChecklistShareUrl(idx);
   const firstName = (m.name || 'there').split(' ')[0];
-  const role = m.role || 'crew';
-  const callStr = m.callTime ? ` Call time: ${m.callTime}.` : '';
-  const msg = `Hi ${firstName}! Your LBV LIVE! Ep ${ep.epNum || ''} ${role} checklist:${callStr} ${url}`;
+  const role = m.role || 'Crew Member';
+  const callLine = m.callTime ? ` Your call time is ${m.callTime}.` : '';
+  const msg = `Hi ${firstName}! Your LBV LIVE! Episode ${ep.epNum || ''} ${role} checklist is ready.${callLine} View and print here: ${url}`;
   window.open(`sms:${m.mobile}?body=${encodeURIComponent(msg)}`, '_self');
 }
 

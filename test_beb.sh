@@ -40,6 +40,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Remove answeringClarification from processUserInput (simulates the not-defined scope bug)
   sed -i '' 's/const answeringClarification = lastBooPI.includes/const _answeringClarification_REMOVED = lastBooPI.includes/' "$BEB"
   echo "  Injected: removed answeringClarification from processUserInput (simulates ReferenceError)"
+  # Revert generateCrewChecklistShareUrl to old double-encoding (simulates SMS link regression)
+  sed -i '' 's/return `https:\/\/redsuncreative\.github\.io\/beb\/checklist-view\.html?d=${toBase64Url(data)}`;/return `https:\/\/redsuncreative.github.io\/beb\/checklist-view.html?d=${encodeURIComponent(JSON.stringify(data))}`;/' "$BEB"
+  echo "  Injected: generateCrewChecklistShareUrl reverted to encodeURIComponent (simulates SMS double-encoding)"
   echo ""
 fi
 
@@ -389,6 +392,104 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 11: Share URL uses base64url (no %25 double-encoding in SMS)
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 11: Share URLs use base64url — no double-encoding in SMS ---"
+python3 - > /tmp/beb_shareurl.txt 2>&1 <<'PYEOF'
+import re, sys, base64, json, urllib.parse
+
+with open('beb.html') as f:
+    content = f.read()
+
+errors = []
+
+# toBase64Url must exist
+if 'function toBase64Url(' not in content:
+    errors.append("FAIL: toBase64Url function not found")
+
+# generateCrewChecklistShareUrl must use toBase64Url, not encodeURIComponent(JSON
+crew_fn = re.search(r'function generateCrewChecklistShareUrl\([\s\S]*?\n\}', content)
+if crew_fn:
+    body = crew_fn.group(0)
+    if 'toBase64Url(data)' not in body:
+        errors.append("FAIL: generateCrewChecklistShareUrl does not use toBase64Url")
+    if 'encodeURIComponent(JSON.stringify' in body:
+        errors.append("FAIL: generateCrewChecklistShareUrl still uses encodeURIComponent(JSON.stringify)")
+else:
+    errors.append("FAIL: generateCrewChecklistShareUrl not found")
+
+# generateGuestKitShareUrl must use toBase64Url
+kit_fn = re.search(r'function generateGuestKitShareUrl\([\s\S]*?\n\}', content)
+if kit_fn:
+    body = kit_fn.group(0)
+    if 'toBase64Url(data)' not in body:
+        errors.append("FAIL: generateGuestKitShareUrl does not use toBase64Url")
+    if 'encodeURIComponent(JSON.stringify' in body:
+        errors.append("FAIL: generateGuestKitShareUrl still uses encodeURIComponent(JSON.stringify)")
+else:
+    errors.append("FAIL: generateGuestKitShareUrl not found")
+
+# checklist-view.html must use fromBase64Url
+try:
+    with open('checklist-view.html') as f:
+        cv = f.read()
+    if 'fromBase64Url(' not in cv:
+        errors.append("FAIL: checklist-view.html does not use fromBase64Url")
+    if 'JSON.parse(decodeURIComponent(' in cv:
+        errors.append("FAIL: checklist-view.html still uses old decodeURIComponent decode")
+except:
+    errors.append("FAIL: checklist-view.html not found")
+
+# kit-view.html must use fromBase64Url
+try:
+    with open('kit-view.html') as f:
+        kv = f.read()
+    if 'fromBase64Url(' not in kv:
+        errors.append("FAIL: kit-view.html does not use fromBase64Url")
+except:
+    errors.append("FAIL: kit-view.html not found")
+
+# Simulate base64url round-trip in Python
+def to_base64url(obj):
+    raw = json.dumps(obj, ensure_ascii=False).encode('utf-8')
+    b64 = base64.b64encode(raw).decode('ascii')
+    return b64.replace('+', '-').replace('/', '_').replace('=', '')
+
+def from_base64url(s):
+    padding = '=='
+    b64 = (s + padding).replace('-', '+').replace('_', '/')
+    raw = base64.b64decode(b64)
+    return json.loads(raw.decode('utf-8'))
+
+test_data = {'epNum': 9, 'name': 'Sofía García', 'role': 'Floor Manager', 'callTime': '5:00 PM', 'crew': []}
+encoded = to_base64url(test_data)
+decoded = from_base64url(encoded)
+if decoded != test_data:
+    errors.append(f"FAIL: base64url round-trip mismatch: {decoded}")
+
+# No %25 in SMS body
+url = 'https://redsuncreative.github.io/beb/checklist-view.html?d=' + encoded
+msg = f'Hi Sofia! Your checklist: {url}'
+sms_body = urllib.parse.quote(msg, safe='')
+if '%25' in sms_body:
+    errors.append("FAIL: %25 double-encoding found in SMS body")
+
+# URL length check
+if len(url) > 800:
+    errors.append(f"FAIL: Share URL too long ({len(url)} chars)")
+
+print('\n'.join(errors) if errors else "OK")
+PYEOF
+
+SHARE_RESULT=$(cat /tmp/beb_shareurl.txt)
+if [[ "$SHARE_RESULT" == "OK" ]]; then
+  pass "Share URLs use base64url — no double-encoding in SMS body"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_shareurl.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -398,6 +499,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/fix\.updates\.guests;/fix.updates.guests.map(normalizeGuest);/' "$BEB"
   sed -i '' "s/g\.socials = String(g\.socials);/g.socials = Array.isArray(g.socials) ? g.socials.join(', ') : Object.values(g.socials).join(', ');/" "$BEB"
   sed -i '' 's/const _answeringClarification_REMOVED = lastBooPI.includes/const answeringClarification = lastBooPI.includes/' "$BEB"
+  sed -i '' 's/return `https:\/\/redsuncreative\.github\.io\/beb\/checklist-view\.html?d=${encodeURIComponent(JSON\.stringify(data))}`;/return `https:\/\/redsuncreative.github.io\/beb\/checklist-view.html?d=${toBase64Url(data)}`;/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

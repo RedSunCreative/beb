@@ -31,12 +31,13 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function fmt12(t){if(!t)return'—';const[hS,mS]=t.split(':');let h=parseInt(hS,10);const m=parseInt(mS||'0',10);const ap=h>=12?'PM':'AM';h=h%12||12;return`${h}:${String(m).padStart(2,'0')} ${ap} CT`;}
 function shiftTime(t,d){const[h,m]=(t||'19:00').split(':').map(Number);const tot=h*60+m+d;const nh=Math.floor(((tot%1440)+1440)%1440/60);const nm=((tot%60)+60)%60;return`${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;}
 function fmtDate(ds){if(!ds)return'—';const[y,mo,d]=ds.split('-').map(Number);const M=['January','February','March','April','May','June','July','August','September','October','November','December'];const sfx=[1,21,31].includes(d)?'st':[2,22].includes(d)?'nd':[3,23].includes(d)?'rd':'th';return`${M[mo-1]} ${d}${sfx}, ${y}`;}
+function fromBase64Url(s){const b64=(s+'==').replace(/-/g,'+').replace(/_/g,'/');const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return JSON.parse(new TextDecoder().decode(bytes));}
 
 (function(){
   const raw=new URLSearchParams(location.search).get('d');
   if(!raw){document.getElementById('content').innerHTML='<p style="color:red;padding:60px 0;text-align:center;">No kit data found in URL.</p>';return;}
   let data;
-  try{data=JSON.parse(decodeURIComponent(raw));}
+  try{data=fromBase64Url(raw);}
   catch(e){document.getElementById('content').innerHTML='<p style="color:red;padding:60px 0;text-align:center;">Could not load kit data.</p>';return;}
 
   const{epNum,epTitle,epDate,epTime,epThemeDesc,watchURL,guestName,stageType,gsName,gsPhone}=data;
