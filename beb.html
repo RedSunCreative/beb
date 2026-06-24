@@ -1922,6 +1922,8 @@ function updateAllDisplays() {
                      (g.vip ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:3px;padding:1px 5px;margin-left:3px;">VIP</span>` : '') +
                      (g.bio ? `<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--teal);background:rgba(59,184,201,0.12);border-radius:3px;padding:1px 5px;margin-left:3px;">FORM</span>` : '');
       const firstName = esc((g.name||'').split(' ')[0].toUpperCase());
+      const kitEmailHref = buildGuestKitEmailUrl(g);
+      const kitSmsHref = buildGuestKitSmsHref(g);
       return `<div class="crew-item">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
           <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
@@ -1935,6 +1937,15 @@ function updateAllDisplays() {
           </div>
           <button onclick="removeGuest(${i})" title="Remove guest" style="font-size:13px;line-height:1;padding:3px 7px;border-radius:4px;background:transparent;color:rgba(232,67,26,0.6);border:1px solid rgba(232,67,26,0.25);cursor:pointer;flex-shrink:0;margin-left:8px;" onmouseover="this.style.color='var(--orange)';this.style.borderColor='var(--orange)';" onmouseout="this.style.color='rgba(232,67,26,0.6)';this.style.borderColor='rgba(232,67,26,0.25)';">✕</button>
         </div>
+        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:5px;" title="Include in Guest and Crew Docs — Guest Welcome Kit">
+          <input type="checkbox" ${g.sendKit ? 'checked' : ''} onchange="toggleGuestKit(${i})" style="width:13px;height:13px;accent-color:#6366f1;cursor:pointer;flex-shrink:0;">
+          <span style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:${g.sendKit ? '#6366f1' : 'var(--muted)'};">SEND WELCOME KIT</span>
+        </label>
+        ${g.sendKit ? `<div style="display:flex;gap:5px;align-items:center;margin-bottom:5px;">
+          ${kitEmailHref ? `<a class="crew-sms" href="${kitEmailHref}" target="_blank" style="background:#6366f1;">EMAIL KIT</a>` : ''}
+          ${kitSmsHref ? `<a class="crew-sms" href="${kitSmsHref}" style="background:#4f46e5;">TEXT KIT</a>` : ''}
+          ${!kitEmailHref && !kitSmsHref ? '<span style="font-size:10px;color:var(--muted)">add email or mobile to send kit</span>' : ''}
+        </div>` : ''}
         ${(smsBsm || smsRos || mailHref || (!g.confirmed && g.mobile) || g.email) ? `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:4px;">
           ${!g.confirmed && g.mobile ? `<button onclick="toggleGuestInvite(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--teal);color:#fff;border:none;font-weight:700;cursor:pointer;">INVITE</button>` : ''}
           ${g.email ? `<button onclick="toggleGuestWelcome(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;border:none;font-weight:700;cursor:pointer;">EMAIL WELCOME</button>` : ''}
@@ -2064,6 +2075,9 @@ function renderCrewList() {
         const emailBody = encodeURIComponent(msg + callTimeStr);
         const smsHref = m.mobile ? `sms:${m.mobile}?body=${msgBody}` : '';
         const gmailHref = m.email ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m.email)}&su=${subject}&body=${emailBody}` : '';
+        const checklistEmailHref = buildCrewChecklistEmailUrl(m);
+        const checklistSmsHref = buildCrewChecklistSmsHref(m);
+        const roleLabel = (m.role || 'CREW').toUpperCase();
         return `<div class="crew-item">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <label style="display:flex;align-items:center;gap:5px;cursor:pointer;" title="${m.confirmed ? 'Mark unconfirmed' : 'Mark confirmed'}">
@@ -2072,6 +2086,15 @@ function renderCrewList() {
             </label>
             <button class="crew-remove" onclick="removeCrew(${i})" title="Remove">✕</button>
           </div>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:5px;" title="Include in Guest and Crew Docs — crew checklist">
+            <input type="checkbox" ${m.includeChecklist ? 'checked' : ''} onchange="toggleCrewChecklist(${i})" style="width:13px;height:13px;accent-color:#6366f1;cursor:pointer;flex-shrink:0;">
+            <span style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:${m.includeChecklist ? '#6366f1' : 'var(--muted)'};">SEND ${roleLabel} CHECKLIST</span>
+          </label>
+          ${m.includeChecklist ? `<div style="display:flex;gap:5px;align-items:center;margin-bottom:5px;">
+            ${checklistEmailHref ? `<a class="crew-sms" href="${checklistEmailHref}" target="_blank" style="background:#6366f1;">EMAIL CHECKLIST</a>` : ''}
+            ${checklistSmsHref ? `<a class="crew-sms" href="${checklistSmsHref}" style="background:#4f46e5;">TEXT CHECKLIST</a>` : ''}
+            ${!checklistEmailHref && !checklistSmsHref ? '<span style="font-size:10px;color:var(--muted)">add email or mobile to send</span>' : ''}
+          </div>` : ''}
           <div class="crew-fields">
             <input class="crew-inp" placeholder="Name" value="${esc(m.name||'')}" onchange="updateCrew(${i},'name',this.value)">
             <input class="crew-inp" placeholder="Role" value="${esc(m.role||'')}" onchange="updateCrew(${i},'role',this.value)">
@@ -2182,6 +2205,20 @@ function toggleGuestConfirmed(idx) {
 function toggleCrewConfirmed(idx) {
   if (!showData.crew || !showData.crew[idx]) return;
   showData.crew[idx].confirmed = !showData.crew[idx].confirmed;
+  saveState();
+  renderCrewList();
+}
+
+function toggleGuestKit(idx) {
+  if (!showData.guests[idx]) return;
+  showData.guests[idx].sendKit = !showData.guests[idx].sendKit;
+  saveState();
+  updateAllDisplays();
+}
+
+function toggleCrewChecklist(idx) {
+  if (!showData.crew || !showData.crew[idx]) return;
+  showData.crew[idx].includeChecklist = !showData.crew[idx].includeChecklist;
   saveState();
   renderCrewList();
 }
@@ -2787,6 +2824,88 @@ function formatDateLong(dateStr) {
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const sfx = [1,21,31].includes(d) ? 'st' : [2,22].includes(d) ? 'nd' : [3,23].includes(d) ? 'rd' : 'th';
   return `${months[mo-1]} ${d}${sfx}, ${y}`;
+}
+
+// ─── KIT / CHECKLIST EMAIL + SMS BUILDERS ─────────────────────────────────────
+
+function buildGuestKitEmailUrl(g) {
+  const ep = showData;
+  const firstName = (g.name || 'there').split(' ')[0];
+  const goLive = ep.epTime || '19:00';
+  const callTime = g.stageType === 'music' ? fmt12(shiftTime(goLive, -60)) : fmt12(shiftTime(goLive, -45));
+  const dateStr = ep.epDate ? formatDateLong(ep.epDate) : '';
+  const subject = encodeURIComponent(`Your Guest Welcome Kit — LBV LIVE! Episode ${ep.epNum || ''}`);
+  const lines = [
+    `Hi ${firstName}!`,
+    '',
+    `Here's your Guest Welcome Kit for Little Big Voices LIVE! — Episode ${ep.epNum || ''}${dateStr ? ', ' + dateStr : ''}.`,
+    '',
+    'SHOW DETAILS:',
+    dateStr ? `Date: ${dateStr}` : '',
+    'Location: Little Big Studio — 1507 Kinney Ave. #109, Austin TX',
+    '  (Second building past the entrance off Kinney. Purple light on the ground floor.)',
+    '',
+    `Call Time: ${callTime}`,
+    `Show Circle: ${fmt12(shiftTime(goLive, -20))} (we gather before going live)`,
+    `Go Live on YouTube: ${fmt12(goLive)}`,
+    `Happy Hour Celebration: ${fmt12(shiftTime(goLive, 90))}`,
+    '',
+    'WHAT TO BRING: Your stories, songs, and open mind and heart!',
+    'WHAT TO WEAR: Clothes that help you feel peaceful and comfortable.',
+    '',
+    'Questions? Just reply to this email.',
+    '',
+    'Peace,',
+    'Mark + the LBV Team'
+  ].filter(Boolean).join('\n');
+  return g.email ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(g.email)}&su=${subject}&body=${encodeURIComponent(lines)}` : '';
+}
+
+function buildGuestKitSmsHref(g) {
+  if (!g.mobile) return '';
+  const ep = showData;
+  const firstName = (g.name || 'there').split(' ')[0];
+  const goLive = ep.epTime || '19:00';
+  const callTime = g.stageType === 'music' ? fmt12(shiftTime(goLive, -60)) : fmt12(shiftTime(goLive, -45));
+  const dateStr = ep.epDate ? formatDateLong(ep.epDate) : '';
+  const msg = `Hi ${firstName}! LBV LIVE! Ep ${ep.epNum || ''}${dateStr ? ' — ' + dateStr : ''}. Call time: ${callTime}. Go live: ${fmt12(goLive)}. Location: 1507 Kinney Ave #109, Austin (purple light, ground floor). Full Welcome Kit coming by email!`;
+  return `sms:${g.mobile}?body=${encodeURIComponent(msg)}`;
+}
+
+function buildCrewChecklistEmailUrl(m) {
+  const ep = showData;
+  const firstName = (m.name || 'there').split(' ')[0];
+  const role = m.role || 'Crew';
+  const dateStr = ep.epDate ? formatDateLong(ep.epDate) : '';
+  const subject = encodeURIComponent(`${role} Checklist — LBV LIVE! Episode ${ep.epNum || ''}`);
+  const lines = [
+    `Hi ${firstName}!`,
+    '',
+    `Here's your ${role} checklist for Little Big Voices LIVE! — Episode ${ep.epNum || ''}${dateStr ? ', ' + dateStr : ''}.`,
+    '',
+    m.callTime ? `Your call time: ${m.callTime}` : "Call time: TBD — we'll confirm soon.",
+    '',
+    'LOCATION: Little Big Studio',
+    '  1507 Kinney Ave. #109, Austin TX',
+    '  Second building past the entrance off Kinney. Purple light on the ground floor.',
+    '',
+    'Please confirm you received this and let us know if you have any questions.',
+    '',
+    'Thank you!',
+    'Mark + the LBV Team'
+  ].join('\n');
+  return m.email ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m.email)}&su=${subject}&body=${encodeURIComponent(lines)}` : '';
+}
+
+function buildCrewChecklistSmsHref(m) {
+  if (!m.mobile) return '';
+  const ep = showData;
+  const firstName = (m.name || 'there').split(' ')[0];
+  const role = m.role || 'crew';
+  const dateStr = ep.epDate ? formatDateLong(ep.epDate) : '';
+  const callStr = m.callTime ? ` Call time: ${m.callTime}.` : '';
+  const msg = `Hi ${firstName}! LBV LIVE! Ep ${ep.epNum || ''}${dateStr ? ' — ' + dateStr : ''} ${role} reminder.${callStr} Location: 1507 Kinney Ave #109, Austin (purple light). Questions? Let us know!`;
+  return `sms:${m.mobile}?body=${encodeURIComponent(msg)}`;
 }
 
 // ─── GUEST INVITE ─────────────────────────────────────────────────────────────
