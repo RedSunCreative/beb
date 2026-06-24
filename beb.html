@@ -127,7 +127,8 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
 .cue-item.dragging{opacity:0.35;}
 .cue-item.drag-over{outline:2px solid var(--teal);outline-offset:1px;}
 .cue-num-label{font-family:'Syne',sans-serif;font-size:0.7rem;font-weight:700;color:#F5A623;letter-spacing:0.1em;text-transform:uppercase;}
-.drag-handle{font-size:13px;color:var(--muted);cursor:grab;user-select:none;line-height:1;padding:1px 4px 0 0;flex-shrink:0;}
+.drag-handle{font-size:22px;color:var(--muted);cursor:grab;user-select:none;line-height:1;padding:0 8px 0 0;flex-shrink:0;opacity:0.5;}
+.drag-handle:hover{opacity:1;color:var(--teal);}
 .drag-handle:active{cursor:grabbing;}
 .cue-item-name{font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:600;color:#FFFFFF;margin:2px 0;}
 .cue-item-dur{font-family:'DM Mono',monospace;font-size:0.65rem;font-weight:400;color:#8A8A9A;letter-spacing:0.08em;}
@@ -481,6 +482,10 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
       </div>
       <div class="data-section-body" id="memory-body" style="display:none;">
         <div id="memory-list"><div style="font-size:12px;color:var(--muted)">No memories yet...</div></div>
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <input id="memory-add-inp" type="text" class="crew-inp" placeholder="Add something for Boo to remember…" style="flex:1;" onkeydown="if(event.key==='Enter'){addMemoryManual();event.preventDefault();}">
+          <button onclick="addMemoryManual()" style="background:var(--teal);border:none;color:#000;border-radius:4px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:0.05em;">+ ADD</button>
+        </div>
       </div>
     </div>
 
@@ -2215,6 +2220,19 @@ function deleteMemory(i) {
   showData.booMemory.splice(i, 1);
   renderMemory();
   saveState();
+}
+
+function addMemoryManual() {
+  const inp = document.getElementById('memory-add-inp');
+  const val = (inp.value || '').trim();
+  if (!val) return;
+  if (!showData.booMemory) showData.booMemory = [];
+  if (!showData.booMemory.includes(val)) {
+    showData.booMemory.push(val);
+    renderMemory();
+    saveState();
+  }
+  inp.value = '';
 }
 
 function toggleSection(id) {
