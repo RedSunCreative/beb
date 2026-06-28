@@ -64,6 +64,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Break the guest About field wiring
   sed -i '' "s/,'about',this.value)/,'aboutBRK',this.value)/" "$BEB"
   echo "  Injected: broke guest About field wiring"
+  # Drop a named stage from CUE_STAGES
+  sed -i '' "s/label: 'Red Velvet Stage' }/label: 'RedVelvetBRK' }/" "$BEB"
+  echo "  Injected: removed Red Velvet Stage from CUE_STAGES"
   echo ""
 fi
 
@@ -804,6 +807,35 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 18: cue-list stage dropdown includes the named stages
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 18: cue stage dropdown options ---"
+python3 - > /tmp/beb_stages.txt 2>&1 <<'PYEOF'
+c = open('beb.html').read()
+errors = []
+for s in ['Red Velvet Stage','Sunset Stage','Guitar Stage','Rose Garden Stage','Hair/Make-up Stage','Crew Stage','Kitchen Disco']:
+    if ("label: '%s'" % s) not in c:
+        errors.append("FAIL: CUE_STAGES missing '%s'" % s)
+if 'function stageOptionsHTML(' not in c:
+    errors.append("FAIL: stageOptionsHTML() helper missing")
+# definition + both cue dropdowns (editScene + showROSEditPanel) must reference it
+if c.count('stageOptionsHTML(') < 3:
+    errors.append("FAIL: cue dropdowns not wired to stageOptionsHTML (count=%d)" % c.count('stageOptionsHTML('))
+# legacy pod/music/kitchen/video values must still be options (existing cues rely on them)
+for v in ["value: 'pod'","value: 'music'","value: 'kitchen'","value: 'video'"]:
+    if v not in c:
+        errors.append("FAIL: CUE_STAGES dropped legacy %s" % v)
+print('\n'.join(errors) if errors else "OK")
+PYEOF
+STAGES_RESULT=$(cat /tmp/beb_stages.txt)
+if [[ "$STAGES_RESULT" == "OK" ]]; then
+  pass "cue stage dropdown includes named stages + keeps legacy values"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_stages.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -821,6 +853,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "s/  if (g.intro == null) g.intro = g.intro;/  if (g.intro == null) g.intro = '';/" "$BEB"
   sed -i '' 's/function _brk_openTeleprompter(/function openTeleprompter(/' "$BEB"
   sed -i '' "s/,'aboutBRK',this.value)/,'about',this.value)/" "$BEB"
+  sed -i '' "s/label: 'RedVelvetBRK' }/label: 'Red Velvet Stage' }/" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

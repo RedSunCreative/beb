@@ -655,6 +655,30 @@ function featuredPerson(cue, guests) {
 
 const STAGE_LABEL = { pod: 'Pod Stage', music: 'Music Stage', kitchen: 'Kitchen Disco', video: 'Video' };
 
+// Stage options for the cue-list dropdown. `value` is what's stored on the cue.
+// pod/music/kitchen/video keep their built-in semantics (standby logic, colors,
+// labels key off them); the named stages are additive — a step toward a per-show
+// stage config. ("Sunset Stage" not "Sun Set" — loadState normalizes that spelling.)
+const CUE_STAGES = [
+  { value: 'pod',                label: 'Pod Stage' },
+  { value: 'music',              label: 'Music Stage' },
+  { value: 'kitchen',            label: 'Kitchen Disco' },
+  { value: 'video',              label: 'Video' },
+  { value: 'Red Velvet Stage',   label: 'Red Velvet Stage' },
+  { value: 'Sunset Stage',       label: 'Sunset Stage' },
+  { value: 'Guitar Stage',       label: 'Guitar Stage' },
+  { value: 'Rose Garden Stage',  label: 'Rose Garden Stage' },
+  { value: 'Hair/Make-up Stage', label: 'Hair/Make-up Stage' },
+  { value: 'Crew Stage',         label: 'Crew Stage' },
+];
+function stageOptionsHTML(cur) {
+  cur = cur || '';
+  let opts = CUE_STAGES.slice();
+  // Preserve any legacy/unknown value already on the cue so it stays selected.
+  if (cur && !opts.some(o => o.value === cur)) opts = [{ value: cur, label: cur }].concat(opts);
+  return opts.map(o => `<option value="${esc(o.value)}"${o.value === cur ? ' selected' : ''}>${esc(o.label)}</option>`).join('');
+}
+
 // Ready cue: during this scene, who needs to get into position — i.e. the person featured in
 // the NEXT scene that has one, sent to that scene's stage. Skips scenes with nobody (video,
 // kitchen-disco link, pre-records). Derived from order + roster, so it's correct after a drag.
@@ -1965,7 +1989,7 @@ function updateAllDisplays() {
               <span style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:${g.confirmed ? 'var(--green)' : 'var(--muted)'};">${g.confirmed ? 'CONFIRMED' : 'UNCONFIRMED'}</span>
             </label>
             <span class="guest-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(g.name||'')}</span>
-            <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;flex-shrink:0;">${(g.stageType||'').toUpperCase()}${g.role ? ' · ' + esc(g.role) : ''}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;flex-shrink:0;">${(g.stageType||'').toUpperCase()}</span>
             ${badges.replace(/<span[^>]*>CONFIRMED<\/span>/, '')}
           </div>
           <button onclick="removeGuest(${i})" title="Remove guest" style="font-size:13px;line-height:1;padding:3px 7px;border-radius:4px;background:transparent;color:rgba(232,67,26,0.6);border:1px solid rgba(232,67,26,0.25);cursor:pointer;flex-shrink:0;margin-left:8px;" onmouseover="this.style.color='var(--orange)';this.style.borderColor='var(--orange)';" onmouseout="this.style.color='rgba(232,67,26,0.6)';this.style.borderColor='rgba(232,67,26,0.25)';">✕</button>
@@ -1987,7 +2011,7 @@ function updateAllDisplays() {
           ${mailHref ? `<a class="crew-sms" href="${mailHref}" style="background:var(--teal);">EMAIL</a>` : ''}
         </div>` : ''}
 
-        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">${esc(g.segment||'')}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">${esc(g.segment||'')}${g.role ? (g.segment ? ' · ' : '') + esc(g.role) : ''}</div>
         ${g.bio ? `<div style="font-size:11px;color:var(--muted);margin-bottom:5px;line-height:1.4;font-style:italic;">${esc(g.bio.slice(0,160))}${g.bio.length>160?'…':''}</div>` : ''}
         ${g.socials ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">&#128279; ${esc(g.socials.slice(0,100))}</div>` : ''}
         ${(g.profile1 || g.profile2) ? `<div style="font-size:10px;margin-bottom:4px;display:flex;gap:12px;flex-wrap:wrap;">
@@ -2060,7 +2084,7 @@ function updateAllDisplays() {
         </div>
         <div class="cue-item-name">${c.scene || '(untitled)'}${c.cueCard ? ' <span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--teal);background:rgba(59,184,201,0.12);border-radius:3px;padding:1px 5px;vertical-align:middle;">CC</span>' : ''}</div>
         <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
-        ${c.standbyWho ? `<div class="cue-item-boo">READY: ${c.standbyWho}${c.standbyStage ? ' · ' + (STAGE_LABEL[c.standbyStage] || '') : ''}</div>` : ''}
+        ${c.standbyWho ? `<div class="cue-item-boo">READY: ${c.standbyWho}${c.standbyStage ? ' · ' + (STAGE_LABEL[c.standbyStage] || c.standbyStage) : ''}</div>` : ''}
       </div>`).join('');
   initCueDrag();
 }
@@ -2576,9 +2600,7 @@ function esc(s) {
 function editScene(i) {
   editingSceneIdx = i;
   const c = showData.cues[i];
-  const typeOpts = ['pod','music','kitchen','video'].map(t =>
-    `<option value="${t}"${c.stageType===t?' selected':''}>${t.charAt(0).toUpperCase()+t.slice(1)}</option>`
-  ).join('');
+  const typeOpts = stageOptionsHTML(c.stageType);
   document.getElementById('scene-edit-container').innerHTML = `
     <div class="scene-edit-panel">
       <div class="scene-edit-title">SCENE ${i+1} — EDIT
@@ -3609,9 +3631,7 @@ function generateFloorMgrHTML() {
 // ─── ROS EDIT PANEL ──────────────────────────────────────────────────────────
 function showROSEditPanel() {
   const cues = showData.cues;
-  const typeOpts = (cur) => ['pod','music','kitchen','video'].map(t =>
-    `<option value="${t}"${cur === t ? ' selected' : ''}>${t.charAt(0).toUpperCase() + t.slice(1)}</option>`
-  ).join('');
+  const typeOpts = (cur) => stageOptionsHTML(cur);
 
   const rows = cues.length ? cues.map((c, i) => `
     <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px 16px;margin-bottom:10px;">
