@@ -666,6 +666,10 @@ assert(featuredPerson(cues[1], []) === 'Mark', 'host-opener should resolve to th
 assert(featuredPerson(cues[1], []) !== 'Karly Pittman', 'host-opener must NOT surface the booName next-up tease');
 const r = recomputeStructuralFields(cues);
 assert(r[0].standbyWho === 'Mark', 'READY before the opener should be the host (Mark), got "' + r[0].standbyWho + '"');
+// A guest named in the title beats the host: "MARK INTRODUCES DAVID" features David, not Mark.
+assert(featuredPerson({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'David Rothgeb', 'guest named in title must beat host, got "' + featuredPerson({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) + '"');
+// ...but the host still resolves when no guest is named in the title.
+assert(featuredPerson({scene:'Mark SHOW OPENER', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'Mark', 'host should still resolve when no guest is in the title');
 // Idempotency: recompute(recompute(x)) === recompute(x)
 const once = JSON.stringify(recomputeStructuralFields(cues));
 const twice = JSON.stringify(recomputeStructuralFields(recomputeStructuralFields(cues)));

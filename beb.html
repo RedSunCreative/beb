@@ -655,10 +655,14 @@ function featuredPerson(cue, guests) {
     if (bySong) return bySong.name;
     if (cue.stageType === 'pod') return title; // pod title IS a person even if not in the roster
   }
-  // Host-led scene (e.g. "Mark SHOW OPENER"): the roster only has guests, not the host, so
-  // recognize the configured host name when it appears in the scene title. This makes the host
-  // the featured person (NOW) and the get-ready name (READY on the prior scene) — without
-  // touching booName, which stays the editable "Next Up" tease.
+  // A GUEST named anywhere in the title wins over the host — e.g. "MARK INTRODUCES DAVID"
+  // features David (the guest getting ready), not Mark (the host, always present). Try full
+  // name first, then first name, as whole words.
+  const wordIn = n => n && new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(cue.scene || '');
+  const namedGuest = guests.find(g => wordIn(g.name)) || guests.find(g => wordIn((g.name || '').split(' ')[0]));
+  if (namedGuest) return namedGuest.name;
+  // Host-led scene with no guest named (e.g. "Mark SHOW OPENER" / "Mark SHOW CLOSE"): the roster
+  // only has guests, not the host, so recognize the configured host name in the scene title.
   const host = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.hostName) ? CLIENT_CONFIG.hostName : '';
   if (host && new RegExp('\\b' + host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(cue.scene || '')) return host;
   // A guest assigned to this scene's stage (e.g. a Kitchen Disco "Show Chef"). Auto-match only
@@ -2672,10 +2676,10 @@ function editScene(i) {
         <div class="edit-field full"><div class="edit-lbl">CAMERAS NEXT</div><textarea class="edit-ta" id="ef-camerasNext">${esc(c.camerasNext)}</textarea></div>
         <div class="edit-field full"><div class="edit-lbl">LIGHTING NEXT</div><textarea class="edit-ta" id="ef-lightingNext">${esc(c.lightingNext)}</textarea></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;align-items:center;">
         <button class="edit-save-btn" onclick="saveSceneEdit()">SAVE CHANGES</button>
         <button class="edit-close-btn" onclick="closeSceneEdit()">CANCEL</button>
-        <button onclick="deleteScene(${i})" title="Delete this scene" style="margin-left:auto;background:transparent;border:1px solid rgba(232,67,26,0.4);color:var(--orange);border-radius:4px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">🗑 Delete Scene</button>
+        <button onclick="deleteScene(${i})" title="Delete this scene" style="background:transparent;border:1px solid rgba(232,67,26,0.4);color:var(--orange);border-radius:4px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">🗑 Delete Scene</button>
       </div>
     </div>`;
   document.getElementById('scene-edit-container').scrollIntoView({behavior:'smooth',block:'nearest'});
