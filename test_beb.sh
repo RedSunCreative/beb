@@ -73,6 +73,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Break the ADD CUE handler
   sed -i '' 's/function addCue(/function _brk_addCue(/' "$BEB"
   echo "  Injected: renamed addCue"
+  # Break the DELETE SCENE handler
+  sed -i '' 's/function deleteScene(/function _brk_deleteScene(/' "$BEB"
+  echo "  Injected: renamed deleteScene"
   echo ""
 fi
 
@@ -916,6 +919,8 @@ c = open('beb.html').read()
 errors = []
 if 'function addCue(' not in c: errors.append("FAIL: addCue() missing")
 if 'onclick="addCue()"' not in c: errors.append("FAIL: ADD CUE button not wired")
+if 'function deleteScene(' not in c: errors.append("FAIL: deleteScene() missing")
+if 'onclick="deleteScene(' not in c: errors.append("FAIL: DELETE SCENE button not wired")
 if 'function updateRuntime(' not in c: errors.append("FAIL: updateRuntime() missing")
 if 'updateRuntime();' not in c: errors.append("FAIL: updateRuntime not called from updateAllDisplays")
 if 'dur=this.value;updateRuntime()' not in c: errors.append("FAIL: duration fields not wired to live runtime")
@@ -954,6 +959,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "s/label: 'RedVelvetBRK' }/label: 'Red Velvet Stage' }/" "$BEB"
   sed -i '' "s/test(cue.scene || '')) return '';/test(cue.scene || '')) return host;/" "$BEB"
   sed -i '' 's/function _brk_addCue(/function addCue(/' "$BEB"
+  sed -i '' 's/function _brk_deleteScene(/function deleteScene(/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

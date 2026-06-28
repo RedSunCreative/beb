@@ -2672,9 +2672,10 @@ function editScene(i) {
         <div class="edit-field full"><div class="edit-lbl">CAMERAS NEXT</div><textarea class="edit-ta" id="ef-camerasNext">${esc(c.camerasNext)}</textarea></div>
         <div class="edit-field full"><div class="edit-lbl">LIGHTING NEXT</div><textarea class="edit-ta" id="ef-lightingNext">${esc(c.lightingNext)}</textarea></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:6px;">
+      <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
         <button class="edit-save-btn" onclick="saveSceneEdit()">SAVE CHANGES</button>
         <button class="edit-close-btn" onclick="closeSceneEdit()">CANCEL</button>
+        <button onclick="deleteScene(${i})" title="Delete this scene" style="margin-left:auto;background:transparent;border:1px solid rgba(232,67,26,0.4);color:var(--orange);border-radius:4px;padding:7px 14px;font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">🗑 Delete Scene</button>
       </div>
     </div>`;
   document.getElementById('scene-edit-container').scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -2712,6 +2713,20 @@ function saveSceneEdit() {
 function closeSceneEdit() {
   editingSceneIdx = null;
   document.getElementById('scene-edit-container').innerHTML = '';
+}
+
+// Delete a scene from the cue list (confirmed). Recomputes neighbors and saves.
+function deleteScene(i) {
+  const c = showData.cues[i];
+  if (!c) return;
+  const name = c.scene || 'this scene';
+  if (!confirm(`Delete "${name}"? Scene ${i + 1} will be removed from the cue list.`)) return;
+  const next = showData.cues.slice();
+  next.splice(i, 1);
+  closeSceneEdit();
+  setCues(next);          // re-derive standby/next/warnings for the new order
+  updateAllDisplays();
+  saveState();
 }
 
 // ─── GENERATE RUN OF SHOW ───
