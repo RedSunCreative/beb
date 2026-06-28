@@ -1990,6 +1990,10 @@ function updateAllDisplays() {
         <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;">${esc(g.segment||'')}</div>
         ${g.bio ? `<div style="font-size:11px;color:var(--muted);margin-bottom:5px;line-height:1.4;font-style:italic;">${esc(g.bio.slice(0,160))}${g.bio.length>160?'…':''}</div>` : ''}
         ${g.socials ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">&#128279; ${esc(g.socials.slice(0,100))}</div>` : ''}
+        ${(g.profile1 || g.profile2) ? `<div style="font-size:10px;margin-bottom:4px;display:flex;gap:12px;flex-wrap:wrap;">
+          ${g.profile1 ? `<a href="${esc(/^https?:\/\//i.test(g.profile1) ? g.profile1 : 'https://'+g.profile1)}" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:none;font-weight:600;" title="${esc(g.profile1)}">&#128279; Profile 1 &#8599;</a>` : ''}
+          ${g.profile2 ? `<a href="${esc(/^https?:\/\//i.test(g.profile2) ? g.profile2 : 'https://'+g.profile2)}" target="_blank" rel="noopener" style="color:var(--teal);text-decoration:none;font-weight:600;" title="${esc(g.profile2)}">&#128279; Profile 2 &#8599;</a>` : ''}
+        </div>` : ''}
         <div class="crew-fields">
           <input class="crew-inp" placeholder="Role (e.g. Music, Show Chef, Co-Host)" value="${esc(g.role||'')}" onchange="updateGuest(${i},'role',this.value)" title="What this guest does on the show" style="grid-column:span 2;">
           <select class="crew-inp" onchange="updateGuest(${i},'stageType',this.value)" title="Which stage / scene type this guest appears in">

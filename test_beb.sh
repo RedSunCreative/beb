@@ -785,6 +785,8 @@ if "updateGuest(${i},'intro'" not in c:
 for field in ('about','profile1','profile2'):
     if ("updateGuest(${i},'%s'" % field) not in c:
         errors.append("FAIL: guest card missing editable %s field" % field)
+if "'https://'+g.profile1" not in c:
+    errors.append("FAIL: profile links not rendered as clickable anchors")
 # Boo must know the intro field
 if ', intro,' not in c:
     errors.append("FAIL: guest shape in system prompt missing intro field")
