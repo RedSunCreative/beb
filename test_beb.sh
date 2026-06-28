@@ -52,6 +52,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Disable the performer-via-song lookup in featuredPerson (simulates missing ready cues)
   sed -i '' 's/    if (bySong) return bySong.name;/    if (false \&\& bySong) return bySong.name;/' "$BEB"
   echo "  Injected: disabled song-lookup in featuredPerson"
+  # Neutralize the guest role default (simulates role going undefined)
+  sed -i '' "s/  if (g.role == null) g.role = '';/  if (g.role == null) g.role = g.role;/" "$BEB"
+  echo "  Injected: removed guest role default"
   echo ""
 fi
 
@@ -161,8 +164,8 @@ REQUIRED=(
   "THE SHOW BLUEPRINT"
   "When asking a clarifying question"
   "MANDATORY"
-  "GUEST TYPE"
-  "Pod guest or performance guest"
+  "GUEST TYPE & ROLE"
+  "Which stage — pod, performance, or Kitchen Disco"
 )
 for section in "${REQUIRED[@]}"; do
   if grep -qF "$section" "$BEB"; then
@@ -703,6 +706,53 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 16: guest role field + special (kitchen) guest ready cue
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 16: guest role + kitchen/special ready cue ---"
+python3 - > /tmp/beb_role.js <<'PYEOF'
+src=open('beb.html').read()
+def extract(name):
+    i=src.find('function '+name+'('); b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+    return ''
+for fn in ('normalizeGuest','featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+    print(extract(fn) or ('// MISSING '+fn)); print()
+print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+// role defaults to '' and coerces non-strings
+assert(normalizeGuest({}).role === '', 'role should default to empty string');
+assert(normalizeGuest({role:5}).role === '5', 'non-string role should coerce to string');
+assert(normalizeGuest({role:'Show Chef'}).role === 'Show Chef', 'role string should pass through');
+// a special guest on the kitchen stage gets a ready cue to the Kitchen Disco
+const guests = [{name:'Chef Jane', stageType:'kitchen', role:'Show Chef', songs:[]}];
+const cues = [
+  {scene:'INTERVIEW — Kyndle Lee', stageType:'pod', dur:10},
+  {scene:'KITCHEN DISCO #1', stageType:'kitchen', dur:6, booName:'Chef Jane'},
+];
+assert(featuredPerson(cues[1], guests) === 'Chef Jane', 'kitchen scene should feature its booName guest, got "'+featuredPerson(cues[1],guests)+'"');
+const r = recomputeStructuralFields(cues, guests);
+assert(r[0].standbyWho === 'Chef Jane', 'scene before kitchen disco should ready the chef, got "'+r[0].standbyWho+'"');
+assert(r[0].standbyStage === 'kitchen', 'ready stage should be kitchen, got "'+r[0].standbyStage+'"');
+assert(STAGE_LABEL['kitchen'] === 'Kitchen Disco', 'kitchen stage label');
+console.log('OK');
+''')
+PYEOF
+
+ROLE_RESULT=$(node /tmp/beb_role.js 2>&1)
+if [[ "$ROLE_RESULT" == *"OK"* ]] && [[ "$ROLE_RESULT" != *"FAIL"* ]] && [[ "$ROLE_RESULT" != *"MISSING"* ]]; then
+  pass "guest role field round-trips + special (kitchen) guest gets a ready cue"
+else
+  fail "role/special-guest test: $ROLE_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -716,6 +766,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/if (u.cues?.length > 0) showData.cues = u.cues;/if (u.cues?.length > 0) setCues(u.cues);/' "$BEB"
   sed -i '' 's/      \/\/ ...deriveStandby(arr, i, guests),/      ...deriveStandby(arr, i, guests),/' "$BEB"
   sed -i '' 's/    if (false \&\& bySong) return bySong.name;/    if (bySong) return bySong.name;/' "$BEB"
+  sed -i '' "s/  if (g.role == null) g.role = g.role;/  if (g.role == null) g.role = '';/" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

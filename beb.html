@@ -1438,21 +1438,25 @@ CRITICAL: Never write placeholders. Real names only. If you can't find info on a
 Format: plain text bullet lines only, no markdown. Tight — prompter card, not script.
 When all scenes are done, send the COMPLETE updated cues array.
 
-Guest shape: { name, segment, stageType: "pod"|"music"|"kitchen", mobile, email, bio, socials, contactMethod, songs: [{name, duration}], confirmed: true|false, vip: true|false, floorNotes: "" }
+Guest shape: { name, role, segment, stageType: "pod"|"music"|"kitchen", mobile, email, bio, socials, contactMethod, songs: [{name, duration}], confirmed: true|false, vip: true|false, floorNotes: "" }
+role: a short freeform descriptor of what this guest does on the show — e.g. "Music", "Poetry", "Show Chef", "Co-Host", "Comedy". Set it whenever Mark describes the guest. It is label/metadata for Mark; stageType still controls WHERE the guest goes in the script.
 confirmed: true once attendance is confirmed. vip: true marks a guest as VIP. floorNotes: brief handling instruction for the Floor Manager (e.g. "hearing difficulty — use written notes").
 bio: guest's self-written biography from their intake form — use to write cueCard introductions. socials: MUST be a plain string (comma-separated handles/URLs) — never an object or array. contactMethod: how the audience can reach them after the show — also a plain string.
 When Mark says "[guest] is confirmed" / "confirm [guest]" / "[guest] confirmed" — set confirmed:true. When Mark says "[guest] is VIP" — set vip:true. When Mark adds a floor note for a guest — set floorNotes.
 When Mark says "write intro cue cards" or "generate cue card intros" — for each guest scene whose guest has a bio, write a cueCard that gives Mark a punchy host introduction: 3-5 bullet lines, real names only, drawn from their bio. Scenes with no matching guest bio get cueCard "".
 stageType "music" = performance stage — covers all non-pod acts: music, comedy, poetry, dramatic reading, spoken word, etc. Call these guests "performance guests" when talking to Mark, not "musical guests."
-stageType "pod" = pod interview guest. stageType "kitchen" = Kitchen Disco host.
+stageType "pod" = pod interview guest. stageType "kitchen" = appears in the Kitchen Disco (e.g. a guest chef or other special guest).
 epThemeDesc: the descriptive paragraph for this episode's theme — set when Mark describes the theme in paragraph form.
 watchURL: the public watch link (default: https://littlebigvoices.com) — set if Mark gives a different URL.
 
-=== GUEST TYPE — ALWAYS CONFIRM BEFORE ADDING ===
-When Mark adds a new guest and hasn't specified whether they're a pod guest or a performance guest, ask before adding:
-"Pod guest or performance guest?"
-Never assume pod. Never assume music/performance. One question, then act.
-If stageType is clear from context (e.g. "add her as a performance guest", "he's doing a comedy set"), proceed without asking.
+=== GUEST TYPE & ROLE — ALWAYS CONFIRM BEFORE ADDING ===
+Every guest needs two things: a stageType (WHERE they appear) and a role (WHAT they do).
+  • stageType — one of: "pod" (Pod Stage interview), "music" (Performance/Music Stage — music, comedy, poetry, spoken word, dramatic reading, etc.), "kitchen" (Kitchen Disco — e.g. a guest chef).
+  • role — a short freeform label: "Music", "Poetry", "Show Chef", "Co-Host", "Comedy", etc.
+Special guests are FLEXIBLE — there is no fixed list. Capture the role and place them on the stage that fits: a Show Chef → kitchen, a Co-Host → pod, a poet → music.
+When Mark adds a guest and the stageType is not clear from context, ask ONE question, then act: "Which stage — pod, performance, or Kitchen Disco — and what's their role?"
+If it IS clear from context (e.g. "add her as a performance guest", "he's our guest chef in the kitchen"), proceed without asking and set the role from context. Never assume a bare pod/performance binary — kitchen/special guests are first-class.
+When a guest is featured in a scene, set that scene's booName to the guest's name so the floor gets a "get ready" cue — this includes Kitchen Disco / special-guest scenes (set the Kitchen Disco scene's booName to the guest chef).
 Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage, cueCard }
 cueCard: freeform prompter text for host — bullet lines, real names only. "" if not applicable.
 standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
@@ -1739,7 +1743,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
     }
 
     // Auto-correct: if the request implied a guest change but no guests came through, retry
-    const impliesGuestChange = /\b(guest|confirm|vip|pod|performance|music|kitchen|stageType)\b/i.test(text) || answeringClarification;
+    const impliesGuestChange = /\b(guest|confirm|vip|pod|performance|music|kitchen|stageType|role|chef|co-?host)\b/i.test(text) || answeringClarification;
     const guestsMissing = !(response.updates?.guests?.length > 0);
     if (impliesGuestChange && guestsMissing) {
       conversationHistory.push({ role: 'user', content: "Your last response didn't include updates.guests. Send the complete updated guests array now. No speech needed — just the JSON." });
@@ -1959,7 +1963,7 @@ function updateAllDisplays() {
               <span style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:${g.confirmed ? 'var(--green)' : 'var(--muted)'};">${g.confirmed ? 'CONFIRMED' : 'UNCONFIRMED'}</span>
             </label>
             <span class="guest-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(g.name||'')}</span>
-            <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;flex-shrink:0;">${(g.stageType||'').toUpperCase()}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:0.62rem;color:#8A8A9A;letter-spacing:0.1em;flex-shrink:0;">${(g.stageType||'').toUpperCase()}${g.role ? ' · ' + esc(g.role) : ''}</span>
             ${badges.replace(/<span[^>]*>CONFIRMED<\/span>/, '')}
           </div>
           <button onclick="removeGuest(${i})" title="Remove guest" style="font-size:13px;line-height:1;padding:3px 7px;border-radius:4px;background:transparent;color:rgba(232,67,26,0.6);border:1px solid rgba(232,67,26,0.25);cursor:pointer;flex-shrink:0;margin-left:8px;" onmouseover="this.style.color='var(--orange)';this.style.borderColor='var(--orange)';" onmouseout="this.style.color='rgba(232,67,26,0.6)';this.style.borderColor='rgba(232,67,26,0.25)';">✕</button>
@@ -1985,6 +1989,12 @@ function updateAllDisplays() {
         ${g.bio ? `<div style="font-size:11px;color:var(--muted);margin-bottom:5px;line-height:1.4;font-style:italic;">${esc(g.bio.slice(0,160))}${g.bio.length>160?'…':''}</div>` : ''}
         ${g.socials ? `<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">&#128279; ${esc(g.socials.slice(0,100))}</div>` : ''}
         <div class="crew-fields">
+          <input class="crew-inp" placeholder="Role (e.g. Music, Show Chef, Co-Host)" value="${esc(g.role||'')}" onchange="updateGuest(${i},'role',this.value)" title="What this guest does on the show" style="grid-column:span 2;">
+          <select class="crew-inp" onchange="updateGuest(${i},'stageType',this.value)" title="Which stage / scene type this guest appears in">
+            <option value="pod"${g.stageType==='pod'?' selected':''}>Pod Stage</option>
+            <option value="music"${g.stageType==='music'?' selected':''}>Music Stage</option>
+            <option value="kitchen"${g.stageType==='kitchen'?' selected':''}>Kitchen Disco</option>
+          </select>
           <input class="crew-inp" placeholder="Mobile" value="${esc(g.mobile||'')}" onchange="updateGuest(${i},'mobile',this.value)">
           <input class="crew-inp" placeholder="Email" value="${esc(g.email||'')}" onchange="updateGuest(${i},'email',this.value)" style="grid-column:span 2;">
         </div>
@@ -2205,6 +2215,8 @@ function normalizeGuest(g) {
   }
   if (g.bio != null && typeof g.bio !== 'string') g.bio = String(g.bio);
   if (g.contactMethod != null && typeof g.contactMethod !== 'string') g.contactMethod = String(g.contactMethod);
+  if (g.role == null) g.role = '';
+  else if (typeof g.role !== 'string') g.role = String(g.role);
   return g;
 }
 
@@ -3258,12 +3270,15 @@ function generateHospHTML() {
   const headcount = (ep.guests||[]).length + (ep.crew||[]).length;
   const podGuests  = (ep.guests||[]).filter(g => g.stageType === 'pod');
   const perfGuests = (ep.guests||[]).filter(g => g.stageType === 'music');
+  // Catch-all so no guest is ever dropped from the sheet — kitchen/special and any other stageType.
+  const specialGuests = (ep.guests||[]).filter(g => g.stageType !== 'pod' && g.stageType !== 'music');
   const vipGuests  = (ep.guests||[]).filter(g => g.vip);
 
   const guestRow = (g, idx) => {
     const conf = g.confirmed ? ' (confirmed)' : '';
     const phone = g.mobile ? ' &nbsp;' + g.mobile : '';
-    return `<li>${idx+1}. <b>${esc(g.name)}</b>${phone}${conf}</li>`;
+    const role = g.role ? ' — ' + esc(g.role) : '';
+    return `<li>${idx+1}. <b>${esc(g.name)}</b>${role}${phone}${conf}</li>`;
   };
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>LBV Hospitality Manager — E${ep.epNum}</title>
@@ -3316,6 +3331,7 @@ function generateHospHTML() {
   <hr>
   ${podGuests.length ? `<h3>PODCAST GUESTS:</h3><ul>${podGuests.map(guestRow).join('')}</ul>` : ''}
   ${perfGuests.length ? `<h3>PERFORMANCE GUESTS:</h3><ul>${perfGuests.map(guestRow).join('')}</ul>` : ''}
+  ${specialGuests.length ? `<h3>SPECIAL GUESTS:</h3><ul>${specialGuests.map(guestRow).join('')}</ul>` : ''}
   <h3>CREW:</h3>
   <ul>${(ep.crew||[]).map((c,i) => `<li>${i+1}. <b>${esc(c.name)}</b> — ${esc(c.role||'')}${c.mobile ? ' &nbsp;' + c.mobile : ''}</li>`).join('')}</ul>
   ${vipGuests.length ? `<h3>VIP LIST:</h3><ul>${vipGuests.map(g => `<li><b>${esc(g.name)}</b>${g.floorNotes ? ' — ' + esc(g.floorNotes) : ''}</li>`).join('')}</ul>` : ''}
@@ -3389,9 +3405,12 @@ function generateFloorMgrHTML() {
 
   const podGuests  = (ep.guests||[]).filter(g => g.stageType === 'pod');
   const perfGuests = (ep.guests||[]).filter(g => g.stageType === 'music');
+  const specialGuests = (ep.guests||[]).filter(g => g.stageType !== 'pod' && g.stageType !== 'music');
   const vipGuests  = (ep.guests||[]).filter(g => g.vip);
   const perfNames  = perfGuests.map(g => g.name).join(', ') || '—';
   const podNames   = podGuests.map(g => g.name).join(', ') || '—';
+  const specialNames = specialGuests.map(g => g.name).join(', ') || '—';
+  const specialCall = podCall;
 
   const bsmUrl = `https://redsuncreative.github.io/beb/bsm-e${ep.epNum}.html`;
   const pin = ep.pin || '5000';
@@ -3415,6 +3434,7 @@ function generateFloorMgrHTML() {
   <b>Floor Manager + Hospitality Manager Arrive:</b> ${fmArrive}<br>
   <b>Audio, Video, Camera Operators Arrive:</b> ${avArrive}<br>
   ${perfGuests.length ? `<b>Performance Guest Sound/Video Check:</b> ${perfCall} <span class="muted">(${esc(perfNames)})</span><br>` : ''}
+  ${specialGuests.length ? `<b>Special Guest Check-In:</b> ${specialCall} <span class="muted">(${esc(specialNames)})</span><br>` : ''}
   <b>Pod Guests Sound/Video Checks:</b> ${podCall} <span class="muted">(${esc(podNames)})</span><br>
   <b>Show Circle:</b> ${circle}<br>
   <b>Go Live:</b> ${goLiveFmt}</p>
@@ -3430,6 +3450,10 @@ function generateFloorMgrHTML() {
   ${perfGuests.length ? `<h3>PERFORMANCE GUESTS — E${ep.epNum}</h3>
   ${perfGuests.map((g,i) => `<p style="margin-left:16px;"><b>${i+1}. ${esc(g.name)}</b>${g.mobile ? ' &nbsp;' + g.mobile : ''}<br>
   <span class="muted">Music Stage &mdash; sound/video check at ${perfCall}${g.segment ? ' &mdash; ' + esc(g.segment) : ''}</span></p>`).join('')}` : ''}
+
+  ${specialGuests.length ? `<h3>SPECIAL GUESTS — E${ep.epNum}</h3>
+  ${specialGuests.map((g,i) => `<p style="margin-left:16px;"><b>${i+1}. ${esc(g.name)}</b>${g.role ? ' &mdash; ' + esc(g.role) : ''}${g.mobile ? ' &nbsp;' + g.mobile : ''}<br>
+  <span class="muted">${g.stageType === 'kitchen' ? 'Kitchen Disco' : esc((g.stageType||'').toUpperCase())} &mdash; check-in at ${specialCall}${g.floorNotes ? '<br><b>NOTE: ' + esc(g.floorNotes) + '</b>' : ''}</span></p>`).join('')}` : ''}
 
   ${vipGuests.length ? `<h3>VIP LIST — E${ep.epNum}</h3>
   ${vipGuests.map(g => `<p style="margin-left:16px;"><b>&#9733; ${esc(g.name)}</b>${g.floorNotes ? '<br><span class="muted">' + esc(g.floorNotes) + '</span>' : ''}</p>`).join('')}` : ''}
