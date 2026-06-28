@@ -1,2 +1,10 @@
 node_modules/
 .env
+
+# Supabase row backups — local only, never commit production data
+*-backup-*.json
+builder_state-row*.json
+backups/
+
+# API keys — never commit
+*.rtf

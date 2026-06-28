@@ -43,6 +43,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Revert generateCrewChecklistShareUrl to old double-encoding (simulates SMS link regression)
   sed -i '' 's/return `https:\/\/redsuncreative\.github\.io\/beb\/checklist-view\.html?d=${toBase64Url(data)}`;/return `https:\/\/redsuncreative.github.io\/beb\/checklist-view.html?d=${encodeURIComponent(JSON.stringify(data))}`;/' "$BEB"
   echo "  Injected: generateCrewChecklistShareUrl reverted to encodeURIComponent (simulates SMS double-encoding)"
+  # Revert API cue apply to a raw assignment (simulates the recompute-bypass bug)
+  sed -i '' 's/if (u.cues?.length > 0) setCues(u.cues);/if (u.cues?.length > 0) showData.cues = u.cues;/' "$BEB"
+  echo "  Injected: API cue apply bypasses setCues (raw showData.cues = u.cues)"
+  # Comment out the standby derivation inside recomputeStructuralFields (simulates stale ready/up-next)
+  sed -i '' 's/      ...deriveStandby(arr, i),/      \/\/ ...deriveStandby(arr, i),/' "$BEB"
+  echo "  Injected: removed deriveStandby from recomputeStructuralFields"
   echo ""
 fi
 
@@ -490,6 +496,115 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 12: Adjacency fields re-derive after a reorder (behavioral)
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 12: standby/next re-derive after reorder ---"
+python3 - > /tmp/beb_derive.js 2>/dev/null <<'PYEOF'
+src = open('beb.html').read()
+def extract(name):
+    idx = src.find('function ' + name + '(')
+    if idx < 0: return ''
+    b = src.find('{', idx); depth = 0; i = b
+    while i < len(src):
+        if src[i] == '{': depth += 1
+        elif src[i] == '}':
+            depth -= 1
+            if depth == 0: return src[idx:i+1]
+        i += 1
+    return ''
+out = []
+for fn in ('deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
+    body = extract(fn)
+    if not body:
+        print('// MISSING ' + fn)
+    out.append(body)
+print('\n\n'.join(out))
+print('''
+function assert(c, m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+const original = [
+  {scene:'Opening', stageType:'pod', dur:5},
+  {scene:'Kitchen Disco', stageType:'kitchen', dur:5},
+  {scene:'Interview — Alice', stageType:'pod', dur:10},
+  {scene:'Music Set', stageType:'music', dur:5},
+  {scene:'Interview — Bob', stageType:'pod', dur:10},
+];
+let r = recomputeStructuralFields(original);
+assert(r[1].standbyWho === 'Alice', 'kitchen standby should be Alice before reorder, got ' + r[1].standbyWho);
+assert(r[3].standbyWho === 'Bob', 'music standby should be Bob before reorder, got ' + r[3].standbyWho);
+// reorder -> Opening, Kitchen, Bob, Music, Alice
+const re = original.slice();
+const [bob] = re.splice(4,1);
+const [alice] = re.splice(2,1);
+re.splice(2,0,bob);
+re.splice(4,0,alice);
+r = recomputeStructuralFields(re);
+assert(r[1].standbyWho === 'Bob', 'kitchen standby should re-derive to Bob after reorder, got ' + r[1].standbyWho);
+assert(r[3].standbyWho === 'Alice', 'music standby should re-derive to Alice after reorder, got ' + r[3].standbyWho);
+assert(r[1].nextScene === 'Interview — Bob', 'nextScene after kitchen should be Bob, got ' + r[1].nextScene);
+console.log('OK');
+''')
+PYEOF
+
+DERIVE_RESULT=$(node /tmp/beb_derive.js 2>&1)
+if [[ "$DERIVE_RESULT" == *"OK"* ]] && [[ "$DERIVE_RESULT" != *"FAIL"* ]] && [[ "$DERIVE_RESULT" != *"MISSING"* ]]; then
+  pass "standby/next re-derive correctly after reorder"
+else
+  fail "recompute behavioral test: $DERIVE_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
+# TEST 13: Every cue-mutation path routes through setCues()
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 13: cue mutations route through setCues() ---"
+python3 - > /tmp/beb_setcues.txt 2>&1 <<'PYEOF'
+import re
+content = open('beb.html').read()
+errors = []
+if 'function setCues(' not in content:
+    errors.append("FAIL: setCues() helper not found")
+if 'recomputeStructuralFields' not in content.split('function setCues(')[-1][:200] if 'function setCues(' in content else True:
+    pass  # depth-checked below
+# setCues must recompute
+m = re.search(r'function setCues\([^)]*\)\s*\{([^}]*)\}', content)
+if not m or 'recomputeStructuralFields' not in m.group(1):
+    errors.append("FAIL: setCues() does not call recomputeStructuralFields")
+# API apply paths must use setCues, not raw assignment
+if re.search(r'showData\.cues\s*=\s*u\.cues\b', content):
+    errors.append("FAIL: raw 'showData.cues = u.cues' bypasses setCues (API apply)")
+if re.search(r'showData\.cues\s*=\s*fix\.updates\.cues\b', content):
+    errors.append("FAIL: raw 'showData.cues = fix.updates.cues' bypasses setCues (auto-correct)")
+if 'setCues(u.cues)' not in content:
+    errors.append("FAIL: API apply does not call setCues(u.cues)")
+if 'setCues(fix.updates.cues)' not in content:
+    errors.append("FAIL: auto-correct does not call setCues(fix.updates.cues)")
+# Edit Show Script + FULL DETAILS saves must recompute
+for fn in ('saveROSEditAll', 'saveSceneEdit'):
+    mm = re.search(r'function ' + fn + r'\([^)]*\)\s*\{', content)
+    if not mm:
+        errors.append("FAIL: " + fn + " not found"); continue
+    start = mm.start(); depth = 0; i = content.find('{', start); body_start = i
+    while i < len(content):
+        if content[i] == '{': depth += 1
+        elif content[i] == '}':
+            depth -= 1
+            if depth == 0: break
+        i += 1
+    body = content[body_start:i]
+    if 'setCues(' not in body:
+        errors.append("FAIL: " + fn + " does not route through setCues()")
+print('\n'.join(errors) if errors else "OK")
+PYEOF
+
+SETCUES_RESULT=$(cat /tmp/beb_setcues.txt)
+if [[ "$SETCUES_RESULT" == "OK" ]]; then
+  pass "all cue mutations route through setCues() (single source of truth)"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_setcues.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -500,6 +615,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "s/g\.socials = String(g\.socials);/g.socials = Array.isArray(g.socials) ? g.socials.join(', ') : Object.values(g.socials).join(', ');/" "$BEB"
   sed -i '' 's/const _answeringClarification_REMOVED = lastBooPI.includes/const answeringClarification = lastBooPI.includes/' "$BEB"
   sed -i '' 's/return `https:\/\/redsuncreative\.github\.io\/beb\/checklist-view\.html?d=${encodeURIComponent(JSON\.stringify(data))}`;/return `https:\/\/redsuncreative.github.io\/beb\/checklist-view.html?d=${toBase64Url(data)}`;/' "$BEB"
+  sed -i '' 's/if (u.cues?.length > 0) showData.cues = u.cues;/if (u.cues?.length > 0) setCues(u.cues);/' "$BEB"
+  sed -i '' 's/      \/\/ ...deriveStandby(arr, i),/      ...deriveStandby(arr, i),/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

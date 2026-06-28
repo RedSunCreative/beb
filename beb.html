@@ -731,6 +731,31 @@ function recomputeStructuralFields(cues) {
   });
 }
 
+// Single entry point for replacing the cue array. ALWAYS re-derives adjacency
+// fields (standby / next* / warnings) so the in-memory cues, the on-screen
+// editors, the saved row, and the published BSM/ROS all agree. Use this instead
+// of assigning showData.cues directly anywhere a cue is added, moved, or edited.
+function setCues(arr) {
+  showData.cues = recomputeStructuralFields(arr || []);
+  refreshOpenCueEditors();
+}
+
+// After any cue mutation, re-render whichever cue editor is open so the
+// "ready / up next" it shows matches the freshly-derived data (and what BSM
+// will publish). Skips re-render while the user is actively typing in a field
+// so we never clobber an in-progress edit.
+function refreshOpenCueEditors() {
+  const active = document.activeElement;
+  const rosOverlay = document.getElementById('ros-edit-overlay');
+  if (rosOverlay && rosOverlay.style.display === 'block') {
+    if (!(active && rosOverlay.contains(active))) showROSEditPanel();
+  }
+  if (editingSceneIdx !== null && showData.cues[editingSceneIdx]) {
+    const container = document.getElementById('scene-edit-container');
+    if (!(container && active && container.contains(active))) editScene(editingSceneIdx);
+  }
+}
+
 async function saveState() {
   if (currentEpRow === 0) return; // no row assigned yet for this episode
   try {
@@ -1690,7 +1715,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
       if (u.watchURL !== undefined) showData.watchURL = u.watchURL;
       if (u.guests?.length > 0) showData.guests = u.guests.map(normalizeGuest);
       if (u.crew?.length > 0) showData.crew = u.crew;
-      if (u.cues?.length > 0) showData.cues = u.cues;
+      if (u.cues?.length > 0) setCues(u.cues);
     }
 
     conversationHistory.push(buildHistoryEntry(response));
@@ -1711,7 +1736,7 @@ document.getElementById('mic-btn').classList.remove('thinking');
       try {
         const fix = await callClaude("Your last response didn't include updates.cues. Send the complete updated cues array now. No speech needed — just the JSON.");
         if (fix?.updates?.cues?.length > 0) {
-          showData.cues = fix.updates.cues;
+          setCues(fix.updates.cues);
           conversationHistory.push(buildHistoryEntry(fix));
           response.updates = response.updates || {};
           response.updates.cues = fix.updates.cues;
@@ -2047,11 +2072,12 @@ function initCueDrag() {
       e.preventDefault();
       const targetIdx = parseInt(item.dataset.idx);
       if (_dragSrcIdx === null || _dragSrcIdx === targetIdx) return;
-      const [moved] = showData.cues.splice(_dragSrcIdx, 1);
-      showData.cues.splice(targetIdx, 0, moved);
-      // Re-derive standbys/next*/warnings for the new order and write back into the
-      // live array, so the on-screen cue list reflects the move (not just the DB save).
-      showData.cues = recomputeStructuralFields(showData.cues);
+      const reordered = showData.cues.slice();
+      const [moved] = reordered.splice(_dragSrcIdx, 1);
+      reordered.splice(targetIdx, 0, moved);
+      // Single source of truth: re-derive standbys/next*/warnings for the new order
+      // and re-render any open editor so "ready / up next" matches what BSM publishes.
+      setCues(reordered);
       _dragSrcIdx = null;
       updateAllDisplays();
       saveState();
@@ -2500,6 +2526,9 @@ function saveSceneEdit() {
   c.videoNext   = document.getElementById('ef-videoNext').value;
   c.camerasNext = document.getElementById('ef-camerasNext').value;
   c.lightingNext= document.getElementById('ef-lightingNext').value;
+  // Recompute adjacency fields from the edited cue so standby/next/warnings stay
+  // consistent with what BSM will publish (which always re-derives these).
+  setCues(showData.cues);
   updateAllDisplays();
   saveState();
   closeSceneEdit();
@@ -3499,6 +3528,9 @@ function saveROSEditAll() {
     c.booMsg   = document.getElementById(`re-boo-${i}`)?.value   ?? c.booMsg;
     c.audioNow = document.getElementById(`re-audio-${i}`)?.value ?? c.audioNow;
   });
+  // Stage-type/name edits change neighbor derivations — recompute so the editor,
+  // the saved row, and the published BSM/ROS all agree.
+  setCues(showData.cues);
   updateAllDisplays();
   saveState();
   closeROSEditPanel();
