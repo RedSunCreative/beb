@@ -55,6 +55,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Neutralize the guest role default (simulates role going undefined)
   sed -i '' "s/  if (g.role == null) g.role = '';/  if (g.role == null) g.role = g.role;/" "$BEB"
   echo "  Injected: removed guest role default"
+  # Neutralize the guest intro default
+  sed -i '' "s/  if (g.intro == null) g.intro = '';/  if (g.intro == null) g.intro = g.intro;/" "$BEB"
+  echo "  Injected: removed guest intro default"
+  # Break the generic teleprompter function name (simulates missing reader)
+  sed -i '' 's/function openTeleprompter(/function _brk_openTeleprompter(/' "$BEB"
+  echo "  Injected: renamed openTeleprompter"
   echo ""
 fi
 
@@ -730,6 +736,8 @@ function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
 assert(normalizeGuest({}).role === '', 'role should default to empty string');
 assert(normalizeGuest({role:5}).role === '5', 'non-string role should coerce to string');
 assert(normalizeGuest({role:'Show Chef'}).role === 'Show Chef', 'role string should pass through');
+assert(normalizeGuest({}).intro === '', 'intro should default to empty string');
+assert(normalizeGuest({intro:5}).intro === '5', 'non-string intro should coerce to string');
 // a special guest on the kitchen stage gets a ready cue to the Kitchen Disco
 const guests = [{name:'Chef Jane', stageType:'kitchen', role:'Show Chef', songs:[]}];
 const cues = [
@@ -753,6 +761,37 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 17: guest intro teleprompter wiring present
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 17: guest intro + teleprompter wiring ---"
+python3 - > /tmp/beb_tp.txt 2>&1 <<'PYEOF'
+import re
+c = open('beb.html').read()
+errors = []
+if 'function openTeleprompter(' not in c:
+    errors.append("FAIL: generic openTeleprompter() missing")
+if 'function openGuestIntro(' not in c:
+    errors.append("FAIL: openGuestIntro() missing")
+if "onclick=\"openGuestIntro(" not in c.replace('`','`'):
+    errors.append("FAIL: guest card has no READ INTRO button wired to openGuestIntro")
+if "updateGuest(${i},'intro'" not in c:
+    errors.append("FAIL: guest card has no editable intro field")
+# Boo must know the intro field
+if ', intro,' not in c:
+    errors.append("FAIL: guest shape in system prompt missing intro field")
+if 'spoken introduction Mark reads' not in c:
+    errors.append("FAIL: system prompt missing guest-intro instruction")
+print('\n'.join(errors) if errors else "OK")
+PYEOF
+TP_RESULT=$(cat /tmp/beb_tp.txt)
+if [[ "$TP_RESULT" == "OK" ]]; then
+  pass "guest intro field + generic teleprompter wired (form + Boo)"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_tp.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -767,6 +806,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/      \/\/ ...deriveStandby(arr, i, guests),/      ...deriveStandby(arr, i, guests),/' "$BEB"
   sed -i '' 's/    if (false \&\& bySong) return bySong.name;/    if (bySong) return bySong.name;/' "$BEB"
   sed -i '' "s/  if (g.role == null) g.role = g.role;/  if (g.role == null) g.role = '';/" "$BEB"
+  sed -i '' "s/  if (g.intro == null) g.intro = g.intro;/  if (g.intro == null) g.intro = '';/" "$BEB"
+  sed -i '' 's/function _brk_openTeleprompter(/function openTeleprompter(/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
