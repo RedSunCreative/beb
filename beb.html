@@ -708,6 +708,29 @@ function deriveWarnings(cues, i) {
   return { w5, w2 };
 }
 
+// Single source of truth: re-derive every adjacency-dependent field (next*, standby,
+// warnings) from the CURRENT cue order. Returns a NEW array — assign it back into
+// showData.cues after any add / remove / move / reorder so the live display, the saved
+// data, and the ROS export all agree. (Before this existed, the logic was duplicated in
+// saveState + buildROSHtml and never written back to showData.cues, so a drag-reorder
+// left the on-screen standbys stale until a reload.)
+function recomputeStructuralFields(cues) {
+  return (cues || []).map((c, i, arr) => {
+    const next = arr[i + 1];
+    return {
+      ...c,
+      nextScene:    next?.scene       ?? '',
+      nextHint:     next?.booName     ?? next?.scene ?? '',
+      audioNext:    next?.audioNow    ?? '',
+      videoNext:    next?.videoNow    ?? '',
+      camerasNext:  next?.camerasNow  ?? '',
+      lightingNext: next?.lightingNow ?? '',
+      ...deriveStandby(arr, i),
+      ...deriveWarnings(arr, i)
+    };
+  });
+}
+
 async function saveState() {
   if (currentEpRow === 0) return; // no row assigned yet for this episode
   try {
@@ -716,20 +739,7 @@ async function saveState() {
     if (dataToSave.cues && dataToSave.cues.length === 0) delete dataToSave.cues;
     // Auto-derive structural fields from adjacent cues — always consistent regardless of reorder
     if (dataToSave.cues) {
-      dataToSave.cues = dataToSave.cues.map((c, i, arr) => {
-        const next = arr[i + 1];
-        return {
-          ...c,
-          nextScene:    next?.scene       ?? '',
-          nextHint:     next?.booName     ?? next?.scene ?? '',
-          audioNext:    next?.audioNow    ?? '',
-          videoNext:    next?.videoNow    ?? '',
-          camerasNext:  next?.camerasNow  ?? '',
-          lightingNext: next?.lightingNow ?? '',
-          ...deriveStandby(arr, i),
-          ...deriveWarnings(arr, i)
-        };
-      });
+      dataToSave.cues = recomputeStructuralFields(dataToSave.cues);
     }
     const saves = [
       sb.rpc('merge_builder_state', { p_id: currentEpRow, p_data: dataToSave, p_history: conversationHistory })
@@ -2039,6 +2049,9 @@ function initCueDrag() {
       if (_dragSrcIdx === null || _dragSrcIdx === targetIdx) return;
       const [moved] = showData.cues.splice(_dragSrcIdx, 1);
       showData.cues.splice(targetIdx, 0, moved);
+      // Re-derive standbys/next*/warnings for the new order and write back into the
+      // live array, so the on-screen cue list reflects the move (not just the DB save).
+      showData.cues = recomputeStructuralFields(showData.cues);
       _dragSrcIdx = null;
       updateAllDisplays();
       saveState();
@@ -2499,10 +2512,7 @@ function closeSceneEdit() {
 
 // ─── GENERATE RUN OF SHOW ───
 function buildROSHtml() {
-  const cues = showData.cues.map((c, i, arr) => {
-    const next = arr[i + 1];
-    return { ...c, nextScene: next?.scene ?? '', nextHint: next?.booName ?? next?.scene ?? '', audioNext: next?.audioNow ?? '', videoNext: next?.videoNow ?? '', camerasNext: next?.camerasNow ?? '', lightingNext: next?.lightingNow ?? '', ...deriveStandby(arr, i), ...deriveWarnings(arr, i) };
-  });
+  const cues = recomputeStructuralFields(showData.cues);
   if (!cues.length) return null;
 
   const cfg = CLIENT_CONFIG;
