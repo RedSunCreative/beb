@@ -644,15 +644,17 @@ for fn in ('featuredPerson','deriveStandby','deriveWarnings','recomputeStructura
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
-// Buffer scene whose next pod is a host-named opener (no "— Name") carrying booName.
+// A host-led pod scene (no "— Name" in the title) must NOT surface its booName "Next Up"
+// tease as the on-scene person — that name belongs only to the studio-TV next-up card.
 const cues = [
   {scene:'COLD OPEN', stageType:'music', dur:5},
   {scene:'Mark SHOW OPENER', stageType:'pod', dur:5, booName:'Karly Pittman'},
   {scene:'KITCHEN DISCO', stageType:'kitchen', dur:5},
   {scene:'INTERVIEW — Kyndle Lee', stageType:'pod', dur:10},
 ];
+assert(featuredPerson(cues[1], []) === '', 'pod host-opener must not surface booName as its featured person, got "' + featuredPerson(cues[1], []) + '"');
 const r = recomputeStructuralFields(cues);
-assert(r[0].standbyWho === 'Karly Pittman', 'buffer should fall back to booName for host-named opener, got "' + r[0].standbyWho + '"');
+assert(r[0].standbyWho === 'Kyndle Lee', 'standby should skip the host opener to the next real guest (Kyndle), got "' + r[0].standbyWho + '"');
 // Idempotency: recompute(recompute(x)) === recompute(x)
 const once = JSON.stringify(recomputeStructuralFields(cues));
 const twice = JSON.stringify(recomputeStructuralFields(recomputeStructuralFields(cues)));

@@ -634,11 +634,14 @@ function playSosumi() {
 const { createClient } = supabase;
 const sb = createClient(SB_URL, SB_KEY);
 
-// Who does this cue feature? Pod scenes feature the interviewed guest ("INTERVIEW — Kyndle
-// Lee"). Music/performance scenes feature the PERFORMER — found by matching the title after
-// the em-dash against each guest's song list (the performer's name is NOT in the cue itself).
-// Resolution order: exact guest-name match → song match → (pod only) the parsed title is the
-// guest name → booName. Music titles never fall back to the title (it's a song, not a person).
+// Who does this cue feature (the person ON this scene — NOW)? Pod scenes feature the
+// interviewed guest from the title ("INTERVIEW — Kyndle Lee"). Music/performance scenes
+// feature the PERFORMER, found by matching the title after the em-dash against guests' songs.
+// Resolution: exact guest-name match → song match → (pod) the parsed title → (non-pod) booName.
+// IMPORTANT: pod scenes do NOT fall back to booName — on a pod cue booName is the forward
+// "Next Up" tease, not who's on now, so a host-led scene like "Mark SHOW OPENER" (no name in
+// the title) correctly resolves to nobody instead of bleeding the next-up name into NOW.
+// Non-pod scenes keep the booName fallback so a Kitchen Disco guest-chef is still detected.
 function featuredPerson(cue, guests) {
   guests = guests || [];
   const m = (cue.scene || '').match(/—\s*(.+)$/);
@@ -650,7 +653,8 @@ function featuredPerson(cue, guests) {
     if (bySong) return bySong.name;
     if (cue.stageType === 'pod') return title; // pod title IS a person even if not in the roster
   }
-  return cue.booName || '';
+  if (cue.stageType !== 'pod') return cue.booName || ''; // chef / named-stage person lives in booName
+  return '';
 }
 
 // Single source of truth for studio stages. `value` is what's stored on the cue and
@@ -2614,7 +2618,7 @@ function editScene(i) {
         <div class="edit-field"><div class="edit-lbl">DURATION (MIN)</div><input class="edit-inp" id="ef-dur" value="${esc(c.dur)}"></div>
         <div class="edit-field"><div class="edit-lbl">STAGE TYPE</div><select class="edit-inp" id="ef-stageType">${typeOpts}</select></div>
         <div class="edit-section-head">LIVE DISPLAY</div>
-        <div class="edit-field"><div class="edit-lbl">BOO CALLED NAME</div><input class="edit-inp" id="ef-booName" value="${esc(c.booName)}"></div>
+        <div class="edit-field"><div class="edit-lbl">NEXT UP NAME</div><input class="edit-inp" id="ef-booName" value="${esc(c.booName)}" title="Studio-TV get-ready card: the guest coming up next (not who's on this scene)"></div>
         <div class="edit-field full"><div class="edit-lbl">BOO MESSAGE</div><textarea class="edit-ta" id="ef-booMsg">${esc(c.booMsg)}</textarea></div>
         <div class="edit-field"><div class="edit-lbl">5-MIN WARNING</div><textarea class="edit-ta" id="ef-w5">${esc(c.w5)}</textarea></div>
         <div class="edit-field"><div class="edit-lbl">2-MIN WARNING</div><textarea class="edit-ta" id="ef-w2">${esc(c.w2)}</textarea></div>
