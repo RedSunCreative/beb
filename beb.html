@@ -659,6 +659,11 @@ function featuredPerson(cue, guests) {
   // touching booName, which stays the editable "Next Up" tease.
   const host = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.hostName) ? CLIENT_CONFIG.hostName : '';
   if (host && new RegExp('\\b' + host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(cue.scene || '')) return host;
+  // A guest assigned to this scene's stage (e.g. a Kitchen Disco "Show Chef"). Auto-match only
+  // when exactly one guest is on that stage, so we never guess between multiple same-stage guests
+  // (pod/music scenes usually have several — those resolve by title/song above, not here).
+  const onStage = (cue.stageType ? guests.filter(g => (g.stageType || '') === cue.stageType) : []);
+  if (onStage.length === 1) return onStage[0].name;
   if (cue.stageType !== 'pod') return cue.booName || ''; // chef / named-stage person lives in booName
   return '';
 }

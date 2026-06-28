@@ -757,9 +757,11 @@ assert(normalizeGuest({about:5}).about === '5', 'non-string about should coerce 
 const guests = [{name:'Chef Jane', stageType:'kitchen', role:'Show Chef', songs:[]}];
 const cues = [
   {scene:'INTERVIEW — Kyndle Lee', stageType:'pod', dur:10},
-  {scene:'KITCHEN DISCO #1', stageType:'kitchen', dur:6, booName:'Chef Jane'},
+  {scene:'KITCHEN DISCO #1', stageType:'kitchen', dur:6},
 ];
-assert(featuredPerson(cues[1], guests) === 'Chef Jane', 'kitchen scene should feature its booName guest, got "'+featuredPerson(cues[1],guests)+'"');
+// No name in the title and no booName — the chef is detected purely by being the guest
+// assigned to the kitchen stage.
+assert(featuredPerson(cues[1], guests) === 'Chef Jane', 'kitchen scene should feature its assigned kitchen guest, got "'+featuredPerson(cues[1],guests)+'"');
 const r = recomputeStructuralFields(cues, guests);
 assert(r[0].standbyWho === 'Chef Jane', 'scene before kitchen disco should ready the chef, got "'+r[0].standbyWho+'"');
 assert(r[0].standbyStage === 'kitchen', 'ready stage should be kitchen, got "'+r[0].standbyStage+'"');
