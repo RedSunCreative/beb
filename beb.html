@@ -634,76 +634,61 @@ function playSosumi() {
 const { createClient } = supabase;
 const sb = createClient(SB_URL, SB_KEY);
 
-function deriveStandby(cues, i) {
-  const c = cues[i];
-  // Pre-show / video / countdown: no standby needed
-  if (c.prelive || c.stageType === 'video' || !c.stageType) return { standbyWho: '', standbyStage: '' };
-
-  // Who is the pod guest for a cue? Prefer the "SCENE NAME — Guest Name" pattern,
-  // but fall back to booName (the AI-set "next guest up") when the title carries no
-  // name — e.g. "Mark SHOW OPENER". Additive: never blanks a name we could already find.
-  function podGuest(cue) {
-    const m = (cue.scene || '').match(/—\s*(.+)$/);
-    return (m ? m[1].trim() : '') || cue.booName || '';
+// Who does this cue feature? Pod scenes feature the interviewed guest ("INTERVIEW — Kyndle
+// Lee"). Music/performance scenes feature the PERFORMER — found by matching the title after
+// the em-dash against each guest's song list (the performer's name is NOT in the cue itself).
+// Resolution order: exact guest-name match → song match → (pod only) the parsed title is the
+// guest name → booName. Music titles never fall back to the title (it's a song, not a person).
+function featuredPerson(cue, guests) {
+  guests = guests || [];
+  const m = (cue.scene || '').match(/—\s*(.+)$/);
+  const title = m ? m[1].trim() : '';
+  if (title) {
+    const byName = guests.find(g => (g.name || '').trim().toLowerCase() === title.toLowerCase());
+    if (byName) return byName.name;
+    const bySong = guests.find(g => (g.songs || []).some(s => (s.name || '').trim().toLowerCase() === title.toLowerCase()));
+    if (bySong) return bySong.name;
+    if (cue.stageType === 'pod') return title; // pod title IS a person even if not in the roster
   }
+  return cue.booName || '';
+}
 
-  // Find the next pod cue after index j
-  function nextPodAfter(j) {
-    for (let k = j + 1; k < cues.length; k++) {
-      if (cues[k].stageType === 'pod') return cues[k];
-    }
-    return null;
+const STAGE_LABEL = { pod: 'Pod Stage', music: 'Music Stage', kitchen: 'Kitchen Disco', video: 'Video' };
+
+// Ready cue: during this scene, who needs to get into position — i.e. the person featured in
+// the NEXT scene that has one, sent to that scene's stage. Skips scenes with nobody (video,
+// kitchen-disco link, pre-records). Derived from order + roster, so it's correct after a drag.
+function deriveStandby(cues, i, guests) {
+  for (let k = i + 1; k < cues.length; k++) {
+    const who = featuredPerson(cues[k], guests);
+    if (who) return { standbyWho: who, standbyStage: cues[k].stageType || '' };
   }
-
-  if (c.stageType === 'kitchen' || c.stageType === 'music') {
-    // Buffer scene: who needs to be at the pod for the next pod scene?
-    const nextPod = nextPodAfter(i);
-    const who = nextPod ? podGuest(nextPod) : '';
-    return { standbyWho: who, standbyStage: who ? 'pod' : '' };
-  }
-
-  if (c.stageType === 'pod') {
-    // During a pod scene: the guest coming up after the NEXT buffer
-    let pastBuffer = false;
-    for (let k = i + 1; k < cues.length; k++) {
-      if (!pastBuffer && (cues[k].stageType === 'kitchen' || cues[k].stageType === 'music')) {
-        pastBuffer = true;
-      } else if (pastBuffer && cues[k].stageType === 'pod') {
-        const who = podGuest(cues[k]);
-        return { standbyWho: who, standbyStage: who ? 'pod' : '' };
-      }
-    }
-    return { standbyWho: '', standbyStage: '' };
-  }
-
   return { standbyWho: '', standbyStage: '' };
 }
 
-function deriveWarnings(cues, i) {
+function deriveWarnings(cues, i, guests) {
   const nxt = cues[i + 1];
-  function guestFrom(scene) {
-    const m = (scene || '').match(/—\s*(.+)$/);
-    return m ? m[1].trim() : (scene || '');
-  }
   if (!nxt) return { w5: "5 minutes — finishing the show!", w2: "2 minutes left — almost done!" };
-  const label = nxt.booName || nxt.scene || 'next scene';
+  const who   = featuredPerson(nxt, guests);
+  const stage = STAGE_LABEL[nxt.stageType] || '';
   const type  = nxt.stageType;
   let w5, w2;
-  if (type === 'pod') {
-    const guest = guestFrom(nxt.scene);
-    w5 = `5 minutes — ${guest}, please head to the Pod Stage.`;
-    w2 = `2 minutes — ${guest}, to the Pod Stage now.`;
+  if (type === 'pod' && who) {
+    w5 = `5 minutes — ${who}, please head to the Pod Stage.`;
+    w2 = `2 minutes — ${who}, to the Pod Stage now.`;
   } else if (type === 'kitchen') {
     w5 = `5 minutes — wrapping up, Kitchen Disco is next.`;
     w2 = `2 minutes — heading to Kitchen Disco.`;
   } else if (type === 'music') {
-    const perfLabel = guestFrom(nxt.scene) || nxt.scene || 'performance';
-    w5 = `5 minutes — ${perfLabel} coming up.`;
-    w2 = `2 minutes — ${perfLabel} up next.`;
+    const songTitle = (nxt.scene || '').match(/—\s*(.+)$/)?.[1]?.trim();
+    const label = who || songTitle || 'performance';
+    w5 = `5 minutes — ${label}${who && stage ? `, please head to the ${stage}` : ' coming up'}.`;
+    w2 = `2 minutes — ${label}${who ? ` to the ${stage} now` : ' up next'}.`;
   } else if (type === 'video' || nxt.prelive) {
     w5 = `5 minutes remaining in this segment.`;
     w2 = `2 minutes remaining.`;
   } else {
+    const label = who || nxt.scene || 'next scene';
     w5 = `5 minutes — ${label} up next.`;
     w2 = `2 minutes — ${label}.`;
   }
@@ -716,7 +701,8 @@ function deriveWarnings(cues, i) {
 // data, and the ROS export all agree. (Before this existed, the logic was duplicated in
 // saveState + buildROSHtml and never written back to showData.cues, so a drag-reorder
 // left the on-screen standbys stale until a reload.)
-function recomputeStructuralFields(cues) {
+function recomputeStructuralFields(cues, guests) {
+  guests = guests || (typeof showData !== 'undefined' ? showData.guests : []) || [];
   return (cues || []).map((c, i, arr) => {
     const next = arr[i + 1];
     return {
@@ -727,8 +713,8 @@ function recomputeStructuralFields(cues) {
       videoNext:    next?.videoNow    ?? '',
       camerasNext:  next?.camerasNow  ?? '',
       lightingNext: next?.lightingNow ?? '',
-      ...deriveStandby(arr, i),
-      ...deriveWarnings(arr, i)
+      ...deriveStandby(arr, i, guests),
+      ...deriveWarnings(arr, i, guests)
     };
   });
 }
@@ -797,6 +783,9 @@ async function loadState(rowId) {
       if (showData.cues) {
         const fix = s => typeof s === 'string' ? s.replace(/Sun Set Stage/gi, 'Sunset Stage').replace(/SUN SET STAGE/g, 'SUNSET STAGE') : s;
         showData.cues = showData.cues.map(c => { const n = {}; for (const k of Object.keys(c)) n[k] = fix(c[k]); return n; });
+        // Re-derive ready cues / next / warnings from the loaded order + roster so the
+        // cue list shows correct, current data immediately (not whatever was last saved).
+        showData.cues = recomputeStructuralFields(showData.cues, showData.guests);
       }
       conversationHistory = epRes.data.history || [];
       if (memRes.data?.data?.booMemory?.length > 0) {
@@ -2048,7 +2037,7 @@ function updateAllDisplays() {
         </div>
         <div class="cue-item-name">${c.scene || '(untitled)'}${c.cueCard ? ' <span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--teal);background:rgba(59,184,201,0.12);border-radius:3px;padding:1px 5px;vertical-align:middle;">CC</span>' : ''}</div>
         <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
-        ${c.booName ? `<div class="cue-item-boo">→ ${c.booName}</div>` : ''}
+        ${c.standbyWho ? `<div class="cue-item-boo">READY: ${c.standbyWho}${c.standbyStage ? ' · ' + (STAGE_LABEL[c.standbyStage] || '') : ''}</div>` : ''}
       </div>`).join('');
   initCueDrag();
 }
@@ -2374,7 +2363,7 @@ async function generateBSM() {
 
   const cueLines = showData.cues.map((c, i, arr) => {
     const nxt = arr[i + 1];
-    const warn = deriveWarnings(arr, i);
+    const warn = deriveWarnings(arr, i, showData.guests);
     return `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
     prelive: ${c.prelive ? 'true' : 'false'},
@@ -2394,7 +2383,7 @@ async function generateBSM() {
   }).join(',\n');
 
   const standbyLines = showData.cues.map((c, i, arr) => {
-    const sb = deriveStandby(arr, i);
+    const sb = deriveStandby(arr, i, showData.guests);
     if (!sb.standbyWho) return 'null';
     const isPod = sb.standbyStage === 'pod';
     return `{who: ${q(sb.standbyWho)}, stage: "${isPod ? 'Pod Stage' : sb.standbyStage === 'music' ? 'Music Stage' : 'Kitchen Disco'}", isPod: ${isPod}}`;

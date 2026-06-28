@@ -47,11 +47,11 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/if (u.cues?.length > 0) setCues(u.cues);/if (u.cues?.length > 0) showData.cues = u.cues;/' "$BEB"
   echo "  Injected: API cue apply bypasses setCues (raw showData.cues = u.cues)"
   # Comment out the standby derivation inside recomputeStructuralFields (simulates stale ready/up-next)
-  sed -i '' 's/      ...deriveStandby(arr, i),/      \/\/ ...deriveStandby(arr, i),/' "$BEB"
+  sed -i '' 's/      ...deriveStandby(arr, i, guests),/      \/\/ ...deriveStandby(arr, i, guests),/' "$BEB"
   echo "  Injected: removed deriveStandby from recomputeStructuralFields"
-  # Remove the booName fallback in podGuest (simulates the empty-standby gap)
-  sed -i '' "s/    return (m ? m\[1\].trim() : '') || cue.booName || '';/    return (m ? m[1].trim() : '');/" "$BEB"
-  echo "  Injected: removed booName fallback from podGuest"
+  # Disable the performer-via-song lookup in featuredPerson (simulates missing ready cues)
+  sed -i '' 's/    if (bySong) return bySong.name;/    if (false \&\& bySong) return bySong.name;/' "$BEB"
+  echo "  Injected: disabled song-lookup in featuredPerson"
   echo ""
 fi
 
@@ -517,12 +517,13 @@ def extract(name):
         i += 1
     return ''
 out = []
-for fn in ('deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
+for fn in ('featuredPerson', 'deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
     body = extract(fn)
     if not body:
         print('// MISSING ' + fn)
     out.append(body)
 print('\n\n'.join(out))
+print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print('''
 function assert(c, m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
 const original = [
@@ -623,8 +624,9 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
+print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
 // Buffer scene whose next pod is a host-named opener (no "— Name") carrying booName.
@@ -652,6 +654,55 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 15: performer resolved via song lookup; ready cue points to next performer
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 15: performer-via-song ready cue ---"
+python3 - > /tmp/beb_song.js <<'PYEOF'
+src=open('beb.html').read()
+def extract(name):
+    i=src.find('function '+name+'('); b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+    return ''
+for fn in ('featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+    print(extract(fn) or ('// MISSING '+fn)); print()
+print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+const guests = [
+  {name:'David Rothgeb', stageType:'music', songs:[{name:'Missing In Our Kissing'},{name:'What Can I Do'}]},
+  {name:'Darren Tjepkema', stageType:'music', songs:[{name:'Poetry Reading'}]},
+  {name:'Kyndle Lee', stageType:'pod', songs:[]},
+];
+const cues = [
+  {scene:'INTERVIEW — Kyndle Lee', stageType:'pod', dur:10},
+  {scene:'PERFORMANCE — Missing In Our Kissing', stageType:'music', dur:4},
+  {scene:'PERFORMANCE — Poetry Reading', stageType:'music', dur:2, booName:'Kyndle Lee'},
+];
+// performer resolved from the song roster, NOT the scene title
+assert(featuredPerson(cues[1], guests) === 'David Rothgeb', 'Missing In Our Kissing should resolve to David, got "' + featuredPerson(cues[1], guests) + '"');
+assert(featuredPerson(cues[2], guests) === 'Darren Tjepkema', 'Poetry Reading should resolve to Darren (not stale booName), got "' + featuredPerson(cues[2], guests) + '"');
+// the interview scene's ready cue is the NEXT performer, sent to the Music stage
+const r = recomputeStructuralFields(cues, guests);
+assert(r[0].standbyWho === 'David Rothgeb', 'interview ready cue should be David, got "' + r[0].standbyWho + '"');
+assert(r[0].standbyStage === 'music', 'ready stage should be music, got "' + r[0].standbyStage + '"');
+console.log('OK');
+''')
+PYEOF
+
+SONG_RESULT=$(node /tmp/beb_song.js 2>&1)
+if [[ "$SONG_RESULT" == *"OK"* ]] && [[ "$SONG_RESULT" != *"FAIL"* ]] && [[ "$SONG_RESULT" != *"MISSING"* ]]; then
+  pass "performer resolved via song lookup; ready cue points to next performer"
+else
+  fail "performer/song ready-cue test: $SONG_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -663,8 +714,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/const _answeringClarification_REMOVED = lastBooPI.includes/const answeringClarification = lastBooPI.includes/' "$BEB"
   sed -i '' 's/return `https:\/\/redsuncreative\.github\.io\/beb\/checklist-view\.html?d=${encodeURIComponent(JSON\.stringify(data))}`;/return `https:\/\/redsuncreative.github.io\/beb\/checklist-view.html?d=${toBase64Url(data)}`;/' "$BEB"
   sed -i '' 's/if (u.cues?.length > 0) showData.cues = u.cues;/if (u.cues?.length > 0) setCues(u.cues);/' "$BEB"
-  sed -i '' 's/      \/\/ ...deriveStandby(arr, i),/      ...deriveStandby(arr, i),/' "$BEB"
-  sed -i '' "s/    return (m ? m\[1\].trim() : '');/    return (m ? m[1].trim() : '') || cue.booName || '';/" "$BEB"
+  sed -i '' 's/      \/\/ ...deriveStandby(arr, i, guests),/      ...deriveStandby(arr, i, guests),/' "$BEB"
+  sed -i '' 's/    if (false \&\& bySong) return bySong.name;/    if (bySong) return bySong.name;/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
