@@ -2890,6 +2890,9 @@ async function generateROS() {
   const epNum = showData.epNum || 'X';
   const rosUrl = `https://redsuncreative.github.io/beb/ros-e${epNum}.html`;
   const html = buildROSHtml();
+  // Open in a new tab to view/print immediately — same proven path as the Outline,
+  // so it works even without a GitHub token. (The upload below still publishes a share link.)
+  if (html) { const _w = window.open('', '_blank'); if (_w) { _w.document.write(html); _w.document.close(); } }
   if (!html) { btn.textContent = '📄 SHOW SCRIPTS \u25be'; btn.disabled = false; return; }
 
   const filename = `ros-e${epNum}.html`;
