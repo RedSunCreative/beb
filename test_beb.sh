@@ -834,6 +834,13 @@ if 'STAGE_LABEL[sb.standbyStage]' not in c:
     errors.append("FAIL: generateBSM standby not mapped via STAGE_LABEL (named stages would mislabel)")
 if 'stageType: ${q(c.stageType)}' not in c:
     errors.append("FAIL: cue stageType not emitted into BSM cue data")
+# Cue cards must show NOW / UP NEXT names; BSM cue data must carry now/upNext
+if 'NOW: ${esc(nowWho)}' not in c:
+    errors.append("FAIL: cue card missing NOW name line")
+if 'UP NEXT: ${esc(nextWho)}' not in c:
+    errors.append("FAIL: cue card missing UP NEXT name line")
+if 'now: ${q(featuredPerson(c' not in c:
+    errors.append("FAIL: BSM cue data missing now/upNext names")
 print('\n'.join(errors) if errors else "OK")
 PYEOF
 STAGES_RESULT=$(cat /tmp/beb_stages.txt)

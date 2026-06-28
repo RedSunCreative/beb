@@ -2067,7 +2067,12 @@ function updateAllDisplays() {
   const cl = document.getElementById('cue-list-display');
   cl.innerHTML = showData.cues.length === 0
     ? '<div style="font-size:12px;color:var(--muted)">Tell Boo what\'s in the show...</div>'
-    : showData.cues.map((c, i) => `
+    : showData.cues.map((c, i, arr) => {
+        const nowWho  = featuredPerson(c, showData.guests);
+        const nextCue = arr[i + 1];
+        const nextWho = nextCue ? featuredPerson(nextCue, showData.guests) : '';
+        const readyStage = c.standbyStage ? (STAGE_LABEL[c.standbyStage] || c.standbyStage) : '';
+        return `
       <div class="cue-item ${c.stageType === 'music' ? 'music' : c.stageType === 'kitchen' ? 'kitchen' : c.scene ? 'has-data' : ''}" draggable="true" data-idx="${i}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div style="display:flex;align-items:flex-start;gap:2px;">
@@ -2078,8 +2083,11 @@ function updateAllDisplays() {
         </div>
         <div class="cue-item-name">${c.scene || '(untitled)'}${c.cueCard ? ' <span style="font-size:9px;font-weight:700;letter-spacing:1px;color:var(--teal);background:rgba(59,184,201,0.12);border-radius:3px;padding:1px 5px;vertical-align:middle;">CC</span>' : ''}</div>
         <div class="cue-item-dur">${c.dur || '?'} min${c.stageType ? ' · ' + c.stageType.toUpperCase() : ''}</div>
-        ${c.standbyWho ? `<div class="cue-item-boo">READY: ${c.standbyWho}${c.standbyStage ? ' · ' + (STAGE_LABEL[c.standbyStage] || c.standbyStage) : ''}</div>` : ''}
-      </div>`).join('');
+        ${nowWho ? `<div class="cue-item-boo" style="color:#4ade80;">NOW: ${esc(nowWho)}</div>` : ''}
+        ${nextWho ? `<div class="cue-item-boo" style="color:var(--teal);">UP NEXT: ${esc(nextWho)}</div>` : ''}
+        ${c.standbyWho ? `<div class="cue-item-boo">READY: ${esc(c.standbyWho)}${readyStage ? ' · ' + readyStage : ''}</div>` : ''}
+      </div>`;
+      }).join('');
   initCueDrag();
 }
 
@@ -2503,6 +2511,7 @@ async function generateBSM() {
     return `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
     prelive: ${c.prelive ? 'true' : 'false'}, stageType: ${q(c.stageType)}, stageLabel: ${q(STAGE_LABEL[c.stageType] || c.stageType)},
+    now: ${q(featuredPerson(c, showData.guests))}, upNext: ${q(nxt ? featuredPerson(nxt, showData.guests) : '')},
     booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
     w5: ${q(warn.w5)}, w2: ${q(warn.w2)},
     next: ${q(nxt?.booName ?? nxt?.scene ?? '')}, nextScene: ${q(nxt?.scene ?? '')},
