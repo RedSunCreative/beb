@@ -49,6 +49,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Comment out the standby derivation inside recomputeStructuralFields (simulates stale ready/up-next)
   sed -i '' 's/      ...deriveStandby(arr, i),/      \/\/ ...deriveStandby(arr, i),/' "$BEB"
   echo "  Injected: removed deriveStandby from recomputeStructuralFields"
+  # Remove the booName fallback in podGuest (simulates the empty-standby gap)
+  sed -i '' "s/    return (m ? m\[1\].trim() : '') || cue.booName || '';/    return (m ? m[1].trim() : '');/" "$BEB"
+  echo "  Injected: removed booName fallback from podGuest"
   echo ""
 fi
 
@@ -605,6 +608,50 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 14: standby falls back to booName + recompute is idempotent
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 14: booName fallback + idempotent recompute ---"
+python3 - > /tmp/beb_fallback.js <<'PYEOF'
+src=open('beb.html').read()
+def extract(name):
+    i=src.find('function '+name+'('); b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+    return ''
+for fn in ('deriveStandby','deriveWarnings','recomputeStructuralFields'):
+    print(extract(fn) or ('// MISSING '+fn)); print()
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+// Buffer scene whose next pod is a host-named opener (no "— Name") carrying booName.
+const cues = [
+  {scene:'COLD OPEN', stageType:'music', dur:5},
+  {scene:'Mark SHOW OPENER', stageType:'pod', dur:5, booName:'Karly Pittman'},
+  {scene:'KITCHEN DISCO', stageType:'kitchen', dur:5},
+  {scene:'INTERVIEW — Kyndle Lee', stageType:'pod', dur:10},
+];
+const r = recomputeStructuralFields(cues);
+assert(r[0].standbyWho === 'Karly Pittman', 'buffer should fall back to booName for host-named opener, got "' + r[0].standbyWho + '"');
+// Idempotency: recompute(recompute(x)) === recompute(x)
+const once = JSON.stringify(recomputeStructuralFields(cues));
+const twice = JSON.stringify(recomputeStructuralFields(recomputeStructuralFields(cues)));
+assert(once === twice, 'recompute is not idempotent');
+console.log('OK');
+''')
+PYEOF
+
+FALLBACK_RESULT=$(node /tmp/beb_fallback.js 2>&1)
+if [[ "$FALLBACK_RESULT" == *"OK"* ]] && [[ "$FALLBACK_RESULT" != *"FAIL"* ]] && [[ "$FALLBACK_RESULT" != *"MISSING"* ]]; then
+  pass "standby falls back to booName + recompute is idempotent"
+else
+  fail "booName-fallback/idempotency test: $FALLBACK_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -617,6 +664,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/return `https:\/\/redsuncreative\.github\.io\/beb\/checklist-view\.html?d=${encodeURIComponent(JSON\.stringify(data))}`;/return `https:\/\/redsuncreative.github.io\/beb\/checklist-view.html?d=${toBase64Url(data)}`;/' "$BEB"
   sed -i '' 's/if (u.cues?.length > 0) showData.cues = u.cues;/if (u.cues?.length > 0) setCues(u.cues);/' "$BEB"
   sed -i '' 's/      \/\/ ...deriveStandby(arr, i),/      ...deriveStandby(arr, i),/' "$BEB"
+  sed -i '' "s/    return (m ? m\[1\].trim() : '');/    return (m ? m[1].trim() : '') || cue.booName || '';/" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

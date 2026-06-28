@@ -639,10 +639,12 @@ function deriveStandby(cues, i) {
   // Pre-show / video / countdown: no standby needed
   if (c.prelive || c.stageType === 'video' || !c.stageType) return { standbyWho: '', standbyStage: '' };
 
-  // Extract guest name from "SCENE NAME — Guest Name" pattern
-  function guestFrom(scene) {
-    const m = (scene || '').match(/—\s*(.+)$/);
-    return m ? m[1].trim() : '';
+  // Who is the pod guest for a cue? Prefer the "SCENE NAME — Guest Name" pattern,
+  // but fall back to booName (the AI-set "next guest up") when the title carries no
+  // name — e.g. "Mark SHOW OPENER". Additive: never blanks a name we could already find.
+  function podGuest(cue) {
+    const m = (cue.scene || '').match(/—\s*(.+)$/);
+    return (m ? m[1].trim() : '') || cue.booName || '';
   }
 
   // Find the next pod cue after index j
@@ -656,7 +658,7 @@ function deriveStandby(cues, i) {
   if (c.stageType === 'kitchen' || c.stageType === 'music') {
     // Buffer scene: who needs to be at the pod for the next pod scene?
     const nextPod = nextPodAfter(i);
-    const who = nextPod ? guestFrom(nextPod.scene) : '';
+    const who = nextPod ? podGuest(nextPod) : '';
     return { standbyWho: who, standbyStage: who ? 'pod' : '' };
   }
 
@@ -667,7 +669,7 @@ function deriveStandby(cues, i) {
       if (!pastBuffer && (cues[k].stageType === 'kitchen' || cues[k].stageType === 'music')) {
         pastBuffer = true;
       } else if (pastBuffer && cues[k].stageType === 'pod') {
-        const who = guestFrom(cues[k].scene);
+        const who = podGuest(cues[k]);
         return { standbyWho: who, standbyStage: who ? 'pod' : '' };
       }
     }
@@ -750,9 +752,12 @@ function refreshOpenCueEditors() {
   if (rosOverlay && rosOverlay.style.display === 'block') {
     if (!(active && rosOverlay.contains(active))) showROSEditPanel();
   }
-  if (editingSceneIdx !== null && showData.cues[editingSceneIdx]) {
+  // A single-scene FULL DETAILS panel is keyed by index; a reorder shifts indices,
+  // so re-rendering it could show the WRONG scene. Close it (unless the user is
+  // actively typing in it) so it's reopened against the correct, current cue.
+  if (editingSceneIdx !== null) {
     const container = document.getElementById('scene-edit-container');
-    if (!(container && active && container.contains(active))) editScene(editingSceneIdx);
+    if (!(container && active && container.contains(active))) closeSceneEdit();
   }
 }
 
