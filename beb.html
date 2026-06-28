@@ -1438,9 +1438,10 @@ CRITICAL: Never write placeholders. Real names only. If you can't find info on a
 Format: plain text bullet lines only, no markdown. Tight — prompter card, not script.
 When all scenes are done, send the COMPLETE updated cues array.
 
-Guest shape: { name, role, intro, segment, stageType: "pod"|"music"|"kitchen", mobile, email, bio, socials, contactMethod, songs: [{name, duration}], confirmed: true|false, vip: true|false, floorNotes: "" }
+Guest shape: { name, role, intro, about, segment, stageType: "pod"|"music"|"kitchen", mobile, email, bio, profile1, profile2, socials, contactMethod, songs: [{name, duration}], confirmed: true|false, vip: true|false, floorNotes: "" }
 role: a short freeform descriptor of what this guest does on the show — e.g. "Music", "Poetry", "Show Chef", "Co-Host", "Comedy". Set it whenever Mark describes the guest. It is label/metadata for Mark; stageType still controls WHERE the guest goes in the script.
-intro: the spoken introduction Mark reads ALOUD to bring this guest on — warm, conversational prose (full sentences, NOT bullet points), real names, drawn from their bio. Set it when Mark says "write guest intros", "write an intro for [guest]", or "intro for [guest]". This is distinct from the scene cueCard (terse bullet prompter notes); the intro is the actual words Mark speaks.
+intro: the spoken introduction Mark reads ALOUD to bring this guest on — warm, conversational prose (full sentences, NOT bullet points), real names, drawn from their bio AND their about field. Set it when Mark says "write guest intros", "write an intro for [guest]", or "intro for [guest]". This is distinct from the scene cueCard (terse bullet prompter notes); the intro is the actual words Mark speaks.
+about: freeform info Mark pastes about a guest (research, articles, notes). Use it together with bio when writing the guest's intro and cueCard. profile1, profile2: the guest's social profile URLs — plain strings; you may use them as sources when researching the guest.
 confirmed: true once attendance is confirmed. vip: true marks a guest as VIP. floorNotes: brief handling instruction for the Floor Manager (e.g. "hearing difficulty — use written notes").
 bio: guest's self-written biography from their intake form — use to write cueCard introductions. socials: MUST be a plain string (comma-separated handles/URLs) — never an object or array. contactMethod: how the audience can reach them after the show — also a plain string.
 When Mark says "[guest] is confirmed" / "confirm [guest]" / "[guest] confirmed" — set confirmed:true. When Mark says "[guest] is VIP" — set vip:true. When Mark adds a floor note for a guest — set floorNotes.
@@ -1998,7 +1999,11 @@ function updateAllDisplays() {
           </select>
           <input class="crew-inp" placeholder="Mobile" value="${esc(g.mobile||'')}" onchange="updateGuest(${i},'mobile',this.value)">
           <input class="crew-inp" placeholder="Email" value="${esc(g.email||'')}" onchange="updateGuest(${i},'email',this.value)" style="grid-column:span 2;">
+          <input class="crew-inp" placeholder="Profile 1 (social URL)" value="${esc(g.profile1||'')}" onchange="updateGuest(${i},'profile1',this.value)" style="grid-column:span 3;">
+          <input class="crew-inp" placeholder="Profile 2 (social URL)" value="${esc(g.profile2||'')}" onchange="updateGuest(${i},'profile2',this.value)" style="grid-column:span 3;">
         </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:var(--muted);margin:6px 0 3px;">ABOUT <span style="font-weight:400;text-transform:none;letter-spacing:0;">(paste anything about the guest — Boo uses this to write the intro)</span></div>
+        <textarea placeholder="Paste bio, articles, notes — anything that helps Boo introduce them..." onchange="updateGuest(${i},'about',this.value)" style="width:100%;box-sizing:border-box;min-height:46px;resize:vertical;background:var(--dark);border:1px solid var(--border);border-radius:5px;color:var(--white);font-size:12px;padding:7px 9px;line-height:1.5;font-family:inherit;">${esc(g.about||'')}</textarea>
         <div style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:var(--muted);margin:6px 0 3px;">GUEST INTRO <span style="font-weight:400;text-transform:none;letter-spacing:0;">(what you'll say to bring them on — Boo can write this)</span></div>
         <textarea placeholder="e.g. Our next guest has spent fifteen years..." onchange="updateGuest(${i},'intro',this.value)" style="width:100%;box-sizing:border-box;min-height:46px;resize:vertical;background:var(--dark);border:1px solid var(--border);border-radius:5px;color:var(--white);font-size:12px;padding:7px 9px;line-height:1.5;font-family:inherit;">${esc(g.intro||'')}</textarea>
         <div style="margin-top:5px;"><button onclick="openGuestIntro(${i})"${g.intro ? '' : ' disabled'} style="font-size:10px;letter-spacing:1px;padding:5px 12px;border-radius:4px;background:#9966dd;color:#fff;border:none;font-weight:700;cursor:${g.intro?'pointer':'not-allowed'};${g.intro?'':'opacity:0.4;'}" title="Open this intro full-screen to read aloud">📺 READ INTRO ▶</button></div>
@@ -2310,6 +2315,10 @@ function normalizeGuest(g) {
   else if (typeof g.role !== 'string') g.role = String(g.role);
   if (g.intro == null) g.intro = '';
   else if (typeof g.intro !== 'string') g.intro = String(g.intro);
+  for (const k of ['about', 'profile1', 'profile2']) {
+    if (g[k] == null) g[k] = '';
+    else if (typeof g[k] !== 'string') g[k] = String(g[k]);
+  }
   return g;
 }
 

@@ -61,6 +61,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Break the generic teleprompter function name (simulates missing reader)
   sed -i '' 's/function openTeleprompter(/function _brk_openTeleprompter(/' "$BEB"
   echo "  Injected: renamed openTeleprompter"
+  # Break the guest About field wiring
+  sed -i '' "s/,'about',this.value)/,'aboutBRK',this.value)/" "$BEB"
+  echo "  Injected: broke guest About field wiring"
   echo ""
 fi
 
@@ -738,6 +741,8 @@ assert(normalizeGuest({role:5}).role === '5', 'non-string role should coerce to 
 assert(normalizeGuest({role:'Show Chef'}).role === 'Show Chef', 'role string should pass through');
 assert(normalizeGuest({}).intro === '', 'intro should default to empty string');
 assert(normalizeGuest({intro:5}).intro === '5', 'non-string intro should coerce to string');
+['about','profile1','profile2'].forEach(function(k){ assert(normalizeGuest({})[k] === '', k+' should default to empty string'); });
+assert(normalizeGuest({about:5}).about === '5', 'non-string about should coerce to string');
 // a special guest on the kitchen stage gets a ready cue to the Kitchen Disco
 const guests = [{name:'Chef Jane', stageType:'kitchen', role:'Show Chef', songs:[]}];
 const cues = [
@@ -777,9 +782,14 @@ if "onclick=\"openGuestIntro(" not in c.replace('`','`'):
     errors.append("FAIL: guest card has no READ INTRO button wired to openGuestIntro")
 if "updateGuest(${i},'intro'" not in c:
     errors.append("FAIL: guest card has no editable intro field")
+for field in ('about','profile1','profile2'):
+    if ("updateGuest(${i},'%s'" % field) not in c:
+        errors.append("FAIL: guest card missing editable %s field" % field)
 # Boo must know the intro field
 if ', intro,' not in c:
     errors.append("FAIL: guest shape in system prompt missing intro field")
+if ', about,' not in c or 'profile1, profile2' not in c:
+    errors.append("FAIL: guest shape in system prompt missing about/profile fields")
 if 'spoken introduction Mark reads' not in c:
     errors.append("FAIL: system prompt missing guest-intro instruction")
 print('\n'.join(errors) if errors else "OK")
@@ -808,6 +818,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "s/  if (g.role == null) g.role = g.role;/  if (g.role == null) g.role = '';/" "$BEB"
   sed -i '' "s/  if (g.intro == null) g.intro = g.intro;/  if (g.intro == null) g.intro = '';/" "$BEB"
   sed -i '' 's/function _brk_openTeleprompter(/function openTeleprompter(/' "$BEB"
+  sed -i '' "s/,'aboutBRK',this.value)/,'about',this.value)/" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
