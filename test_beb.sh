@@ -666,8 +666,13 @@ assert(featuredPerson(cues[1], []) === 'Mark', 'host-opener should resolve to th
 assert(featuredPerson(cues[1], []) !== 'Karly Pittman', 'host-opener must NOT surface the booName next-up tease');
 const r = recomputeStructuralFields(cues);
 assert(r[0].standbyWho === 'Mark', 'READY before the opener should be the host (Mark), got "' + r[0].standbyWho + '"');
-// A guest named in the title beats the host: "MARK INTRODUCES DAVID" features David, not Mark.
-assert(featuredPerson({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'David Rothgeb', 'guest named in title must beat host, got "' + featuredPerson({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) + '"');
+// The host LEADS a scene that names him: "MARK INTRODUCES DAVID" features Mark (introducing) —
+// David is the one being brought up (UP NEXT), not who's on NOW.
+assert(featuredPerson({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'Mark', 'host leads a scene naming him, got "' + featuredPerson({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) + '"');
+// NOW is never its own standby: deriveStandby skips the current featured person.
+{ const _c=[{scene:'PERFORMANCE — A', stageType:'music', booName:''},{scene:'PERFORMANCE — B', stageType:'music'}];
+  const _g=[{name:'Dee', stageType:'music', songs:[{name:'A'},{name:'B'}]}];
+  assert(deriveStandby(_c,0,_g).standbyWho !== 'Dee', 'NOW performer must not also be their own READY cue'); }
 // ...but the host still resolves when no guest is named in the title.
 assert(featuredPerson({scene:'Mark SHOW OPENER', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'Mark', 'host should still resolve when no guest is in the title');
 // Idempotency: recompute(recompute(x)) === recompute(x)

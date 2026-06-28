@@ -655,16 +655,15 @@ function featuredPerson(cue, guests) {
     if (bySong) return bySong.name;
     if (cue.stageType === 'pod') return title; // pod title IS a person even if not in the roster
   }
-  // A GUEST named anywhere in the title wins over the host — e.g. "MARK INTRODUCES DAVID"
-  // features David (the guest getting ready), not Mark (the host, always present). Try full
-  // name first, then first name, as whole words.
+  // The HOST named in the title leads the scene — e.g. "MARK INTRODUCES DAVID" or
+  // "Mark SHOW OPENER": Mark is who's on NOW; the guest named is the one being brought up
+  // (UP NEXT / ready), not the person on now. So the host wins for NOW.
+  const host = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.hostName) ? CLIENT_CONFIG.hostName : '';
+  if (host && new RegExp('\\b' + host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(cue.scene || '')) return host;
+  // Otherwise, a guest named anywhere in the title is the featured person (full name, then first).
   const wordIn = n => n && new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(cue.scene || '');
   const namedGuest = guests.find(g => wordIn(g.name)) || guests.find(g => wordIn((g.name || '').split(' ')[0]));
   if (namedGuest) return namedGuest.name;
-  // Host-led scene with no guest named (e.g. "Mark SHOW OPENER" / "Mark SHOW CLOSE"): the roster
-  // only has guests, not the host, so recognize the configured host name in the scene title.
-  const host = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.hostName) ? CLIENT_CONFIG.hostName : '';
-  if (host && new RegExp('\\b' + host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(cue.scene || '')) return host;
   // A guest assigned to this scene's stage (e.g. a Kitchen Disco "Show Chef"). Auto-match only
   // when exactly one guest is on that stage, so we never guess between multiple same-stage guests
   // (pod/music scenes usually have several — those resolve by title/song above, not here).
@@ -704,9 +703,12 @@ function stageOptionsHTML(cur) {
 // the NEXT scene that has one, sent to that scene's stage. Skips scenes with nobody (video,
 // kitchen-disco link, pre-records). Derived from order + roster, so it's correct after a drag.
 function deriveStandby(cues, i, guests) {
+  // The person already on NOW can't be their own "get ready" cue — skip them and find the
+  // next DIFFERENT featured person (e.g. a performer doing back-to-back songs isn't "ready").
+  const nowWho = featuredPerson(cues[i], guests);
   for (let k = i + 1; k < cues.length; k++) {
     const who = featuredPerson(cues[k], guests);
-    if (who) return { standbyWho: who, standbyStage: cues[k].stageType || '' };
+    if (who && who !== nowWho) return { standbyWho: who, standbyStage: cues[k].stageType || '' };
   }
   return { standbyWho: '', standbyStage: '' };
 }
@@ -2101,7 +2103,8 @@ function updateAllDisplays() {
     : showData.cues.map((c, i, arr) => {
         const nowWho  = featuredPerson(c, showData.guests);
         const nextCue = arr[i + 1];
-        const nextWho = nextCue ? featuredPerson(nextCue, showData.guests) : '';
+        const nextRaw = nextCue ? featuredPerson(nextCue, showData.guests) : '';
+        const nextWho = (nextRaw && nextRaw !== nowWho) ? nextRaw : ''; // don't show NOW as its own UP NEXT
         const readyStage = c.standbyStage ? (STAGE_LABEL[c.standbyStage] || c.standbyStage) : '';
         return `
       <div class="cue-item ${c.stageType === 'music' ? 'music' : c.stageType === 'kitchen' ? 'kitchen' : c.scene ? 'has-data' : ''}" draggable="true" data-idx="${i}">
