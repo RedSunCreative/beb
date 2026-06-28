@@ -70,6 +70,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Break host-name detection in featuredPerson
   sed -i '' "s/test(cue.scene || '')) return host;/test(cue.scene || '')) return '';/" "$BEB"
   echo "  Injected: disabled host-name detection in featuredPerson"
+  # Break the ADD CUE handler
+  sed -i '' 's/function addCue(/function _brk_addCue(/' "$BEB"
+  echo "  Injected: renamed addCue"
   echo ""
 fi
 
@@ -904,6 +907,33 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 20: ADD CUE button, manual save, live runtime, ROS/BSM trickle
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 20: add-cue / manual-save / live-runtime / trickle ---"
+python3 - > /tmp/beb_ui.txt 2>&1 <<'PYEOF'
+c = open('beb.html').read()
+errors = []
+if 'function addCue(' not in c: errors.append("FAIL: addCue() missing")
+if 'onclick="addCue()"' not in c: errors.append("FAIL: ADD CUE button not wired")
+if 'function updateRuntime(' not in c: errors.append("FAIL: updateRuntime() missing")
+if 'updateRuntime();' not in c: errors.append("FAIL: updateRuntime not called from updateAllDisplays")
+if 'dur=this.value;updateRuntime()' not in c: errors.append("FAIL: duration fields not wired to live runtime")
+if 'onclick="saveState()"' not in c: errors.append("FAIL: manual SAVE button missing")
+if 'SAVING' not in c: errors.append("FAIL: SAVING state missing")
+# Trickle: a cue's duration must reach BSM and the ROS runtime
+if 'dur: ${c.dur || 10}' not in c: errors.append("FAIL: BSM cue output missing dur (won't trickle to BSM)")
+if 'parseDur(c.dur)' not in c: errors.append("FAIL: ROS/runtime not summing cue durations")
+print('\n'.join(errors) if errors else "OK")
+PYEOF
+UI_RESULT=$(cat /tmp/beb_ui.txt)
+if [[ "$UI_RESULT" == "OK" ]]; then
+  pass "ADD CUE + manual SAVE + live runtime wired; duration trickles to BSM/ROS"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_ui.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -923,6 +953,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "s/,'aboutBRK',this.value)/,'about',this.value)/" "$BEB"
   sed -i '' "s/label: 'RedVelvetBRK' }/label: 'Red Velvet Stage' }/" "$BEB"
   sed -i '' "s/test(cue.scene || '')) return '';/test(cue.scene || '')) return host;/" "$BEB"
+  sed -i '' 's/function _brk_addCue(/function addCue(/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
