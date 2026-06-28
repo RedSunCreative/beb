@@ -67,6 +67,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Drop a named stage from CUE_STAGES
   sed -i '' "s/label: 'Red Velvet Stage' }/label: 'RedVelvetBRK' }/" "$BEB"
   echo "  Injected: removed Red Velvet Stage from CUE_STAGES"
+  # Break host-name detection in featuredPerson
+  sed -i '' "s/test(cue.scene || '')) return host;/test(cue.scene || '')) return '';/" "$BEB"
+  echo "  Injected: disabled host-name detection in featuredPerson"
   echo ""
 fi
 
@@ -642,19 +645,21 @@ def extract(name):
 for fn in ('featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
+print("const CLIENT_CONFIG={hostName:'Mark'};")
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
-// A host-led pod scene (no "— Name" in the title) must NOT surface its booName "Next Up"
-// tease as the on-scene person — that name belongs only to the studio-TV next-up card.
+// Host-led pod scene "Mark SHOW OPENER" resolves to the HOST (CLIENT_CONFIG.hostName), NOT the
+// booName "Next Up" tease. So NOW shows the host, and READY on the prior scene is the host.
 const cues = [
   {scene:'COLD OPEN', stageType:'music', dur:5},
   {scene:'Mark SHOW OPENER', stageType:'pod', dur:5, booName:'Karly Pittman'},
   {scene:'KITCHEN DISCO', stageType:'kitchen', dur:5},
   {scene:'INTERVIEW — Kyndle Lee', stageType:'pod', dur:10},
 ];
-assert(featuredPerson(cues[1], []) === '', 'pod host-opener must not surface booName as its featured person, got "' + featuredPerson(cues[1], []) + '"');
+assert(featuredPerson(cues[1], []) === 'Mark', 'host-opener should resolve to the host, got "' + featuredPerson(cues[1], []) + '"');
+assert(featuredPerson(cues[1], []) !== 'Karly Pittman', 'host-opener must NOT surface the booName next-up tease');
 const r = recomputeStructuralFields(cues);
-assert(r[0].standbyWho === 'Kyndle Lee', 'standby should skip the host opener to the next real guest (Kyndle), got "' + r[0].standbyWho + '"');
+assert(r[0].standbyWho === 'Mark', 'READY before the opener should be the host (Mark), got "' + r[0].standbyWho + '"');
 // Idempotency: recompute(recompute(x)) === recompute(x)
 const once = JSON.stringify(recomputeStructuralFields(cues));
 const twice = JSON.stringify(recomputeStructuralFields(recomputeStructuralFields(cues)));
@@ -915,6 +920,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/function _brk_openTeleprompter(/function openTeleprompter(/' "$BEB"
   sed -i '' "s/,'aboutBRK',this.value)/,'about',this.value)/" "$BEB"
   sed -i '' "s/label: 'RedVelvetBRK' }/label: 'Red Velvet Stage' }/" "$BEB"
+  sed -i '' "s/test(cue.scene || '')) return '';/test(cue.scene || '')) return host;/" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

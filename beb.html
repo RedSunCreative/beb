@@ -653,6 +653,12 @@ function featuredPerson(cue, guests) {
     if (bySong) return bySong.name;
     if (cue.stageType === 'pod') return title; // pod title IS a person even if not in the roster
   }
+  // Host-led scene (e.g. "Mark SHOW OPENER"): the roster only has guests, not the host, so
+  // recognize the configured host name when it appears in the scene title. This makes the host
+  // the featured person (NOW) and the get-ready name (READY on the prior scene) — without
+  // touching booName, which stays the editable "Next Up" tease.
+  const host = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.hostName) ? CLIENT_CONFIG.hostName : '';
+  if (host && new RegExp('\\b' + host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(cue.scene || '')) return host;
   if (cue.stageType !== 'pod') return cue.booName || ''; // chef / named-stage person lives in booName
   return '';
 }
