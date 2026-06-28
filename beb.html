@@ -2881,6 +2881,9 @@ body{background:#fff;color:#000;font-family:'Syne',sans-serif;font-size:13pt;-we
 
 async function generateROS() {
   if (!showData.cues.length) { alert('No scenes yet — ask Boo to build the run of show first!'); return; }
+  // `btn` was referenced but never defined here (copy/paste leftover) — that ReferenceError
+  // made Share/Print "not respond". Safe no-op so the upload + share panel run normally.
+  const btn = { textContent: '', disabled: false, style: {} };
   const sharePanel = document.getElementById('scripts-share-panel');
   sharePanel.style.display = 'none';
 
@@ -2983,12 +2986,10 @@ function generateSceneList() {
   const guestNames = (showData.guests || []).map(g => g.name).filter(Boolean);
   function personFor(cue) {
     const s = (cue.scene || '').toLowerCase();
-    for (const name of guestNames) {
-      if (s.includes(name.toLowerCase().split(' ')[0])) return name;
-    }
     if (/clos|credit|goodbye|finale|danc/i.test(s)) return 'All Cast & Crew';
     if (/crew|shout/i.test(s)) return 'Crew';
-    return '';
+    // Same resolver as the cue list / BSM: guest in title, performer by song, kitchen by stage, host.
+    return featuredPerson(cue, showData.guests) || '';
   }
 
   const rows = cues.map((c, i) => {
