@@ -653,24 +653,24 @@ function featuredPerson(cue, guests) {
   return cue.booName || '';
 }
 
-const STAGE_LABEL = { pod: 'Pod Stage', music: 'Music Stage', kitchen: 'Kitchen Disco', video: 'Video' };
-
-// Stage options for the cue-list dropdown. `value` is what's stored on the cue.
-// pod/music/kitchen/video keep their built-in semantics (standby logic, colors,
-// labels key off them); the named stages are additive — a step toward a per-show
-// stage config. ("Sunset Stage" not "Sun Set" — loadState normalizes that spelling.)
+// Single source of truth for studio stages. `value` is what's stored on the cue and
+// trickles all the way to BSM (standby cues, get-ready cards). pod/music/kitchen/video
+// carry built-in transition semantics; the named stages are real studio sets used
+// verbatim everywhere ("Sun Set Stage" is intentional — a play on words, not a typo).
 const CUE_STAGES = [
   { value: 'pod',                label: 'Pod Stage' },
   { value: 'music',              label: 'Music Stage' },
   { value: 'kitchen',            label: 'Kitchen Disco' },
   { value: 'video',              label: 'Video' },
   { value: 'Red Velvet Stage',   label: 'Red Velvet Stage' },
-  { value: 'Sunset Stage',       label: 'Sunset Stage' },
+  { value: 'Sun Set Stage',      label: 'Sun Set Stage' },
   { value: 'Guitar Stage',       label: 'Guitar Stage' },
   { value: 'Rose Garden Stage',  label: 'Rose Garden Stage' },
   { value: 'Hair/Make-up Stage', label: 'Hair/Make-up Stage' },
   { value: 'Crew Stage',         label: 'Crew Stage' },
 ];
+// stageType value -> human label, derived from CUE_STAGES (named stages map to themselves).
+const STAGE_LABEL = Object.fromEntries(CUE_STAGES.map(s => [s.value, s.label]));
 function stageOptionsHTML(cur) {
   cur = cur || '';
   let opts = CUE_STAGES.slice();
@@ -694,29 +694,23 @@ function deriveWarnings(cues, i, guests) {
   const nxt = cues[i + 1];
   if (!nxt) return { w5: "5 minutes — finishing the show!", w2: "2 minutes left — almost done!" };
   const who   = featuredPerson(nxt, guests);
-  const stage = STAGE_LABEL[nxt.stageType] || '';
-  const type  = nxt.stageType;
-  let w5, w2;
-  if (type === 'pod' && who) {
-    w5 = `5 minutes — ${who}, please head to the Pod Stage.`;
-    w2 = `2 minutes — ${who}, to the Pod Stage now.`;
-  } else if (type === 'kitchen') {
-    w5 = `5 minutes — wrapping up, Kitchen Disco is next.`;
-    w2 = `2 minutes — heading to Kitchen Disco.`;
-  } else if (type === 'music') {
-    const songTitle = (nxt.scene || '').match(/—\s*(.+)$/)?.[1]?.trim();
-    const label = who || songTitle || 'performance';
-    w5 = `5 minutes — ${label}${who && stage ? `, please head to the ${stage}` : ' coming up'}.`;
-    w2 = `2 minutes — ${label}${who ? ` to the ${stage} now` : ' up next'}.`;
-  } else if (type === 'video' || nxt.prelive) {
-    w5 = `5 minutes remaining in this segment.`;
-    w2 = `2 minutes remaining.`;
-  } else {
-    const label = who || nxt.scene || 'next scene';
-    w5 = `5 minutes — ${label} up next.`;
-    w2 = `2 minutes — ${label}.`;
+  const stage = STAGE_LABEL[nxt.stageType] || nxt.stageType || '';
+  // If someone is featured next and we know their stage, direct them there by name —
+  // works for every stage (pod / music / kitchen / named studio sets).
+  if (who && stage) {
+    return {
+      w5: `5 minutes — ${who}, please head to the ${stage}.`,
+      w2: `2 minutes — ${who}, to the ${stage} now.`
+    };
   }
-  return { w5, w2 };
+  if (nxt.stageType === 'kitchen') {
+    return { w5: `5 minutes — wrapping up, Kitchen Disco is next.`, w2: `2 minutes — heading to Kitchen Disco.` };
+  }
+  if (nxt.stageType === 'video' || nxt.prelive) {
+    return { w5: `5 minutes remaining in this segment.`, w2: `2 minutes remaining.` };
+  }
+  const label = who || nxt.scene || 'next scene';
+  return { w5: `5 minutes — ${label} up next.`, w2: `2 minutes — ${label}.` };
 }
 
 // Single source of truth: re-derive every adjacency-dependent field (next*, standby,
@@ -805,8 +799,6 @@ async function loadState(rowId) {
     if (epRes.data?.data) {
       showData = { ...showData, ...epRes.data.data };
       if (showData.cues) {
-        const fix = s => typeof s === 'string' ? s.replace(/Sun Set Stage/gi, 'Sunset Stage').replace(/SUN SET STAGE/g, 'SUNSET STAGE') : s;
-        showData.cues = showData.cues.map(c => { const n = {}; for (const k of Object.keys(c)) n[k] = fix(c[k]); return n; });
         // Re-derive ready cues / next / warnings from the loaded order + roster so the
         // cue list shows correct, current data immediately (not whatever was last saved).
         showData.cues = recomputeStructuralFields(showData.cues, showData.guests);
@@ -1421,7 +1413,7 @@ Never make a surgical one-field change in isolation. Treat the cues array as a l
 Every cue must have standbyWho and standbyStage set whenever someone needs to physically move before that scene starts. Fill these automatically — do not wait to be asked.
 
   standbyWho — the actual name of the person moving (from showData.guests). Never a placeholder. "" if nobody needs to move.
-  standbyStage — "pod", "music", or "kitchen". "" if no standby.
+  standbyStage — the stageType of the set the person must get to: "pod", "music", "kitchen", or a named studio set ("Red Velvet Stage", "Sun Set Stage", "Guitar Stage", "Rose Garden Stage", "Hair/Make-up Stage", "Crew Stage"). "" if no standby.
 
 Logic:
   • Buffer scenes (Kitchen Disco, music, video): the outgoing pod guest exits during this scene and the NEXT pod guest takes their seat — set standbyWho = next pod guest, standbyStage = "pod".
@@ -1483,9 +1475,11 @@ Special guests are FLEXIBLE — there is no fixed list. Capture the role and pla
 When Mark adds a guest and the stageType is not clear from context, ask ONE question, then act: "Which stage — pod, performance, or Kitchen Disco — and what's their role?"
 If it IS clear from context (e.g. "add her as a performance guest", "he's our guest chef in the kitchen"), proceed without asking and set the role from context. Never assume a bare pod/performance binary — kitchen/special guests are first-class.
 When a guest is featured in a scene, set that scene's booName to the guest's name so the floor gets a "get ready" cue — this includes Kitchen Disco / special-guest scenes (set the Kitchen Disco scene's booName to the guest chef).
-Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType: "pod"|"music"|"kitchen"|"video", booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage, cueCard }
+Cue shape: { scene, liveLabel, dur, prelive: true|false, stageType, booName, booMsg, w5, w2, nextScene, nextHint, audioNow, videoNow, camerasNow, lightingNow, audioNext, videoNext, camerasNext, lightingNext, standbyWho, standbyStage, cueCard }
 cueCard: freeform prompter text for host — bullet lines, real names only. "" if not applicable.
-standbyWho: name of person who needs to be in position before this scene. standbyStage: "pod"|"music"|"kitchen". Both "" if no standby.
+
+STAGES — stageType is the studio set a scene happens on. Core types carry transition semantics: "pod" (Pod Stage interview), "music" (Music/performance stage), "kitchen" (Kitchen Disco), "video" (pre-recorded/countdown). Named studio sets (use the EXACT string as the value): "Red Velvet Stage", "Sun Set Stage", "Guitar Stage", "Rose Garden Stage", "Hair/Make-up Stage", "Crew Stage". ("Sun Set Stage" is intentional — a play on words, not a typo; never rewrite it to "Sunset".) Set stageType to the actual set a scene uses. These values flow through to BSM so the floor directs people to the right set.
+standbyWho: name of person who needs to be in position before this scene. standbyStage: the stageType of the set they must be at (any of the values above) — it drives the BSM "→ [Stage]" get-ready cue, so it must name the real set. Both "" if no standby. When you write a scene's booMsg, direct the guest to their actual stage by name (e.g. "please head to the Red Velvet Stage").
 prelive:true means pre-show (Countdown) — excluded from runtime total.
 
 === SCENE REFERENCE VALIDATION — MANDATORY for cue/scene changes; does NOT apply to guest list operations ===
@@ -2508,7 +2502,7 @@ async function generateBSM() {
     const warn = deriveWarnings(arr, i, showData.guests);
     return `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
-    prelive: ${c.prelive ? 'true' : 'false'},
+    prelive: ${c.prelive ? 'true' : 'false'}, stageType: ${q(c.stageType)}, stageLabel: ${q(STAGE_LABEL[c.stageType] || c.stageType)},
     booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
     w5: ${q(warn.w5)}, w2: ${q(warn.w2)},
     next: ${q(nxt?.booName ?? nxt?.scene ?? '')}, nextScene: ${q(nxt?.scene ?? '')},
@@ -2528,7 +2522,7 @@ async function generateBSM() {
     const sb = deriveStandby(arr, i, showData.guests);
     if (!sb.standbyWho) return 'null';
     const isPod = sb.standbyStage === 'pod';
-    return `{who: ${q(sb.standbyWho)}, stage: "${isPod ? 'Pod Stage' : sb.standbyStage === 'music' ? 'Music Stage' : 'Kitchen Disco'}", isPod: ${isPod}}`;
+    return `{who: ${q(sb.standbyWho)}, stage: ${q(STAGE_LABEL[sb.standbyStage] || sb.standbyStage)}, isPod: ${isPod}}`;
   }).join(', ');
 
   const qmStudio = (showData.quickMessages?.studio || []).map(m => `  {label:${q(m.label)},text:${q(m.text)}}`).join(',\n');
@@ -2707,7 +2701,7 @@ function buildROSHtml() {
       return `<div class="note-row"><span class="note-lbl">${d.lbl}</span><span class="note-val">${lines}</span></div>`;
     }).join('');
     const booLine = c.booMsg ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>` : '';
-    const standbyStageLabel = c.standbyStage === 'pod' ? 'Pod Stage' : c.standbyStage === 'music' ? 'Music Stage' : c.standbyStage === 'kitchen' ? 'Kitchen Disco' : '';
+    const standbyStageLabel = STAGE_LABEL[c.standbyStage] || c.standbyStage || '';
     const standbyLine = c.standbyWho ? `<div class="note-row"><span class="note-lbl stby">STBY</span><span class="note-val stby-val">${c.standbyWho}${standbyStageLabel ? ' → ' + standbyStageLabel : ''}</span></div>` : '';
     const timeStr = c.prelive ? `${dur}m` : `${dur}m &nbsp;·&nbsp; <span class="runtime">show: ${runAtStart}m</span>`;
     return `<div class="srow" style="border-left:4px solid ${color};">

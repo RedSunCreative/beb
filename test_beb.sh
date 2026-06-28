@@ -814,7 +814,7 @@ echo "--- Test 18: cue stage dropdown options ---"
 python3 - > /tmp/beb_stages.txt 2>&1 <<'PYEOF'
 c = open('beb.html').read()
 errors = []
-for s in ['Red Velvet Stage','Sunset Stage','Guitar Stage','Rose Garden Stage','Hair/Make-up Stage','Crew Stage','Kitchen Disco']:
+for s in ['Red Velvet Stage','Sun Set Stage','Guitar Stage','Rose Garden Stage','Hair/Make-up Stage','Crew Stage','Kitchen Disco']:
     if ("label: '%s'" % s) not in c:
         errors.append("FAIL: CUE_STAGES missing '%s'" % s)
 if 'function stageOptionsHTML(' not in c:
@@ -826,6 +826,14 @@ if c.count('stageOptionsHTML(') < 3:
 for v in ["value: 'pod'","value: 'music'","value: 'kitchen'","value: 'video'"]:
     if v not in c:
         errors.append("FAIL: CUE_STAGES dropped legacy %s" % v)
+# "Sun Set Stage" must NOT be auto-rewritten to "Sunset" anymore
+if 'replace(/Sun Set Stage' in c:
+    errors.append("FAIL: loadState still rewrites 'Sun Set Stage' to 'Sunset'")
+# BSM standby must map by label (not the old kitchen-disco default), and stageType must trickle to BSM
+if 'STAGE_LABEL[sb.standbyStage]' not in c:
+    errors.append("FAIL: generateBSM standby not mapped via STAGE_LABEL (named stages would mislabel)")
+if 'stageType: ${q(c.stageType)}' not in c:
+    errors.append("FAIL: cue stageType not emitted into BSM cue data")
 print('\n'.join(errors) if errors else "OK")
 PYEOF
 STAGES_RESULT=$(cat /tmp/beb_stages.txt)
@@ -833,6 +841,50 @@ if [[ "$STAGES_RESULT" == "OK" ]]; then
   pass "cue stage dropdown includes named stages + keeps legacy values"
 else
   while IFS= read -r line; do fail "$line"; done < /tmp/beb_stages.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
+# TEST 19: named stage flows through standby + warning (BSM direction)
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 19: named-stage standby + warning direction ---"
+python3 - > /tmp/beb_namedstage.js <<'PYEOF'
+import re
+src = open('beb.html').read()
+print(re.search(r'const CUE_STAGES = \[[\s\S]*?\];', src).group(0))
+print(re.search(r'const STAGE_LABEL = .*?;', src).group(0))
+def extract(name):
+    i=src.find('function '+name+'('); b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+    return ''
+for fn in ('featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+    print(extract(fn) or ('// MISSING '+fn)); print()
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+assert(STAGE_LABEL['Sun Set Stage'] === 'Sun Set Stage', 'Sun Set Stage must map to itself (literal), got "'+STAGE_LABEL['Sun Set Stage']+'"');
+assert(STAGE_LABEL['Red Velvet Stage'] === 'Red Velvet Stage', 'Red Velvet Stage label');
+const guests = [{name:'Etta James', stageType:'music', songs:[], role:'Music'}];
+const cues = [
+  {scene:'OPENER', stageType:'pod', dur:5},
+  {scene:'RED VELVET SET', stageType:'Red Velvet Stage', dur:8, booName:'Etta James'},
+];
+const r = recomputeStructuralFields(cues, guests);
+assert(r[0].standbyWho === 'Etta James', 'prior scene should ready Etta, got "'+r[0].standbyWho+'"');
+assert(r[0].standbyStage === 'Red Velvet Stage', 'standby stage should be the named set, got "'+r[0].standbyStage+'"');
+assert(/please head to the Red Velvet Stage/.test(r[0].w5), 'warning should direct to the named stage, got "'+r[0].w5+'"');
+console.log('OK');
+''')
+PYEOF
+NS_RESULT=$(node /tmp/beb_namedstage.js 2>&1)
+if [[ "$NS_RESULT" == *"OK"* ]] && [[ "$NS_RESULT" != *"FAIL"* ]] && [[ "$NS_RESULT" != *"MISSING"* ]]; then
+  pass "named studio stage flows through standby + warning (reaches BSM correctly)"
+else
+  fail "named-stage test: $NS_RESULT"
 fi
 
 # ──────────────────────────────────────────────────────────────
