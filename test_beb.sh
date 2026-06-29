@@ -49,9 +49,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Comment out the standby derivation inside recomputeStructuralFields (simulates stale ready/up-next)
   sed -i '' 's/      ...deriveStandby(arr, i, guests),/      \/\/ ...deriveStandby(arr, i, guests),/' "$BEB"
   echo "  Injected: removed deriveStandby from recomputeStructuralFields"
-  # Disable the performer-via-song lookup in featuredPerson (simulates missing ready cues)
+  # Disable the performer-via-song lookup in autoResolveNowPerson (simulates missing ready cues)
   sed -i '' 's/    if (bySong) return bySong.name;/    if (false \&\& bySong) return bySong.name;/' "$BEB"
-  echo "  Injected: disabled song-lookup in featuredPerson"
+  echo "  Injected: disabled song-lookup in autoResolveNowPerson"
   # Neutralize the guest role default (simulates role going undefined)
   sed -i '' "s/  if (g.role == null) g.role = '';/  if (g.role == null) g.role = g.role;/" "$BEB"
   echo "  Injected: removed guest role default"
@@ -67,15 +67,21 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Drop a named stage from CUE_STAGES
   sed -i '' "s/label: 'Red Velvet Stage' }/label: 'RedVelvetBRK' }/" "$BEB"
   echo "  Injected: removed Red Velvet Stage from CUE_STAGES"
-  # Break host-name detection in featuredPerson
+  # Break host-name detection in autoResolveNowPerson
   sed -i '' "s/test(cue.scene || '')) return host;/test(cue.scene || '')) return '';/" "$BEB"
-  echo "  Injected: disabled host-name detection in featuredPerson"
+  echo "  Injected: disabled host-name detection in autoResolveNowPerson"
   # Break the ADD CUE handler
   sed -i '' 's/function addCue(/function _brk_addCue(/' "$BEB"
   echo "  Injected: renamed addCue"
   # Break the DELETE SCENE handler
   sed -i '' 's/function deleteScene(/function _brk_deleteScene(/' "$BEB"
   echo "  Injected: renamed deleteScene"
+  # Reintroduce the booName-into-NOW leak in resolveNowPeople (the exact class bug we fixed)
+  sed -i '' 's/  return auto ? \[auto\] : \[\];/  return auto ? [auto] : (cue.booName ? [cue.booName] : []);/' "$BEB"
+  echo "  Injected: resolveNowPeople falls back to booName (re-leaks NEXT into NOW)"
+  # Make resolveNameToRoster silently pick the first match on an ambiguous partial name
+  sed -i '' 's/if (firstMatches.length === 1) return firstMatches\[0\].name;/if (firstMatches.length >= 1) return firstMatches[0].name;/' "$BEB"
+  echo "  Injected: resolveNameToRoster guesses first match on ambiguous name"
   echo ""
 fi
 
@@ -541,7 +547,7 @@ def extract(name):
         i += 1
     return ''
 out = []
-for fn in ('featuredPerson', 'deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson', 'resolveNameToRoster', 'resolveNowPeople', 'nowLabel', 'deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
     body = extract(fn)
     if not body:
         print('// MISSING ' + fn)
@@ -648,7 +654,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print("const CLIENT_CONFIG={hostName:'Mark'};")
@@ -662,23 +668,26 @@ const cues = [
   {scene:'KITCHEN DISCO', stageType:'kitchen', dur:5},
   {scene:'INTERVIEW — Kyndle Lee', stageType:'pod', dur:10},
 ];
-assert(featuredPerson(cues[1], []) === 'Mark', 'host-opener should resolve to the host, got "' + featuredPerson(cues[1], []) + '"');
-assert(featuredPerson(cues[1], []) !== 'Karly Pittman', 'host-opener must NOT surface the booName next-up tease');
+assert(nowLabel(cues[1], []) === 'Mark', 'host-opener should resolve to the host, got "' + nowLabel(cues[1], []) + '"');
+assert(nowLabel(cues[1], []) !== 'Karly Pittman', 'host-opener must NOT surface the booName next-up tease');
 const r = recomputeStructuralFields(cues);
 assert(r[0].standbyWho === 'Mark', 'READY before the opener should be the host (Mark), got "' + r[0].standbyWho + '"');
 // The host LEADS a scene that names him: "MARK INTRODUCES DAVID" features Mark (introducing) —
 // David is the one being brought up (UP NEXT), not who's on NOW.
-assert(featuredPerson({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'Mark', 'host leads a scene naming him, got "' + featuredPerson({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) + '"');
+assert(nowLabel({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'Mark', 'host leads a scene naming him, got "' + nowLabel({scene:'MARK INTRODUCES DAVID', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) + '"');
 // NOW is never its own standby: deriveStandby skips the current featured person.
 { const _c=[{scene:'PERFORMANCE — A', stageType:'music', booName:''},{scene:'PERFORMANCE — B', stageType:'music'}];
   const _g=[{name:'Dee', stageType:'music', songs:[{name:'A'},{name:'B'}]}];
   assert(deriveStandby(_c,0,_g).standbyWho !== 'Dee', 'NOW performer must not also be their own READY cue'); }
 // ...but the host still resolves when no guest is named in the title.
-assert(featuredPerson({scene:'Mark SHOW OPENER', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'Mark', 'host should still resolve when no guest is in the title');
+assert(nowLabel({scene:'Mark SHOW OPENER', stageType:'pod'}, [{name:'David Rothgeb', songs:[]}]) === 'Mark', 'host should still resolve when no guest is in the title');
 // Idempotency: recompute(recompute(x)) === recompute(x)
 const once = JSON.stringify(recomputeStructuralFields(cues));
 const twice = JSON.stringify(recomputeStructuralFields(recomputeStructuralFields(cues)));
 assert(once === twice, 'recompute is not idempotent');
+// nowPeople (the authored NOW-people field) must survive the recompute pipeline that saveState runs
+const np = recomputeStructuralFields([{scene:'PERFORMANCE — X', stageType:'music', nowPeople:['Ann']}], []);
+assert(JSON.stringify(np[0].nowPeople) === JSON.stringify(['Ann']), 'nowPeople must survive recompute, got ' + JSON.stringify(np[0].nowPeople));
 console.log('OK');
 ''')
 PYEOF
@@ -706,7 +715,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print(r'''
@@ -722,8 +731,8 @@ const cues = [
   {scene:'PERFORMANCE — Poetry Reading', stageType:'music', dur:2, booName:'Kyndle Lee'},
 ];
 // performer resolved from the song roster, NOT the scene title
-assert(featuredPerson(cues[1], guests) === 'David Rothgeb', 'Missing In Our Kissing should resolve to David, got "' + featuredPerson(cues[1], guests) + '"');
-assert(featuredPerson(cues[2], guests) === 'Darren Tjepkema', 'Poetry Reading should resolve to Darren (not stale booName), got "' + featuredPerson(cues[2], guests) + '"');
+assert(nowLabel(cues[1], guests) === 'David Rothgeb', 'Missing In Our Kissing should resolve to David, got "' + nowLabel(cues[1], guests) + '"');
+assert(nowLabel(cues[2], guests) === 'Darren Tjepkema', 'Poetry Reading should resolve to Darren (not stale booName), got "' + nowLabel(cues[2], guests) + '"');
 // the interview scene's ready cue is the NEXT performer, sent to the Music stage
 const r = recomputeStructuralFields(cues, guests);
 assert(r[0].standbyWho === 'David Rothgeb', 'interview ready cue should be David, got "' + r[0].standbyWho + '"');
@@ -755,7 +764,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('normalizeGuest','featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('normalizeGuest','autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print(r'''
@@ -776,7 +785,7 @@ const cues = [
 ];
 // No name in the title and no booName — the chef is detected purely by being the guest
 // assigned to the kitchen stage.
-assert(featuredPerson(cues[1], guests) === 'Chef Jane', 'kitchen scene should feature its assigned kitchen guest, got "'+featuredPerson(cues[1],guests)+'"');
+assert(nowLabel(cues[1], guests) === 'Chef Jane', 'kitchen scene should feature its assigned kitchen guest, got "'+nowLabel(cues[1],guests)+'"');
 const r = recomputeStructuralFields(cues, guests);
 assert(r[0].standbyWho === 'Chef Jane', 'scene before kitchen disco should ready the chef, got "'+r[0].standbyWho+'"');
 assert(r[0].standbyStage === 'kitchen', 'ready stage should be kitchen, got "'+r[0].standbyStage+'"');
@@ -863,8 +872,11 @@ if 'NOW: ${esc(nowWho)}' not in c:
     errors.append("FAIL: cue card missing NOW name line")
 if 'UP NEXT: ${esc(nextWho)}' not in c:
     errors.append("FAIL: cue card missing UP NEXT name line")
-if 'now: ${q(featuredPerson(c' not in c:
+if 'now: ${q(nowLabel(c' not in c:
     errors.append("FAIL: BSM cue data missing now/upNext names")
+# NOW must never be sourced from booName anywhere (the class bug we fixed)
+if 'autoResolveNowPerson(c, showData.guests))}, upNext' in c:
+    errors.append("FAIL: BSM now/upNext still bypasses nowLabel (should be nowLabel)")
 print('\n'.join(errors) if errors else "OK")
 PYEOF
 STAGES_RESULT=$(cat /tmp/beb_stages.txt)
@@ -893,16 +905,18 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('featuredPerson','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
 assert(STAGE_LABEL['Sun Set Stage'] === 'Sun Set Stage', 'Sun Set Stage must map to itself (literal), got "'+STAGE_LABEL['Sun Set Stage']+'"');
 assert(STAGE_LABEL['Red Velvet Stage'] === 'Red Velvet Stage', 'Red Velvet Stage label');
 const guests = [{name:'Etta James', stageType:'music', songs:[], role:'Music'}];
+// Etta is ON the Red Velvet scene — authored via nowPeople (partial "Etta" resolves to the full
+// roster name). NOW comes from nowPeople, never booName.
 const cues = [
   {scene:'OPENER', stageType:'pod', dur:5},
-  {scene:'RED VELVET SET', stageType:'Red Velvet Stage', dur:8, booName:'Etta James'},
+  {scene:'RED VELVET SET', stageType:'Red Velvet Stage', dur:8, nowPeople:['Etta'], booName:''},
 ];
 const r = recomputeStructuralFields(cues, guests);
 assert(r[0].standbyWho === 'Etta James', 'prior scene should ready Etta, got "'+r[0].standbyWho+'"');
@@ -948,6 +962,59 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 21: NOW/NEXT split — booName never surfaces as a NOW value; nowPeople resolves
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 21: NOW-people vs booName split (class-proof) ---"
+python3 - > /tmp/beb_nowpeople.js <<'PYEOF'
+src=open('beb.html').read()
+def extract(name):
+    i=src.find('function '+name+'('); b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+    return ''
+for fn in ('autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+    print(extract(fn) or ('// MISSING '+fn)); print()
+print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
+print("const CLIENT_CONFIG={hostName:'Mark'};")
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+const guests = [{name:'David Rothgeb', stageType:'music', songs:[{name:'Water from the Well'}]},
+                {name:'Kyndle Lee', stageType:'pod', songs:[]}];
+// (a) A non-pod scene whose ONLY person reference is booName must NOT surface booName as NOW.
+const countdown = {scene:'PRE-SHOW COUNTDOWN VIDEO', stageType:'video', booName:'David Rothgeb', nowPeople:[]};
+assert(nowLabel(countdown, guests) === '', 'countdown NOW must be empty, not the booName tease, got "' + nowLabel(countdown, guests) + '"');
+assert(resolveNowPeople(countdown, guests).length === 0, 'countdown should resolve to nobody on NOW');
+// (b) Authored partial name resolves to the full roster name.
+const perf = {scene:'PERFORMANCE — Water from the Well', stageType:'music', nowPeople:['David'], booName:''};
+assert(nowLabel(perf, guests) === 'David Rothgeb', 'authored "David" should resolve to full name, got "' + nowLabel(perf, guests) + '"');
+// (c) Ambiguous partial is NOT silently guessed — left verbatim (Boo asks before storing).
+const two = [{name:'David Rothgeb'},{name:'David Kim'}];
+assert(resolveNameToRoster('David', two) === 'David', 'ambiguous "David" must stay verbatim, got "' + resolveNameToRoster('David', two) + '"');
+// (d) Exact full name resolves case-insensitively.
+assert(resolveNameToRoster('david rothgeb', guests) === 'David Rothgeb', 'exact name (ci) should resolve');
+// (e) Empty-state safety: no guests, bare cue — no throw, NOW empty.
+assert(nowLabel({scene:'X'}, []) === '', 'bare cue NOW should be empty');
+// (f) booName does not leak into the standby chain either: standby = next scene's NOW-person.
+const cues = [countdown, {scene:'INTERVIEW — Kyndle Lee', stageType:'pod', nowPeople:['Kyndle Lee']}];
+const r = recomputeStructuralFields(cues, guests);
+assert(r[0].standbyWho === 'Kyndle Lee', 'standby should be next NOW-person (Kyndle), not booName, got "' + r[0].standbyWho + '"');
+assert(r[0].standbyWho !== 'David Rothgeb', 'standby must NOT pick up the countdown booName tease');
+console.log('OK');
+''')
+PYEOF
+NP_RESULT=$(node /tmp/beb_nowpeople.js 2>&1)
+if [[ "$NP_RESULT" == *"OK"* ]] && [[ "$NP_RESULT" != *"FAIL"* ]] && [[ "$NP_RESULT" != *"MISSING"* ]]; then
+  pass "NOW resolves from nowPeople/scene; booName never surfaces as a NOW value"
+else
+  fail "NOW/NEXT split test: $NP_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -969,6 +1036,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "s/test(cue.scene || '')) return '';/test(cue.scene || '')) return host;/" "$BEB"
   sed -i '' 's/function _brk_addCue(/function addCue(/' "$BEB"
   sed -i '' 's/function _brk_deleteScene(/function deleteScene(/' "$BEB"
+  sed -i '' 's/  return auto ? \[auto\] : (cue.booName ? \[cue.booName\] : \[\]);/  return auto ? [auto] : [];/' "$BEB"
+  sed -i '' 's/if (firstMatches.length >= 1) return firstMatches\[0\].name;/if (firstMatches.length === 1) return firstMatches[0].name;/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
