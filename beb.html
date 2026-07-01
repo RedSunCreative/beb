@@ -2611,11 +2611,11 @@ async function generateBSM() {
     const warn = deriveWarnings(arr, i, showData.guests);
     return `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
-    prelive: ${c.prelive ? 'true' : 'false'}, stageType: ${q(c.stageType)}, stageLabel: ${q(STAGE_LABEL[c.stageType] || c.stageType)},
-    now: ${q(nowLabel(c, showData.guests))}, upNext: ${q(nxt ? nowLabel(nxt, showData.guests) : '')},
+    prelive: ${c.prelive ? 'true' : 'false'}, stageType: ${q(c.stageType)},
+    now: ${q(nowLabel(c, showData.guests))},
     booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
     w5: ${q(warn.w5)}, w2: ${q(warn.w2)},
-    next: ${q(nxt?.booName ?? nxt?.scene ?? '')}, nextScene: ${q(nxt?.scene ?? '')},
+    nextScene: ${q(nxt?.scene ?? '')},
     audio: [${split(c.audioNow).map(q).join(', ')}],
     video: [${split(c.videoNow).map(q).join(', ')}],
     cameras: [${split(c.camerasNow).map(q).join(', ')}],

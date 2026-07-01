@@ -19,6 +19,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 .now-live-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 18px;background:#1a0000;border-radius:8px;border:2px solid #cc0000;box-shadow:0 0 14px #ff000044;}
 .nl-dot{width:11px;height:11px;border-radius:50%;background:#E8431A;flex-shrink:0;}
 .nl-label{font-size:19px;font-weight:900;letter-spacing:2px;color:#E8431A;font-family:'Helvetica Neue',Arial,sans-serif;}
+.now-people{font-size:16px;font-weight:800;color:#F5D03A;text-align:center;letter-spacing:1px;margin-top:6px;}
 .card{background:#5a6270;border-radius:12px;border:3px solid #464d59;overflow:hidden;}
 .top-bar{background:#464d59;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
 .boo-id{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
@@ -340,7 +341,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
         <div class="timer-block"><div class="timer-label">SHOW</div><div class="timer-val" id="tv-show">90:00</div></div>
       </div>
     </div>
-    <div style="padding:8px 16px 0;"><div class="now-live-bar" id="tv-now-live-bar"><div class="nl-dot" id="tv-nl-dot"></div><div class="nl-label" id="tv-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div></div>
+    <div style="padding:8px 16px 0;"><div class="now-live-bar" id="tv-now-live-bar"><div class="nl-dot" id="tv-nl-dot"></div><div class="nl-label" id="tv-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div><div class="now-people" id="tv-now-people" style="display:none"></div></div>
     <div class="main">
       <div class="scene-name" id="tv-scene" style="display:none">PRE-SHOW COUNTDOWN VIDEO</div>
       <div class="ros-change-banner" id="ros-change-banner"><div class="ros-change-msg" id="ros-change-msg"></div></div>
@@ -389,7 +390,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
         <div class="timer-block"><div class="timer-label">SHOW</div><div class="timer-val" id="tech-show">90:00</div></div>
       </div>
     </div>
-    <div style="padding:8px 16px 0;"><div class="now-live-bar" id="tech-now-live-bar"><div class="nl-dot" id="tech-nl-dot"></div><div class="nl-label" id="tech-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div></div>
+    <div style="padding:8px 16px 0;"><div class="now-live-bar" id="tech-now-live-bar"><div class="nl-dot" id="tech-nl-dot"></div><div class="nl-label" id="tech-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div><div class="now-people" id="tech-now-people" style="display:none"></div></div>
     <div class="tech-tabs">
       <button class="tech-tab active" id="tab-audio" onclick="setTechTab('audio')">AUDIO</button>
       <button class="tech-tab" id="tab-video" onclick="setTechTab('video')">VIDEO</button>
@@ -424,6 +425,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <a id="beb-link" href="#" target="_blank" style="font-size:11px;color:#8a96a8;letter-spacing:2px;text-decoration:none;font-weight:700;padding:4px 8px;border:1px solid #404858;border-radius:4px;white-space:nowrap;">⚡ OPEN BEB</a>
     </div>
     <div class="now-live-bar" id="host-now-live-bar"><div class="nl-dot" id="host-nl-dot"></div><div class="nl-label" id="host-nl-label">NOW LIVE: PRE-SHOW COUNTDOWN VIDEO</div></div>
+    <div class="now-people" id="host-now-people" style="display:none"></div>
     <div class="warn-banner" id="warn-banner"><div class="warn-tag" id="warn-tag"></div><div class="warn-msg" id="warn-msg"></div></div>
     <div class="timer-grid">
       <div class="timer-card"><div class="timer-label">SEGMENT</div><div class="big-timer" id="h-seg">20:00</div><div class="timer-sub" id="h-scene">PRE-SHOW</div></div>
@@ -729,6 +731,8 @@ function getBooMsg(){
 
 function renderTechLines(lines){return (lines||[]).map(l=>`<div class="tech-line">${l}</div>`).join("")||`<div class="tech-line">—</div>`;}
 function setNowLiveLabels(label){const lbl=label||CUES[cueIdx]?.liveLabel||"";['tv-nl-label','tech-nl-label','host-nl-label'].forEach(id=>{const el=document.getElementById(id);if(el) el.textContent=lbl;});}
+// ON NOW people line under each now-live bar — reads the resolved `now` key BeB emits; hidden when empty.
+function setNowPeople(name){const txt=name?("ON NOW: "+name):"";['tv-now-people','tech-now-people','host-now-people'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=txt;el.style.display=name?"block":"none";}});}
 
 function fireROSChangeMessage(nextName){
   const banner=document.getElementById("ros-change-banner"),msg=document.getElementById("ros-change-msg");
@@ -919,6 +923,7 @@ function render(){
     const tvs=document.getElementById("tv-scene");if(tvs) tvs.textContent=c.scene;
     setNowLiveLabels(c.liveLabel);
   }
+  setNowPeople(c.now);
   const hs=document.getElementById("h-scene");if(hs) hs.textContent=c.scene;
   ["progress","tech-progress"].forEach(id=>{const el=document.getElementById(id);if(el) el.style.width=`${(cueIdx/(CUES.length-1))*100}%`;});
   const sb2=document.getElementById("schedule-badge");if(sb2){const t=fmtOffset(scheduleOffset);sb2.textContent=t;sb2.style.color=t==="ON SCHEDULE"?"#C4B9A8":scheduleOffset>0?"#4ade80":"#E8431A";}
@@ -940,7 +945,7 @@ function render(){
   const nextData=getNextActiveCue();
   const un=document.getElementById("up-next");
   if(un){
-    if(nextData){un.style.display="block";document.getElementById("un-scene").textContent=nextData.cue.scene;}
+    if(nextData){un.style.display="block";document.getElementById("un-scene").textContent=nextData.cue.now||nextData.cue.scene;}
     else un.style.display="none";
   }
   const nowTitle=document.getElementById("tech-now-title");if(nowTitle) nowTitle.textContent=`NOW — ${c.scene}`;
@@ -952,7 +957,7 @@ function render(){
     else if(techTab==="cameras"){now=c.cameras||[];nxt=nc?nc.camerasNext||[]:[]; }
     else{now=c.lighting||[];nxt=nc?nc.lightingNext||[]:[]; }
     nowLines.innerHTML=renderTechLines(now);nextLines.innerHTML=renderTechLines(nxt);
-    if(nextLabel) nextLabel.textContent=nc?`UP NEXT · ${nc.scene}`:"END OF SHOW";
+    if(nextLabel) nextLabel.textContent=nc?`UP NEXT · ${nc.now||nc.scene}`:"END OF SHOW";
   }
   const plbtn=document.getElementById("prelive-btn");if(plbtn) plbtn.style.display=cueIdx===0?"block":"none";
   const stbtn=document.getElementById("standby-btn");
@@ -967,7 +972,7 @@ function render(){
   const nh=document.getElementById("next-hint");
   if(nh){
     if(c.nextScene==="ALL CLEAR") nh.textContent="NEXT: ALL CLEAR";
-    else if(nextData) nh.textContent=`UP NEXT: ${nextData.cue.scene}`;
+    else if(nextData) nh.textContent=`UP NEXT: ${nextData.cue.now||nextData.cue.scene}`;
     else nh.textContent="END OF SHOW";
   }
 }

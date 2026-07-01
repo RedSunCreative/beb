@@ -1015,6 +1015,38 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 22: BSM reads the `now` key (ON NOW, 3 views) + UP NEXT reads the live next person
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 22: BSM NOW/UP-NEXT wiring (emit reaches display) ---"
+python3 - > /tmp/beb_bsmwire.txt 2>&1 <<'PYEOF'
+errs=[]
+b=open('beb.html').read()
+t=open('bsm-template.html').read()
+# BeB still emits `now`, kept `nextScene`, and dropped the dead/redundant keys
+if 'now: ${q(nowLabel(c' not in b: errs.append("FAIL: generateBSM no longer emits `now`")
+if 'nextScene: ${q(nxt?.scene' not in b: errs.append("FAIL: `nextScene` emit dropped (BSM reads it for ALL CLEAR)")
+if 'upNext: ${q(nxt' in b: errs.append("FAIL: dead `upNext` emit still present")
+if 'stageLabel: ${q(STAGE_LABEL' in b: errs.append("FAIL: dead `stageLabel` emit still present")
+if 'next: ${q(nxt?.booName' in b: errs.append("FAIL: dead `next` emit still present")
+# BSM displays the `now` key as ON NOW across all three views
+if 'function setNowPeople(' not in t: errs.append("FAIL: setNowPeople() missing in BSM")
+if 'setNowPeople(c.now)' not in t: errs.append("FAIL: render() does not set ON NOW from c.now")
+for eid in ('tv-now-people','tech-now-people','host-now-people'):
+    if eid not in t: errs.append("FAIL: missing ON NOW element "+eid)
+# UP NEXT sourced from the LIVE next cue's now (recomputes on reorder), not a frozen key
+if 'nextData.cue.now||nextData.cue.scene' not in t: errs.append("FAIL: up-next (hint/box) not sourced from live nextData.cue.now")
+if 'nc.now||nc.scene' not in t: errs.append("FAIL: tech up-next not sourced from live nc.now")
+print("\n".join(errs) if errs else "OK")
+PYEOF
+BSMWIRE=$(cat /tmp/beb_bsmwire.txt)
+if [[ "$BSMWIRE" == "OK" ]]; then
+  pass "BSM ON NOW reads `now` (3 views); UP NEXT reads live next person; dead emits dropped"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_bsmwire.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
