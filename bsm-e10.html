@@ -1391,6 +1391,10 @@ function pinClear(){pinEntry="";updatePinDisplay();}
 function updatePinDisplay(){const d=document.getElementById("pin-display");if(d) d.textContent=(pinEntry+"    ").slice(0,4).split("").map((c,i)=>i<pinEntry.length?"●":"_").join(" ");}
 
 function setView(v){
+  // Before the show is live, the STUDIO/CREW tabs (and the cold-load default) must land on
+  // the welcome screens, not the live cards — mirrors how PRODUCER picks host vs host-welcome.
+  // Once showLive is true, showLiveUI() has already swapped these to the live views.
+  if(!showLive){ if(v==="tv") v="tv-welcome"; else if(v==="tech") v="tech-welcome"; }
   view=v;
   const allViews=["tv-welcome","tech-welcome","host-welcome","tv","tech","host","pin","allclear"];
   allViews.forEach(id=>{const el=document.getElementById(`view-${id}`);if(el) el.style.display="none";});
