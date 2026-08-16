@@ -1726,10 +1726,17 @@ If showData.cues is empty, skip this rule.`;
     };
 
     let lineBuffer = '';
+    // Stall watchdog: the initial-connection timeout was cleared once headers arrived, so a
+    // stream that goes quiet mid-response would hang reader.read() forever and lock the input.
+    // Re-arm on every chunk; if nothing arrives for 45s, abort — the read rejects and the outer
+    // catch resets isThinking / re-enables SEND instead of freezing Boo.
+    let streamStall = setTimeout(() => claudeAbort.abort(), 45000);
     try {
       while (true) {
         const { done, value } = await reader.read();
+        clearTimeout(streamStall);
         if (done) break;
+        streamStall = setTimeout(() => claudeAbort.abort(), 45000);
         lineBuffer += decoder.decode(value, { stream: true });
         const lines = lineBuffer.split('\n');
         lineBuffer = lines.pop(); // hold incomplete last line across chunks
@@ -1763,6 +1770,7 @@ If showData.cues is empty, skip this rule.`;
         }
       }
     } finally {
+      clearTimeout(streamStall);
       reader.cancel().catch(() => {});
     }
     fullText = accumulated;
@@ -1928,10 +1936,11 @@ document.getElementById('mic-btn').classList.remove('thinking');
     const eMsg = e?.message || String(e) || '';
     addBooMessage(`<em>Ran into something — try that again.${eMsg ? ' (' + eMsg.slice(0,80) + ')' : ''}</em>`);
     await speakBoo("Ran into something. Try that again.");
+  } finally {
+    // ALWAYS unlock the input — never leave Boo stuck if a turn errors or is aborted.
+    isThinking = false;
+    document.getElementById('send-btn').disabled = false;
   }
-
-  isThinking = false;
-  document.getElementById('send-btn').disabled = false;
 }
 
 // ─── COUNTDOWN ───
