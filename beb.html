@@ -2652,6 +2652,10 @@ async function uploadToGitHub(filename, content) {
 
 // ─── GENERATE BSM ───
 async function generateBSM() {
+  // `btn` was referenced for status text but never defined here (same copy/paste leftover that
+  // broke generateROS). Without this, the GitHub auto-upload path threw ReferenceError before
+  // uploadToGitHub ran — so Publish only ever downloaded. Safe stub restores auto-publish.
+  const btn = { textContent: '', disabled: false, style: {} };
 
   const split = s => s ? s.split('\n').map(l => l.trim()).filter(Boolean) : [];
   const q = s => s ? `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"` : 'null';
@@ -2870,11 +2874,13 @@ function buildROSHtml() {
   function getStageLabel(c) { return c.prelive ? 'PRE-SHOW' : ({ pod:'POD STAGE', music:'MUSIC STAGE', kitchen:'KITCHEN DISCO', video:'VIDEO' }[c.stageType] || (c.stageType||'').toUpperCase() || 'STAGE'); }
 
   let runMins = 0;
+  // Printed order per Mark: Camera → Video Switch → Audio → Lighting. Empty fields are filtered
+  // out below, so lighting only prints where it's actually set (the first check + S11 kill).
   const crewDefs = [
     { key:'camerasNow', lbl:'CAMERAS' },
+    { key:'videoNow',   lbl:'VIDEO SWITCH' },
     { key:'audioNow',   lbl:'AUDIO' },
     { key:'lightingNow',lbl:'LIGHTING' },
-    { key:'videoNow',   lbl:'VIDEO' },
   ];
 
   const sceneRows = cues.map((c, i) => {
@@ -2888,7 +2894,13 @@ function buildROSHtml() {
     }).join('');
     const booLine = c.booMsg ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>` : '';
     const standbyStageLabel = STAGE_LABEL[c.standbyStage] || c.standbyStage || '';
-    const standbyLine = c.standbyWho ? `<div class="note-row"><span class="note-lbl stby">STBY</span><span class="note-val stby-val">${c.standbyWho}${standbyStageLabel ? ' → ' + standbyStageLabel : ''}</span></div>` : '';
+    // Only cue a person to GET READY on the ONE scene right before they appear — otherwise the
+    // auto-derived standby repeats them across every earlier scene (Kenneth was showing from 3
+    // songs out). ~3 min lead per Mark's default.
+    const nextCue = cues[i + 1];
+    const nextIds = nextCue ? nowIdentities(nextCue, showData.guests).map(s => s.toLowerCase()) : [];
+    const showStandby = c.standbyWho && nextIds.includes((c.standbyWho || '').toLowerCase());
+    const standbyLine = showStandby ? `<div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">${c.standbyWho}${standbyStageLabel ? ' → ' + standbyStageLabel : ''} &nbsp;·&nbsp; ~3 min</span></div>` : '';
     const timeStr = c.prelive ? `${dur}m` : `${dur}m &nbsp;·&nbsp; <span class="runtime">show: ${runAtStart}m</span>`;
     return `<div class="srow" style="border-left:4px solid ${color};">
       <div class="col-num"><div class="s-num" style="color:${color}">S${i+1}</div><div class="s-stage" style="color:${color}">${getStageLabel(c)}</div></div>
@@ -2931,7 +2943,7 @@ body{background:#fff;color:#000;font-family:'Syne',sans-serif;font-size:13pt;-we
 .s-time{font-size:9pt;color:var(--muted);margin-top:3px;}
 .runtime{color:var(--teal);}
 .note-row{display:flex;gap:6px;margin-bottom:4px;align-items:baseline;}
-.note-lbl{font-size:7pt;color:var(--muted);letter-spacing:2px;font-weight:700;text-transform:uppercase;flex-shrink:0;width:58px;}
+.note-lbl{font-size:7pt;color:var(--muted);letter-spacing:1.5px;font-weight:700;text-transform:uppercase;flex-shrink:0;width:76px;line-height:1.2;}
 .stby{color:#8a6a00;}
 .stby-val{color:#8a6a00;}
 .note-val{font-size:11pt;line-height:1.3;}
