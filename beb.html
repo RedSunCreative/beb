@@ -1652,7 +1652,7 @@ If showData.cues is empty, skip this rule.`;
     /#\d+/.test(msg) ||                       // any scene number reference (#2, #33)
     /\b\d+\s*min(ute)?s?\b/.test(msg) ||     // duration changes ("3 minutes", "20 min")
     (showData.cues.length === 0 && msg.length > 15);
-  const maxTokens = needsFullOutput ? 8192 : 512;
+  const maxTokens = needsFullOutput ? 16000 : 512;
   // Sonnet for cue builds (reliable JSON at scale); Haiku for fast-path simple queries
   const model = needsFullOutput ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
