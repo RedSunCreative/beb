@@ -547,7 +547,7 @@ def extract(name):
         i += 1
     return ''
 out = []
-for fn in ('autoResolveNowPerson', 'resolveNameToRoster', 'resolveNowPeople', 'nowLabel', 'deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson', 'resolveNameToRoster', 'splitNowEntry', 'resolveNowDisplay', 'nowIdentity', 'nowIdentities', 'resolveNowPeople', 'nowLabel', 'deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
     body = extract(fn)
     if not body:
         print('// MISSING ' + fn)
@@ -654,7 +654,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print("const CLIENT_CONFIG={hostName:'Mark'};")
@@ -715,7 +715,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print(r'''
@@ -764,7 +764,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('normalizeGuest','autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('normalizeGuest','autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print(r'''
@@ -905,7 +905,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
@@ -977,7 +977,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('autoResolveNowPerson','resolveNameToRoster','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print("const CLIENT_CONFIG={hostName:'Mark'};")

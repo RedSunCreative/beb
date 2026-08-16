@@ -694,15 +694,59 @@ function resolveNameToRoster(name, guests) {
   return n; // unknown or ambiguous → leave verbatim
 }
 
+// A nowPeople entry may tack an unnamed extra onto a named performer via a connector —
+// "David Rothgeb and singers", "Sarah with the band", "Melba & guests". We resolve the NAME
+// part to the roster full name and keep the tail (connector + extra) verbatim, so the studio
+// screens read "David Rothgeb and singers". The person IDENTITY (used for adjacency / get-ready
+// logic) is just the resolved name — the tail never affects who is cued next.
+function splitNowEntry(entry) {
+  const s = (entry || '').trim();
+  const m = s.match(/\s+(?:and|&|\+|with|featuring|feat\.?|ft\.?)\s+.+$/i);
+  if (!m) return { name: s, tail: '' };
+  return { name: s.slice(0, m.index).trim(), tail: ' ' + m[0].trim() };
+}
+// Display string for ONE nowPeople entry: resolved roster name + any trailing "and X" tail.
+function resolveNowDisplay(entry, guests) {
+  const s = (entry || '').trim();
+  if (!s) return '';
+  // A full exact roster match wins outright, so a real name that happens to contain a connector
+  // word (rare, but safe) is never split.
+  if (guests.some(g => (g.name || '').trim().toLowerCase() === s.toLowerCase())) {
+    return resolveNameToRoster(s, guests);
+  }
+  const { name, tail } = splitNowEntry(s);
+  return resolveNameToRoster(name, guests) + tail;
+}
+// Identity for ONE entry — the resolved person only, tail dropped. So "David Rothgeb and singers"
+// and a later plain "David Rothgeb" are recognized as the SAME person by adjacency/standby logic.
+function nowIdentity(entry, guests) {
+  const s = (entry || '').trim();
+  if (!s) return '';
+  if (guests.some(g => (g.name || '').trim().toLowerCase() === s.toLowerCase())) {
+    return resolveNameToRoster(s, guests);
+  }
+  return resolveNameToRoster(splitNowEntry(s).name, guests);
+}
+
 // NOW = who is physically on/in this scene. Authored cue.nowPeople is the source of truth
-// (each entry resolved to a canonical roster name); when absent, fall back to the title/song/
-// host/stage auto-resolver. Returns a (possibly empty) array of names — [] means nobody is on
-// screen (countdown, video roll). NEVER reads booName.
+// (each entry resolved to a canonical roster name, plus any "and X" tail kept for display); when
+// absent, fall back to the title/song/host/stage auto-resolver. Returns a (possibly empty) array
+// of DISPLAY strings — [] means nobody is on screen (countdown, video roll). NEVER reads booName.
 function resolveNowPeople(cue, guests) {
   guests = guests || (typeof showData !== 'undefined' ? showData.guests : []) || [];
   cue = cue || {};
   if (Array.isArray(cue.nowPeople) && cue.nowPeople.length) {
-    return cue.nowPeople.map(n => resolveNameToRoster(n, guests)).filter(Boolean);
+    return cue.nowPeople.map(n => resolveNowDisplay(n, guests)).filter(Boolean);
+  }
+  const auto = autoResolveNowPerson(cue, guests);
+  return auto ? [auto] : [];
+}
+// Roster IDENTITIES of who's on this scene (tails stripped) — for adjacency / standby dedup.
+function nowIdentities(cue, guests) {
+  guests = guests || (typeof showData !== 'undefined' ? showData.guests : []) || [];
+  cue = cue || {};
+  if (Array.isArray(cue.nowPeople) && cue.nowPeople.length) {
+    return cue.nowPeople.map(n => nowIdentity(n, guests)).filter(Boolean);
   }
   const auto = autoResolveNowPerson(cue, guests);
   return auto ? [auto] : [];
@@ -744,10 +788,11 @@ function stageOptionsHTML(cur) {
 function deriveStandby(cues, i, guests) {
   // The people already on NOW can't be their own "get ready" cue — skip them and find the
   // next DIFFERENT person on an upcoming scene (a performer doing back-to-back songs isn't
-  // "ready"). Sourced from resolveNowPeople (authored nowPeople or auto-resolve), never booName.
-  const nowSet = new Set(resolveNowPeople(cues[i], guests));
+  // "ready"). Uses nowIdentities (resolved person, "and X" tail stripped) so a scene's extras
+  // never affect who's cued next, never booName.
+  const nowSet = new Set(nowIdentities(cues[i], guests));
   for (let k = i + 1; k < cues.length; k++) {
-    const who = resolveNowPeople(cues[k], guests).find(p => !nowSet.has(p));
+    const who = nowIdentities(cues[k], guests).find(p => !nowSet.has(p));
     if (who) return { standbyWho: who, standbyStage: cues[k].stageType || '' };
   }
   return { standbyWho: '', standbyStage: '' };
@@ -1546,6 +1591,11 @@ A scene has TWO different person concepts, and they must never be mixed:
     Always resolve to the guest's full roster name (from showData.guests): "David" -> "David Rothgeb".
     If a partial name matches MORE THAN ONE guest (e.g. two Davids), do NOT guess and do NOT store the
     partial — ASK which guest you mean, then set it. A unique match resolves automatically.
+    To include people who are NOT roster guests alongside a named performer (backing singers, a
+    surprise guest, the band), append them AFTER the name in that person's entry using a connector
+    ("and"/"&"/"with"): e.g. nowPeople: ["David Rothgeb and singers"] or ["Sarah Bentley with the band"].
+    The name resolves to the roster; the extra shows verbatim on the studio screens (BSM ON NOW).
+    Do NOT invent a fake roster guest for the extras, and do NOT bury them in the scene label.
   • booName — who is coming up NEXT (the forward studio-TV "get ready" tease). Route here: "David is up
     next", "get David ready", "David is coming up". Leave booName "" unless an up-next is specified.
 NEVER put a now-person into booName, and never put a next-up person into nowPeople.
