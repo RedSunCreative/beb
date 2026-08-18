@@ -1399,7 +1399,7 @@ When showData.cues is empty (a fresh episode), you OPEN the collaboration — yo
 1. In TWO sentences, state the shape you'd lay down for THIS episode, drawn from THE SHOW BLUEPRINT — confident and specific (the fixed anchors plus a sensible middle), no hedging.
 2. Then ask the ONE most valuable question — usually the primary music guest and how many songs, or the cold-open and closing songs (the bookends). ONE question, never a list.
 3. Do NOT build the full run of show yet. After Mark answers, lay the skeleton, fill what the blueprint dictates, then ask the next single unknown — one at a time, per HOW TO BUILD THE SCENE LIST.
-Also remind Mark, once, that crew and tech cues can be pulled forward from a past episode via the Import buttons (Import Past Crew, Import Tech Cues) so he isn't rebuilding from scratch — suggest it; you can't click it for him.
+Check state before nudging: ONLY if showData.crew is empty, point Mark to the Import Past Crew button; ONLY if scenes lack tech cues, point to Import Tech Cues. Never remind about an Import he's clearly already used (e.g. crew is populated). Suggest the button; you can't click it for him.
 This proactive lead applies ONLY while a blank / near-blank episode is being planned. Once the run of show exists, revert to default: do the work, confirm, stop.
 
 === HOW TO BUILD THE SCENE LIST ===
@@ -1407,7 +1407,7 @@ This proactive lead applies ONLY while a blank / near-blank episode is being pla
 2. Confirm Closing Song (name + duration) — ask early so you know the bookends
 3. Collect any middle songs and their durations one at a time
 4. Collect pod guests and their order
-5. If showData.crew is empty, ask Mark for crew before building scenes: "Who's on crew for this one? Give me name, role, and their mobile number."
+5. If showData.crew is empty, tell Mark the fastest path is the Import Past Crew button (pulls the usual crew + producer quick-messages forward); only collect name/role/mobile manually for anyone new. Do NOT demand a full manual crew list.
 6. For each pod guest transition, decide what buffer to use
 7. Build the full scene sequence: Countdown → Cold Open → Pre-recorded Intro → Show Opener → Kitchen Disco #1 → [interview + buffer + interview...] → Closing Song
 8. Do the runtime math (exclude Countdown — it's prelive). Flag if total is off target by more than 8 min and suggest a specific fix.
@@ -1416,7 +1416,7 @@ This proactive lead applies ONLY while a blank / near-blank episode is being pla
 === CREW ===
 showData.crew is an array of crew members: { name, role, mobile }. Roles include: Audio, Video, Camera, Lighting, Stage Manager, Director, etc.
 - Collect crew at the start of episode planning if the list is empty (see step 5 above).
-- On login, if showData.crew is empty, prompt Mark: "I don't have crew info for this episode — who's on crew?"
+- On login, if showData.crew is empty, point Mark to the Import Past Crew button first ("pull your usual crew forward, or tell me who's new") — don't demand a manual list.
 - In CREW SHOUTOUT and CREW THANKS scenes, list every crew member by name and role from showData.crew.
 - When generating crew instructions, use showData.crew to address people by name rather than role alone.
 - When updating crew, send the full updated array in updates.crew.
@@ -4301,7 +4301,7 @@ window.addEventListener('load', async () => {
     addBooMessage(msg);
     await speakBoo(msg);
     if (crewMissing) {
-      const crewMsg = "One thing — I don't have crew info for this episode. Who's on crew? Give me name, role, and mobile number for each person.";
+      const crewMsg = "No crew on this one yet — quickest path is the Import Past Crew button (pulls your usual crew + producer quick-messages forward). Or tell me who's new.";
       addBooMessage(crewMsg);
       await speakBoo(crewMsg);
     }
@@ -4310,7 +4310,7 @@ window.addEventListener('load', async () => {
     addBooMessage(msg);
     await speakBoo(msg);
     if (crewMissing) {
-      const crewMsg = "Also — no crew info on file. Who's working this episode? Name, role, and mobile for each person.";
+      const crewMsg = "Also — no crew on file. Hit Import Past Crew to pull your usual crew + quick-messages forward, or tell me who's new.";
       addBooMessage(crewMsg);
       await speakBoo(crewMsg);
     }
