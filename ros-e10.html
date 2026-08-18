@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Little Big Voices E10 — Run of Show</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--gold:#B8960A;--teal:#1a7a8a;--border:#cccccc;--muted:#555555;}
+body{background:#fff;color:#000;font-family:'Syne',sans-serif;font-size:13pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.page{max-width:800px;margin:0 auto;padding:24px 20px 40px;}
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid var(--gold);margin-bottom:18px;gap:16px;}
+.hdr-show{font-size:10pt;color:var(--teal);letter-spacing:5px;text-transform:uppercase;margin-bottom:2px;}
+.hdr-epnum{font-size:56pt;font-weight:900;color:var(--gold);line-height:0.88;letter-spacing:-2px;}
+.hdr-title{font-size:14pt;font-weight:700;letter-spacing:2px;margin-top:6px;text-transform:uppercase;}
+.hdr-sub{font-size:10pt;color:var(--muted);letter-spacing:2px;margin-top:4px;}
+.hdr-right{text-align:center;flex-shrink:0;}
+.qr-box{padding:4px;background:#fff;border-radius:4px;display:inline-block;border:1px solid #ccc;}
+.qr-lbl{font-size:7pt;color:var(--muted);letter-spacing:2px;margin-top:4px;text-transform:uppercase;}
+.col-head{display:grid;grid-template-columns:70px 1fr 1.4fr;border-bottom:1px solid var(--gold);padding:5px 0 5px 10px;margin-bottom:2px;}
+.col-head-cell{font-size:8pt;font-weight:700;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
+.srow{display:grid;grid-template-columns:70px 1fr 1.4fr;border-bottom:1px solid var(--border);padding:10px 0 10px 10px;align-items:start;page-break-inside:avoid;}
+.col-num{padding-right:8px;}
+.s-num{font-size:15pt;font-weight:900;line-height:1;}
+.s-stage{font-size:7pt;color:var(--muted);letter-spacing:1px;margin-top:2px;text-transform:uppercase;}
+.col-name{padding-right:12px;}
+.s-name{font-size:13pt;font-weight:700;line-height:1.2;}
+.s-time{font-size:9pt;color:var(--muted);margin-top:3px;}
+.runtime{color:var(--teal);}
+.note-row{display:flex;gap:6px;margin-bottom:4px;align-items:baseline;}
+.note-lbl{font-size:7pt;color:var(--muted);letter-spacing:1.5px;font-weight:700;text-transform:uppercase;flex-shrink:0;width:76px;line-height:1.2;}
+.stby{color:#8a6a00;}
+.stby-val{color:#8a6a00;}
+.note-val{font-size:11pt;line-height:1.3;}
+.note-boo{color:var(--teal);font-style:italic;}
+.foot{margin-top:20px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.foot-text{font-size:8pt;color:var(--muted);letter-spacing:2px;}
+.print-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--gold);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:999;}
+.print-bar-label{font-size:10pt;color:var(--muted);letter-spacing:1px;}
+.print-btn{background:var(--teal);color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:12pt;font-weight:700;cursor:pointer;letter-spacing:2px;font-family:'Syne',sans-serif;}
+.live-ros-link{background:var(--gold);color:#000;padding:10px 18px;border-radius:6px;font-size:11pt;font-weight:700;letter-spacing:2px;text-decoration:none;white-space:nowrap;}
+@media (max-width:600px){
+  .hdr{flex-direction:column;gap:10px;}
+  .hdr-right{display:none;}
+  .col-head{display:none;}
+  .srow{display:block;padding:12px 10px;}
+  .col-num{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .s-stage{display:inline;margin-left:4px;}
+  .col-name{margin-bottom:8px;}
+  .col-notes{border-top:1px solid var(--border);padding-top:8px;}
+  .print-bar-label{display:none;}
+}
+@media print{
+  @page{size:letter portrait;margin:0.45in;}
+  .print-bar{display:none;}
+  .live-ros-link{display:none;}
+  .srow{page-break-inside:avoid;}
+  body{font-size:11pt;}
+}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <span class="print-bar-label">Little Big Voices · E10 STATIC RoS</span>
+  <a href="https://redsuncreative.github.io/beb/bsm-e10.html" target="_blank" class="live-ros-link">▶ Live RoS</a>
+  <button class="print-btn" onclick="window.print()">🖨️ PRINT / SAVE PDF</button>
+</div>
+<div class="page">
+  <div class="hdr">
+    <div>
+      <div class="hdr-show">Little Big Voices</div>
+      <div class="hdr-epnum">E10</div>
+      <div class="hdr-title">Little Big Community Chill</div>
+      <div class="hdr-sub">8/16/2026 · 90 MIN · 11 SCENES</div>
+    </div>
+    <div class="hdr-right">
+      <div class="qr-box" id="qr-ros"></div>
+      <div class="qr-lbl">LIVE SHOW MANAGER</div>
+    </div>
+  </div>
+  <div class="col-head">
+    <div class="col-head-cell">SCENE</div>
+    <div class="col-head-cell">NAME / TIME</div>
+    <div class="col-head-cell">STAGE &amp; TECH NOTES</div>
+  </div>
+  <div class="srow" style="border-left:4px solid #1a7a40;">
+      <div class="col-num"><div class="s-num" style="color:#1a7a40">S1</div><div class="s-stage" style="color:#1a7a40">PRE-SHOW</div></div>
+      <div class="col-name"><div class="s-name">COUNTDOWN — Pre-Show</div><div class="s-time">15m</div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">Confirm all Music Stage cameras are ready<br>Confirm slider cam is cued and ready<br>Music Cams: wide + close</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO stream start.<br>Stand by — LBV E10 Countdown Video cued to 20 min — GO exactly on 20 min</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO stream start at 25 minutes till.<br>Have playback countdown video cued to 20 minutes — start video exactly on 20 min.<br>Stand by on music mics</span></div><div class="note-row"><span class="note-lbl">LIGHTING</span><span class="note-val">Confirm all lighting is set for show — this is the only lighting check</span></div><div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">Sarah Bentley and singers, please head to the Music Stage — we go live soon.</span></div><div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">Sarah Bentley → Music Stage &nbsp;·&nbsp; ~3 min</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #B8960A;">
+      <div class="col-num"><div class="s-num" style="color:#B8960A">S2</div><div class="s-stage" style="color:#B8960A">MUSIC STAGE</div></div>
+      <div class="col-name"><div class="s-name">COLD OPEN — Loosen Loosen</div><div class="s-time">5m &nbsp;·&nbsp; <span class="runtime">show: 0m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Music Cams<br>GO: Slider Cam moving<br>READY: Pod Stage cams after Cold Open</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Music Cams live<br>READY: LBV E10 Show Opener Video after Cold Open</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Music mics up + reverb/delay<br>GO: Instrument mic up if needed<br>GO: Slider Cam — moving before song starts<br>READY: Pod mics — Mark + Melba Martinez</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #9966dd;">
+      <div class="col-num"><div class="s-num" style="color:#9966dd">S3</div><div class="s-stage" style="color:#9966dd">VIDEO</div></div>
+      <div class="col-name"><div class="s-name">PRE-RECORDED INTRO — E10 LBV Show Opener Video</div><div class="s-time">1m &nbsp;·&nbsp; <span class="runtime">show: 5m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">Video playback — READY: Pod Stage cams</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: LBV E10 Show Opener Video<br>READY: Pod Stage cams</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Playback audio — LBV E10 Show Opener Video<br>READY: Pod Mixer mics — Mark + Melba Martinez</span></div><div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">Melba, please take your seat at the Pod Stage — you're on next.</span></div><div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">Melba Martinez → Pod Stage &nbsp;·&nbsp; ~3 min</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #1a7a8a;">
+      <div class="col-num"><div class="s-num" style="color:#1a7a8a">S4</div><div class="s-stage" style="color:#1a7a8a">POD STAGE</div></div>
+      <div class="col-name"><div class="s-name">SHOW OPENER — Mark + Melba Martinez</div><div class="s-time">15m &nbsp;·&nbsp; <span class="runtime">show: 6m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Pod Stage cams<br>CAM 3: Pod wide<br>CAM 4: Mark<br>CAM 5: Melba Martinez<br>READY: Music Cams</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Pod Stage cams<br>READY: Music Stage cams</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Pod Mixer mics open<br>GO: Mark + Melba Martinez mics live<br>READY: Sarah Bentley Mic 1 + ensemble mics</span></div><div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">Sarah Bentley and singers, please head to the Music Stage — you're on in 3 minutes.</span></div><div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">Sarah Bentley → Music Stage &nbsp;·&nbsp; ~3 min</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #B8960A;">
+      <div class="col-num"><div class="s-num" style="color:#B8960A">S5</div><div class="s-stage" style="color:#B8960A">MUSIC STAGE</div></div>
+      <div class="col-name"><div class="s-name">MUSIC TALK — Sarah Bentley Intro</div><div class="s-time">10m &nbsp;·&nbsp; <span class="runtime">show: 21m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Music Cams<br>GO: Slider Cam moving<br>READY: Music Cams for Yumm Vibration</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Music Stage cams<br>READY: Music Cams for Yumm Vibration</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Sarah Bentley Mic 4 handheld SM58 — spoken intro ONLY (this scene only)<br>READY: Soyinka Rahim Mic 1 lead vocal<br>READY: Instrument mic if needed<br>READY: All ensemble mics</span></div><div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">Soyinka Rahim, please head to the Music Stage — you're on in 3 minutes.</span></div><div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">Soyinka Rahim → Music Stage &nbsp;·&nbsp; ~3 min</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #B8960A;">
+      <div class="col-num"><div class="s-num" style="color:#B8960A">S6</div><div class="s-stage" style="color:#B8960A">MUSIC STAGE</div></div>
+      <div class="col-name"><div class="s-name">MUSIC — Yumm Vibration</div><div class="s-time">9m &nbsp;·&nbsp; <span class="runtime">show: 31m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Music Cams<br>GO: Slider Cam moving<br>READY: Music Cams for As I Relax</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Music Cams<br>READY: Music Cams for As I Relax</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Soyinka Rahim Mic 1 lead vocal<br>GO: Instrument mic up if needed<br>GO: All ensemble mics up<br>GO: Slider Cam moving before song starts<br>READY: At song end — kill Soyinka Mic 1, bring up Sarah Bentley Mic 1<br>NOTE: Mic 1 is transferring from Soyinka to Sarah — kill mic during handoff, bring Sarah up clean</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #B8960A;">
+      <div class="col-num"><div class="s-num" style="color:#B8960A">S7</div><div class="s-stage" style="color:#B8960A">MUSIC STAGE</div></div>
+      <div class="col-name"><div class="s-name">MUSIC — As I Relax</div><div class="s-time">11m &nbsp;·&nbsp; <span class="runtime">show: 40m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Music Cams<br>GO: Slider Cam moving before song starts<br>READY: Music Cams for The Dark Times</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Music Cams<br>READY: Music Cams for The Dark Times</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Sarah Bentley Mic 1 — spoken intro and lead vocal<br>GO: Instrument mic up if needed<br>GO: All ensemble mics up<br>READY: Sarah Bentley Mic 1 for The Dark Times</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #B8960A;">
+      <div class="col-num"><div class="s-num" style="color:#B8960A">S8</div><div class="s-stage" style="color:#B8960A">MUSIC STAGE</div></div>
+      <div class="col-name"><div class="s-name">MUSIC — The Dark Times</div><div class="s-time">6m &nbsp;·&nbsp; <span class="runtime">show: 51m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Music Cams<br>GO: Slider Cam moving before song starts<br>READY: Pod Stage cams</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Music Cams<br>READY: Pod Stage cams</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Sarah Bentley Mic 1 — spoken intro and lead vocal<br>GO: Instrument mic up if needed<br>GO: All ensemble mics up<br>READY: Pod mics — Mark + Kenneth Spivey</span></div><div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">Kenneth, please head to the Pod Stage now — you're on at the end of this song.</span></div><div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">Kenneth Spivey → Pod Stage &nbsp;·&nbsp; ~3 min</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #1a7a8a;">
+      <div class="col-num"><div class="s-num" style="color:#1a7a8a">S9</div><div class="s-stage" style="color:#1a7a8a">POD STAGE</div></div>
+      <div class="col-name"><div class="s-name">POD INTERVIEW — Kenneth Spivey</div><div class="s-time">25m &nbsp;·&nbsp; <span class="runtime">show: 57m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Pod Stage cams<br>CAM 3: Pod wide<br>CAM 4: Mark<br>CAM 5: Kenneth Spivey<br>READY: Music Cams</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Pod Stage cams<br>READY: Music Stage cams</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Pod Mixer mics open<br>GO: Mark + Kenneth Spivey mics live<br>READY: Sarah Bentley Mic 1 + ensemble mics</span></div><div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">Sarah Bentley and singers, please head to the Music Stage — you're on in 3 minutes.</span></div><div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">Sarah Bentley → Music Stage &nbsp;·&nbsp; ~3 min</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #B8960A;">
+      <div class="col-num"><div class="s-num" style="color:#B8960A">S10</div><div class="s-stage" style="color:#B8960A">MUSIC STAGE</div></div>
+      <div class="col-name"><div class="s-name">CLOSING SONG — Healing is Possible</div><div class="s-time">5m &nbsp;·&nbsp; <span class="runtime">show: 82m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Music Cams<br>GO: Slider Cam moving<br>CAM 3: Crowd reaction<br>READY: Pod Stage cams for show close</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Music Cams<br>GO: Slider Cam moving<br>CAM 3: Crowd reaction<br>READY: Ending Credits Video.mp4</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Sarah Bentley Mic 1 lead vocal<br>GO: Instrument mic up if needed<br>GO: All ensemble mics up<br>GO: Slider Cam moving before song starts<br>READY: Mark mic for show close<br>READY: Credits video — Ending Credits Video.mp4</span></div><div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">Credits + Dancing → Pod Stage &nbsp;·&nbsp; ~3 min</span></div></div>
+    </div><div class="srow" style="border-left:4px solid #1a7a8a;">
+      <div class="col-num"><div class="s-num" style="color:#1a7a8a">S11</div><div class="s-stage" style="color:#1a7a8a">POD STAGE</div></div>
+      <div class="col-name"><div class="s-name">SHOW CLOSE — Credits + Dancing</div><div class="s-time">3m &nbsp;·&nbsp; <span class="runtime">show: 87m</span></div></div>
+      <div class="col-notes"><div class="note-row"><span class="note-lbl">CAMERAS</span><span class="note-val">GO: Music Cams — dancing on Music Stage<br>GO: Kitchen Disco cam — dancing in Kitchen<br>CAM 4: Mark<br>READY: Slider Cam for crowd dancing</span></div><div class="note-row"><span class="note-lbl">VIDEO SWITCH</span><span class="note-val">GO: Ending Credits Video.mp4 on LIVE! cue<br>GO: Music Stage and Kitchen Disco cams for dancing</span></div><div class="note-row"><span class="note-lbl">AUDIO</span><span class="note-val">GO: Mark mic live<br>On Mark's cue 'We'll see you next time on Little Big Voices... LIVE!' — GO Ending Credits Video.mp4<br>Cut all mics on LIVE!<br>Bring ALL mics back up for applause and celebration after credits</span></div><div class="note-row"><span class="note-lbl">LIGHTING</span><span class="note-val">Manually turn off key light during credits</span></div></div>
+    </div>
+  <div class="foot">
+    <div class="foot-text">Little Big Voices · E10 · Generated 8/17/2026</div>
+    <div class="foot-text" style="color:var(--teal)">LITTLE BIG VOICES PRODUCTION</div>
+  </div>
+</div>
+<script>new QRCode(document.getElementById('qr-ros'),{text:"https://redsuncreative.github.io/beb/bsm-e10.html",width:80,height:80,colorDark:"#000000",colorLight:"#ffffff"});</script>
+</body>
+</html>
