@@ -996,12 +996,18 @@ function handleNewEpisode() {
   const savedMemory = [...(showData.booMemory || [])];
   const savedQM2 = showData.quickMessages;
   showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'', quickMessages: savedQM2 };
-  conversationHistory = [];
   currentEpRow = 0;
   localStorage.setItem('beb_current_ep_row', '0');
   updateAllDisplays();
   updateEpSwitchBtn();
   const msg = "Fresh slate — memory stays. What's the episode number?";
+  // Seed the thread so Boo KNOWS it just asked for the episode number. Without this, a bare
+  // reply like "11" reached the API with no context and Boo couldn't connect it — the exact
+  // loop Mark hit. The user-first entry satisfies the API's first-message-must-be-user rule.
+  conversationHistory = [
+    { role: 'user', content: '[Started a new, blank episode — nothing is set yet.]' },
+    { role: 'assistant', content: JSON.stringify({ speech: msg, display: msg, updates: {} }) }
+  ];
   addBooMessage(msg);
   speakBoo(msg);
 }
