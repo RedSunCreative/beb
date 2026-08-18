@@ -465,7 +465,8 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
         <div class="data-section-count" id="cue-count-badge">0</div>
       </div>
       <div class="data-section-body" id="cues-body">
-        <button onclick="addCue()" title="Add a blank scene and edit it (instead of asking Boo)" style="width:100%;background:transparent;border:1px dashed var(--teal);color:var(--teal);border-radius:6px;padding:9px;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;margin-bottom:10px;">+ Add Scene</button>
+        <button onclick="addCue()" title="Add a blank scene and edit it (instead of asking Boo)" style="width:100%;background:transparent;border:1px dashed var(--teal);color:var(--teal);border-radius:6px;padding:9px;font-family:'DM Sans',sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;margin-bottom:6px;">+ Add Scene</button>
+        <button onclick="openTechImport()" title="Fill each scene's empty audio/video/camera/lighting cues from the matching scene type in a past episode" style="width:100%;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:7px;font-family:'DM Sans',sans-serif;font-size:0.66rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;margin-bottom:10px;">⚙ Import Tech Cues from Past Episode</button>
         <div id="cue-list-display"><div style="font-size:12px;color:var(--muted)">Tell Boo what's in the show...</div></div>
         <div id="scene-edit-container"></div>
       </div>
@@ -2687,6 +2688,152 @@ function confirmCrewImport() {
 
 function closeCrewImport() {
   const overlay = document.getElementById('crew-import-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+// ─── IMPORT TECH CUES FROM PAST EPISODE ──────────────────────────────────────
+// Fill each scene's EMPTY audio/video/camera/lighting cues from the same KIND of scene in a
+// past episode (matched by stage + name keywords; best name-overlap wins). Fill-empty-only —
+// never overwrites tech you've already written. Preview + per-scene approval before applying.
+const TECH_FIELDS = [
+  { key: 'camerasNow',  lbl: 'CAMERAS' },
+  { key: 'videoNow',    lbl: 'VIDEO' },
+  { key: 'audioNow',    lbl: 'AUDIO' },
+  { key: 'lightingNow', lbl: 'LIGHTING' },
+];
+// Classify a scene into a reusable "kind" so a new scene borrows tech from the same kind of
+// scene in a past show. Order matters: specific patterns before the generic stage fallback.
+function sceneKind(cue) {
+  const s = (cue.scene || '').toLowerCase();
+  const st = cue.stageType || '';
+  if (/countdown|pre-?show/.test(s)) return 'countdown';
+  if (/cold open/.test(s)) return 'cold-open';
+  // Video/pre-recorded BEFORE opener, so "Pre-Recorded Intro — Show Opener Video" is a video
+  // roll (playback tech), not the live pod opener.
+  if (/pre-?recorded|opener video|intro video|\bvideo:/.test(s) || st === 'video') return 'video';
+  if (/closing song|closing|final song/.test(s)) return 'closing';
+  if (/show close|credits|ending|goodbye|\bdanc/.test(s)) return 'close';
+  if (/show opener|opens show|show open\b/.test(s)) return 'opener';
+  if (/interview/.test(s)) return 'interview';
+  if (/kitchen|disco/.test(s) || st === 'kitchen') return 'kitchen';
+  // A music-stage TALK/intro (host on handheld) is a different tech setup than a sung song.
+  if (st === 'music' && /music talk|\btalk\b|intro/.test(s)) return 'music-talk';
+  if (/music|song|performance/.test(s) || st === 'music') return 'music';
+  if (st === 'pod') return 'interview';
+  return st || 'other';
+}
+function _sceneTokens(s) {
+  return (s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 2 && !['the', 'and', 'for', 'with', 'from'].includes(w));
+}
+let _techMatches = [];
+
+async function openTechImport() {
+  if (!(showData.cues || []).length) { addBooMessage('Add or build your scenes first — then I can pull tech cues into them from a past episode.'); return; }
+  let overlay = document.getElementById('tech-import-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'tech-import-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.onclick = e => { if (e.target === overlay) closeTechImport(); };
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  overlay.innerHTML = '<div class="settings-modal" style="max-width:520px;padding:20px;"><div style="color:var(--muted);letter-spacing:2px;font-size:12px;">MATCHING SCENES TO PAST EPISODES…</div></div>';
+
+  let eps = [];
+  try { eps = (await listEpisodes()).filter(e => e.id !== currentEpRow); } catch(_) {}
+  // Past scenes that carry tech, newest episode first (so recent shows win the name-overlap tie).
+  const past = [];
+  for (const ep of eps) {
+    const lbl = ep.data?.epNum ? ('E' + ep.data.epNum) : ('Row ' + ep.id);
+    for (const c of (ep.data?.cues || [])) {
+      if (!TECH_FIELDS.some(f => (c[f.key] || '').trim())) continue;
+      past.push({ scene: c.scene || '', kind: sceneKind(c), epLabel: lbl,
+        tech: { camerasNow: c.camerasNow || '', videoNow: c.videoNow || '', audioNow: c.audioNow || '', lightingNow: c.lightingNow || '' } });
+    }
+  }
+  _techMatches = (showData.cues || []).map((cur, i) => {
+    const empties = TECH_FIELDS.filter(f => !(cur[f.key] || '').trim()).map(f => f.key);
+    if (!empties.length) return { i, scene: cur.scene || '', match: null, status: 'filled', fillKeys: [] };
+    const kind = sceneKind(cur);
+    const cands = past.filter(p => p.kind === kind);
+    if (!cands.length) return { i, scene: cur.scene || '', match: null, status: 'nomatch', fillKeys: [] };
+    const curTok = _sceneTokens(cur.scene);
+    let best = cands[0], score = -1;
+    for (const p of cands) { const sb = new Set(_sceneTokens(p.scene)); const sc = curTok.filter(w => sb.has(w)).length; if (sc > score) { score = sc; best = p; } }
+    const fillKeys = empties.filter(k => (best.tech[k] || '').trim());
+    return { i, scene: cur.scene || '', match: best, status: fillKeys.length ? 'ready' : 'nomatch', fillKeys };
+  });
+  renderTechImport();
+}
+
+function renderTechImport() {
+  const overlay = document.getElementById('tech-import-overlay');
+  if (!overlay) return;
+  const ready = _techMatches.filter(m => m.status === 'ready');
+  const rows = _techMatches.map(m => {
+    if (m.status === 'ready') {
+      const fills = m.fillKeys.map(k => TECH_FIELDS.find(f => f.key === k).lbl).join(', ');
+      return `<label style="display:flex;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;align-items:flex-start;">
+          <input type="checkbox" class="tech-imp-chk" data-i="${m.i}" checked style="width:16px;height:16px;flex-shrink:0;margin-top:2px;">
+          <span style="flex:1;font-size:12px;">
+            <span style="font-weight:700;color:var(--white);">S${m.i + 1} · ${esc(m.scene || '(untitled)')}</span><br>
+            <span style="color:var(--muted);">fills ${esc(fills)} from <span style="color:var(--teal);">${esc(m.match.scene)} · ${esc(m.match.epLabel)}</span></span>
+          </span></label>`;
+    }
+    const note = m.status === 'filled' ? 'tech already filled — skipped' : 'no matching past scene';
+    return `<div style="display:flex;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);opacity:0.5;font-size:12px;">
+        <span style="width:16px;flex-shrink:0;"></span>
+        <span style="flex:1;">S${m.i + 1} · ${esc(m.scene || '(untitled)')}<br><span style="color:var(--muted);font-size:11px;">${note}</span></span></div>`;
+  }).join('');
+  overlay.innerHTML = `
+    <div class="settings-modal" style="max-width:520px;padding:20px;max-height:82vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.1em;color:#F5A623;text-transform:uppercase;">Import Tech Cues</div>
+        <button onclick="closeTechImport()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">×</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Fills only EMPTY audio / video / camera / lighting cues — never overwrites what you've already written. Review each in EDIT after; they're a starting point.</div>
+      ${ready.length ? `<div style="margin-bottom:4px;"><button onclick="toggleAllTechImport()" style="background:none;border:none;color:var(--teal);font-size:11px;letter-spacing:1px;cursor:pointer;padding:0;">SELECT / CLEAR ALL</button></div>` : ''}
+      ${rows}
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button onclick="confirmTechImport()" class="crew-add-btn" style="flex:1;${ready.length ? '' : 'opacity:0.4;'}"${ready.length ? '' : ' disabled'}>FILL SELECTED</button>
+        <button onclick="closeTechImport()" class="crew-add-btn" style="background:transparent;">CANCEL</button>
+      </div>
+    </div>`;
+}
+
+function toggleAllTechImport() {
+  const chks = [...document.querySelectorAll('.tech-imp-chk')];
+  const anyOff = chks.some(c => !c.checked);
+  chks.forEach(c => { c.checked = anyOff; });
+}
+
+function confirmTechImport() {
+  let scenes = 0, fields = 0;
+  document.querySelectorAll('.tech-imp-chk').forEach(chk => {
+    if (!chk.checked) return;
+    const m = _techMatches.find(x => x.i === +chk.dataset.i);
+    if (!m || !m.match) return;
+    const cue = showData.cues[m.i];
+    if (!cue) return;
+    let touched = false;
+    m.fillKeys.forEach(k => {
+      if (!(cue[k] || '').trim() && (m.match.tech[k] || '').trim()) { cue[k] = m.match.tech[k]; fields++; touched = true; }
+    });
+    if (touched) scenes++;
+  });
+  if (scenes) {
+    setCues(showData.cues);
+    updateAllDisplays();
+    saveState();
+    addBooMessage(`✓ Filled tech cues on ${scenes} scene${scenes === 1 ? '' : 's'} (${fields} field${fields === 1 ? '' : 's'}) from past episodes. Review each in EDIT — they're a starting point, not final.`);
+  }
+  closeTechImport();
+}
+
+function closeTechImport() {
+  const overlay = document.getElementById('tech-import-overlay');
   if (overlay) overlay.style.display = 'none';
 }
 
