@@ -433,6 +433,7 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
         <div id="crew-list"><div style="font-size:12px;color:var(--muted)">Tell Boo your crew members, or add one below.</div></div>
         <div class="crew-footer">
           <button class="crew-add-btn" onclick="addCrewMember()">+ ADD MEMBER</button>
+          <button class="crew-add-btn" onclick="openCrewImport()" title="Bring crew (and their info) over from a past episode">↺ IMPORT PAST CREW</button>
         </div>
       </div>
     </div>
@@ -2564,6 +2565,129 @@ function addCrewMember() {
   renderCrewList();
   const inputs = document.querySelectorAll('.crew-inp');
   if (inputs.length) inputs[inputs.length - 3].focus();
+}
+
+// ─── IMPORT PAST CREW ────────────────────────────────────────────────────────
+// Pull crew members (and optionally the crew quick-message set) from previous episodes,
+// so the same crew carries show-to-show. Read-only against past rows — only ADDS to the
+// current episode's crew, never overwrites. Foundation of the cross-episode data project.
+const DEFAULT_CREW_QM = [
+  { label: 'RECORD',   text: 'Roll Audio and Video Records' },
+  { label: 'STAND BY', text: 'Stand by to Fade UP' },
+  { label: 'HEADS UP', text: 'Heads Up: Switching Run of Show' },
+  { label: 'FADE OUT', text: 'Fade Audio and Video' },
+];
+let _crewImportCandidates = [];   // [{name, role, mobile, email, epLabel}]
+let _crewImportQM = null;         // { srcLabel, msgs:[{label,text}] } or null
+
+async function openCrewImport() {
+  let overlay = document.getElementById('crew-import-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'crew-import-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.onclick = e => { if (e.target === overlay) closeCrewImport(); };
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display = 'flex';
+  overlay.innerHTML = '<div class="settings-modal" style="max-width:460px;padding:20px;"><div style="color:var(--muted);letter-spacing:2px;font-size:12px;">LOADING PAST EPISODES…</div></div>';
+
+  let eps = [];
+  try { eps = (await listEpisodes()).filter(e => e.id !== currentEpRow); } catch(_) {}
+
+  // Crew members: dedupe by name (listEpisodes is newest-first, so most-recent info wins),
+  // and skip anyone already on this episode.
+  const have = new Set((showData.crew || []).map(c => (c.name || '').trim().toLowerCase()).filter(Boolean));
+  const seen = new Set();
+  _crewImportCandidates = [];
+  for (const ep of eps) {
+    const epLabel = ep.data?.epNum ? ('E' + ep.data.epNum) : ('Row ' + ep.id);
+    for (const m of (ep.data?.crew || [])) {
+      const key = (m.name || '').trim().toLowerCase();
+      if (!key || seen.has(key) || have.has(key)) continue;
+      seen.add(key);
+      _crewImportCandidates.push({ name: m.name || '', role: m.role || '', mobile: m.mobile || '', email: m.email || '', epLabel });
+    }
+  }
+
+  // Crew quick-messages: only offer if this episode has none. Prefer a past episode's set;
+  // fall back to the standard crew set if no past episode has any saved.
+  _crewImportQM = null;
+  if (!((showData.quickMessages?.crew) || []).length) {
+    const src = eps.find(ep => (ep.data?.quickMessages?.crew || []).length);
+    if (src) _crewImportQM = { srcLabel: 'from ' + (src.data?.epNum ? 'E' + src.data.epNum : 'Row ' + src.id), msgs: src.data.quickMessages.crew };
+    else _crewImportQM = { srcLabel: 'standard set', msgs: DEFAULT_CREW_QM };
+  }
+  renderCrewImport();
+}
+
+function renderCrewImport() {
+  const overlay = document.getElementById('crew-import-overlay');
+  if (!overlay) return;
+  const items = _crewImportCandidates;
+  const rows = items.length
+    ? items.map((m, i) => `
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;">
+          <input type="checkbox" class="crew-imp-chk" data-i="${i}" checked style="width:16px;height:16px;flex-shrink:0;">
+          <span style="flex:1;"><span style="font-weight:700;color:var(--white);">${esc(m.name)}</span>${m.role ? ` <span style="color:var(--muted);font-size:12px;">· ${esc(m.role)}</span>` : ''}${m.mobile ? `<br><span style="color:var(--muted);font-size:11px;">${esc(m.mobile)}</span>` : ''}</span>
+          <span style="font-size:10px;color:var(--teal);letter-spacing:1px;">${esc(m.epLabel)}</span>
+        </label>`).join('')
+    : '<div style="font-size:12px;color:var(--muted);padding:10px 0;">No new crew found in past episodes — everyone from prior shows is already on this one.</div>';
+  const qmRow = _crewImportQM ? `
+      <label style="display:flex;align-items:center;gap:10px;padding:12px 6px 4px;margin-top:8px;border-top:2px solid var(--teal);cursor:pointer;">
+        <input type="checkbox" id="crew-imp-qm" checked style="width:16px;height:16px;flex-shrink:0;">
+        <span style="flex:1;font-size:12px;color:var(--white);">Also import crew quick-messages <span style="color:var(--muted);">(${_crewImportQM.msgs.map(m => esc(m.label)).join(', ')})</span> <span style="color:var(--teal);font-size:10px;">${esc(_crewImportQM.srcLabel)}</span></span>
+      </label>` : '';
+  overlay.innerHTML = `
+    <div class="settings-modal" style="max-width:460px;padding:20px;max-height:82vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.1em;color:#F5A623;text-transform:uppercase;">Import Past Crew</div>
+        <button onclick="closeCrewImport()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">×</button>
+      </div>
+      ${items.length ? `<div style="margin-bottom:4px;"><button onclick="toggleAllCrewImport()" style="background:none;border:none;color:var(--teal);font-size:11px;letter-spacing:1px;cursor:pointer;padding:0;">SELECT / CLEAR ALL</button></div>` : ''}
+      ${rows}
+      ${qmRow}
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button onclick="confirmCrewImport()" class="crew-add-btn" style="flex:1;"${items.length || _crewImportQM ? '' : ' disabled style="flex:1;opacity:0.4;"'}>ADD SELECTED</button>
+        <button onclick="closeCrewImport()" class="crew-add-btn" style="background:transparent;">CANCEL</button>
+      </div>
+    </div>`;
+}
+
+function toggleAllCrewImport() {
+  const chks = [...document.querySelectorAll('.crew-imp-chk')];
+  const anyOff = chks.some(c => !c.checked);
+  chks.forEach(c => { c.checked = anyOff; });
+}
+
+function confirmCrewImport() {
+  if (!showData.crew) showData.crew = [];
+  let added = 0;
+  document.querySelectorAll('.crew-imp-chk').forEach(chk => {
+    if (!chk.checked) return;
+    const m = _crewImportCandidates[+chk.dataset.i];
+    if (m) { showData.crew.push({ name: m.name, role: m.role, mobile: m.mobile, email: m.email, confirmed: false }); added++; }
+  });
+  let qmAdded = 0;
+  const qmChk = document.getElementById('crew-imp-qm');
+  if (qmChk && qmChk.checked && _crewImportQM) {
+    if (!showData.quickMessages) showData.quickMessages = { studio: [], crew: [] };
+    showData.quickMessages.crew = _crewImportQM.msgs.map(m => ({ label: m.label, text: m.text }));
+    qmAdded = _crewImportQM.msgs.length;
+  }
+  document.getElementById('crew-count').textContent = showData.crew.length;
+  saveState();
+  renderCrewList();
+  renderQuickMsgs();
+  closeCrewImport();
+  if (added || qmAdded) {
+    addBooMessage(`✓ Imported ${added} crew member${added === 1 ? '' : 's'}${qmAdded ? ` and ${qmAdded} crew quick-message${qmAdded === 1 ? '' : 's'}` : ''} from past episodes.`);
+  }
+}
+
+function closeCrewImport() {
+  const overlay = document.getElementById('crew-import-overlay');
+  if (overlay) overlay.style.display = 'none';
 }
 
 function renderMemory() {
