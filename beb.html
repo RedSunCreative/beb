@@ -2730,12 +2730,12 @@ async function generateBSM() {
     const bsmUrl = `https://redsuncreative.github.io/beb/bsm-e${epNum}.html`;
 
 
-    // Upload to GitHub if PAT is configured
+    // Upload to GitHub if PAT is configured. Every outcome posts a VISIBLE Boo message —
+    // the old status went to an off-screen element, so Publish looked like it did nothing.
     if (localStorage.getItem('beb_github_pat') || CLIENT_CONFIG.githubPAT) {
       btn.textContent = '⬆️ UPLOADING TO GITHUB...';
       btn.style.color = '#F5D03A';
       const ok = await uploadToGitHub(filename, output);
-      const epDate = showData.epDate || new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
       btn.style.color = '';
       if (ok) {
         const rosHtml = buildROSHtml();
@@ -2743,16 +2743,20 @@ async function generateBSM() {
         const bsmUrl = `https://${CLIENT_CONFIG.githubRepo?.split('/')[0]?.toLowerCase()}.github.io/${CLIENT_CONFIG.githubRepo?.split('/')[1]}/${filename}`;
         showScriptsSharePanel('✓ Live Show Script published', bsmUrl, true);
         btn.textContent = '✓ PUBLISHED';
+        addBooMessage(`✓ <b>Published live.</b> BSM &amp; printed script are updated on GitHub — give it up to a minute, then hard-refresh. <a href="${bsmUrl}" target="_blank" style="color:var(--teal);">Open BSM ↗</a>`);
       } else {
         btn.textContent = '⚠️ UPLOAD FAILED — check GitHub PAT';
+        addBooMessage(`⚠️ <b>Publish couldn't upload to GitHub.</b> Your token is likely missing, expired, or lacks Contents write on <code>${CLIENT_CONFIG.githubRepo}</code>. Check ⚙ Settings → Personal Access Token. (The file still downloaded to your Downloads folder as a fallback.)`);
       }
     } else {
       btn.textContent = `✓ DOWNLOADED`;
+      addBooMessage(`⬇️ Downloaded <b>${filename}</b> to your Downloads folder — but it did <b>not</b> go live: no GitHub token is set. Add one in ⚙ Settings → Personal Access Token to publish live automatically.`);
     }
     setTimeout(() => { btn.textContent = '📄 SHOW SCRIPTS ▾'; btn.disabled = false; }, 5000);
   } catch(e) {
     console.error(e);
     btn.textContent = '✕ FAILED — check console';
+    addBooMessage(`✕ <b>Publish hit an error.</b> ${(e && e.message ? e.message : String(e)).slice(0,120)} — check the browser console.`);
     setTimeout(() => { btn.textContent = '📄 SHOW SCRIPTS ▾'; btn.disabled = false; }, 3000);
   }
 }
