@@ -88,6 +88,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Revert the SMS href keying to the positional .crew-sms walk
   sed -i '' 's/document.querySelectorAll(.\[data-crew-sms\].)/document.querySelectorAll(".crew-sms")/' "$BEB"
   echo "  Injected: updateCrewMsg reverted to positional .crew-sms walk"
+  # Revert tech import to sourcing every field from one wholesale best match (drops lighting)
+  sed -i '' 's/const src = ranked.find(p =>/const src = [ranked[0]].find(p =>/' "$BEB"
+  echo "  Injected: tech import takes all fields from the single best match"
   echo ""
 fi
 
@@ -1113,6 +1116,82 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 24: tech-cue import sources each field independently (lighting falls back)
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 24: tech import per-field fallback across episodes ---"
+python3 - > /tmp/beb_techmatch.js <<'PYEOF'
+src=open('beb.html').read()
+def extract(name):
+    i=src.find('function '+name+'('); b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+    return ''
+i=src.find('const TECH_FIELDS = ['); print(src[i:src.find('];',i)+2] if i>=0 else '// MISSING TECH_FIELDS')
+for fn in ('sceneKind','_sceneTokens','matchTechForCue'):
+    print(extract(fn) or ('// MISSING '+fn)); print()
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+// Mirrors production reality: E10 recorded no lighting on music scenes, E9 did.
+const past = [
+  { scene:'MUSIC — Yumm Vibration', kind:'music', epLabel:'E10',
+    tech:{ camerasNow:'C2 wide on music stage', videoNow:'MUSIC LOWER THIRD', audioNow:'Music bus up', lightingNow:'' } },
+  { scene:'PERFORMANCE — Water from the Well', kind:'music', epLabel:'E9',
+    tech:{ camerasNow:'C1 tight', videoNow:'E9 L3', audioNow:'E9 music bus', lightingNow:'Warm amber wash, house at 30%' } },
+  { scene:'POD INTERVIEW — Kenneth Spivey', kind:'interview', epLabel:'E10',
+    tech:{ camerasNow:'C3 two-shot', videoNow:'', audioNow:'Pod mics 1-4', lightingNow:'' } },
+];
+const byKey = r => Object.fromEntries(r.fills.map(f => [f.key, f]));
+
+// (a) Newest episode wins the fields it HAS...
+const music = { scene:'MUSIC — Something New', stageType:'music' };
+let r = matchTechForCue(music, past);
+assert(r.status === 'ready', 'music scene should be ready, got ' + r.status);
+let f = byKey(r);
+assert(f.camerasNow.srcEp === 'E10', 'cameras should come from E10, got ' + f.camerasNow.srcEp);
+assert(f.audioNow.srcEp === 'E10', 'audio should come from E10, got ' + f.audioNow.srcEp);
+// (b) ...but LIGHTING falls back to the older episode that actually recorded it.
+assert(f.lightingNow, 'lighting must be filled via fallback, not dropped');
+assert(f.lightingNow.srcEp === 'E9', 'lighting should fall back to E9, got ' + f.lightingNow.srcEp);
+assert(f.lightingNow.text === 'Warm amber wash, house at 30%', 'lighting text should come from the E9 scene');
+
+// (c) Fill-empty-only: an author-written field is never offered for overwrite.
+const partly = { scene:'MUSIC — Something New', stageType:'music', audioNow:'MY OWN AUDIO CUE' };
+r = matchTechForCue(partly, past);
+assert(!byKey(r).audioNow, 'a field the host already wrote must not be offered for fill');
+assert(byKey(r).camerasNow, 'other empty fields should still fill');
+
+// (d) All four already written -> nothing to do.
+const full = { scene:'MUSIC — X', stageType:'music', camerasNow:'a', videoNow:'b', audioNow:'c', lightingNow:'d' };
+assert(matchTechForCue(full, past).status === 'filled', 'fully-authored scene should report filled');
+
+// (e) No same-kind past scene -> nomatch, and nothing invented.
+const kitchen = { scene:'KITCHEN DISCO #1', stageType:'kitchen' };
+r = matchTechForCue(kitchen, past);
+assert(r.status === 'nomatch', 'kitchen has no same-kind candidate, got ' + r.status);
+assert(r.fills.length === 0, 'nomatch must fill nothing');
+
+// (f) A kind whose only candidate lacks a field leaves that field alone (no cross-kind bleed).
+const interview = { scene:'POD INTERVIEW — Someone', stageType:'pod' };
+f = byKey(matchTechForCue(interview, past));
+assert(f.camerasNow.srcEp === 'E10', 'interview cameras from E10');
+assert(!f.videoNow, 'interview video must stay empty — no interview candidate has it');
+assert(!f.lightingNow, 'interview lighting must NOT bleed in from a music scene');
+console.log('OK');
+''')
+PYEOF
+TM_RESULT=$(node /tmp/beb_techmatch.js 2>&1)
+if [[ "$TM_RESULT" == *"OK"* ]] && [[ "$TM_RESULT" != *"FAIL"* ]] && [[ "$TM_RESULT" != *"MISSING"* ]]; then
+  pass "tech import sources each field independently; lighting falls back across episodes"
+else
+  fail "tech import per-field test: $TM_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -1138,6 +1217,7 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/if (firstMatches.length >= 1) return firstMatches\[0\].name;/if (firstMatches.length === 1) return firstMatches[0].name;/' "$BEB"
   sed -i '' 's|// toggleCrewConfirmed( floated above NAME|// Layout order is deliberate: NAME first|' "$BEB"
   sed -i '' 's/document.querySelectorAll(".crew-sms")/document.querySelectorAll('"'"'[data-crew-sms]'"'"')/' "$BEB"
+  sed -i '' 's/const src = \[ranked\[0\]\].find(p =>/const src = ranked.find(p =>/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

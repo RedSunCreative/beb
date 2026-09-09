@@ -2755,6 +2755,37 @@ function _sceneTokens(s) {
 }
 let _techMatches = [];
 
+// Decide which tech fields a single scene can inherit from past episodes.
+// Pure — no DOM, no showData — so the test suite can drive it directly.
+//   cur  = the current cue
+//   past = [{scene, kind, epLabel, tech:{camerasNow,videoNow,audioNow,lightingNow}}], newest episode first
+// Returns { status: 'filled' | 'nomatch' | 'ready', fills: [{key, text, srcScene, srcEp}] }
+function matchTechForCue(cur, past) {
+  const empties = TECH_FIELDS.filter(f => !(cur[f.key] || '').trim()).map(f => f.key);
+  if (!empties.length) return { status: 'filled', fills: [] };
+  const kind = sceneKind(cur);
+  const cands = past.filter(p => p.kind === kind);
+  if (!cands.length) return { status: 'nomatch', fills: [] };
+  // Rank same-kind candidates once by scene-name word overlap. `past` arrives
+  // newest-episode-first and Array#sort is stable, so a recent episode still wins
+  // an equal-overlap tie.
+  const curTok = _sceneTokens(cur.scene);
+  const ranked = cands
+    .map(p => { const sb = new Set(_sceneTokens(p.scene)); return { p, sc: curTok.filter(w => sb.has(w)).length }; })
+    .sort((a, b) => b.sc - a.sc)
+    .map(x => x.p);
+  // Source each field INDEPENDENTLY: the best-ranked past scene that actually has
+  // that field wins it. Taking one scene wholesale left lighting empty whenever the
+  // winning episode never recorded lighting, even though an older episode had it
+  // for the same scene kind.
+  const fills = [];
+  for (const k of empties) {
+    const src = ranked.find(p => (p.tech[k] || '').trim());
+    if (src) fills.push({ key: k, text: src.tech[k], srcScene: src.scene, srcEp: src.epLabel });
+  }
+  return { status: fills.length ? 'ready' : 'nomatch', fills };
+}
+
 async function openTechImport() {
   if (!(showData.cues || []).length) { addBooMessage('Add or build your scenes first — then I can pull tech cues into them from a past episode.'); return; }
   let overlay = document.getElementById('tech-import-overlay');
@@ -2781,16 +2812,8 @@ async function openTechImport() {
     }
   }
   _techMatches = (showData.cues || []).map((cur, i) => {
-    const empties = TECH_FIELDS.filter(f => !(cur[f.key] || '').trim()).map(f => f.key);
-    if (!empties.length) return { i, scene: cur.scene || '', match: null, status: 'filled', fillKeys: [] };
-    const kind = sceneKind(cur);
-    const cands = past.filter(p => p.kind === kind);
-    if (!cands.length) return { i, scene: cur.scene || '', match: null, status: 'nomatch', fillKeys: [] };
-    const curTok = _sceneTokens(cur.scene);
-    let best = cands[0], score = -1;
-    for (const p of cands) { const sb = new Set(_sceneTokens(p.scene)); const sc = curTok.filter(w => sb.has(w)).length; if (sc > score) { score = sc; best = p; } }
-    const fillKeys = empties.filter(k => (best.tech[k] || '').trim());
-    return { i, scene: cur.scene || '', match: best, status: fillKeys.length ? 'ready' : 'nomatch', fillKeys };
+    const r = matchTechForCue(cur, past);
+    return { i, scene: cur.scene || '', fills: r.fills, status: r.status };
   });
   renderTechImport();
 }
@@ -2801,12 +2824,22 @@ function renderTechImport() {
   const ready = _techMatches.filter(m => m.status === 'ready');
   const rows = _techMatches.map(m => {
     if (m.status === 'ready') {
-      const fills = m.fillKeys.map(k => TECH_FIELDS.find(f => f.key === k).lbl).join(', ');
+      // Fields can now come from different past scenes, so group the preview by source.
+      const bySrc = [];
+      m.fills.forEach(f => {
+        const k = f.srcScene + ' ' + f.srcEp;
+        let g = bySrc.find(x => x.k === k);
+        if (!g) { g = { k, scene: f.srcScene, ep: f.srcEp, lbls: [] }; bySrc.push(g); }
+        g.lbls.push(TECH_FIELDS.find(t => t.key === f.key).lbl);
+      });
+      const srcLines = bySrc.map(g =>
+        `<span style="color:var(--muted);">fills ${esc(g.lbls.join(', '))} from <span style="color:var(--teal);">${esc(g.scene)} · ${esc(g.ep)}</span></span>`
+      ).join('<br>');
       return `<label style="display:flex;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;align-items:flex-start;">
           <input type="checkbox" class="tech-imp-chk" data-i="${m.i}" checked style="width:16px;height:16px;flex-shrink:0;margin-top:2px;">
           <span style="flex:1;font-size:12px;">
             <span style="font-weight:700;color:var(--white);">S${m.i + 1} · ${esc(m.scene || '(untitled)')}</span><br>
-            <span style="color:var(--muted);">fills ${esc(fills)} from <span style="color:var(--teal);">${esc(m.match.scene)} · ${esc(m.match.epLabel)}</span></span>
+            ${srcLines}
           </span></label>`;
     }
     const note = m.status === 'filled' ? 'tech already filled — skipped' : 'no matching past scene';
@@ -2841,12 +2874,12 @@ function confirmTechImport() {
   document.querySelectorAll('.tech-imp-chk').forEach(chk => {
     if (!chk.checked) return;
     const m = _techMatches.find(x => x.i === +chk.dataset.i);
-    if (!m || !m.match) return;
+    if (!m || !m.fills.length) return;
     const cue = showData.cues[m.i];
     if (!cue) return;
     let touched = false;
-    m.fillKeys.forEach(k => {
-      if (!(cue[k] || '').trim() && (m.match.tech[k] || '').trim()) { cue[k] = m.match.tech[k]; fields++; touched = true; }
+    m.fills.forEach(f => {
+      if (!(cue[f.key] || '').trim() && (f.text || '').trim()) { cue[f.key] = f.text; fields++; touched = true; }
     });
     if (touched) scenes++;
   });
