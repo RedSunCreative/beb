@@ -97,6 +97,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Make the lighting opt-in sticky across opens
   sed -i '' 's/  _techIncludeLighting = false;   \/\/ opt-in per open, never sticky/  \/\/ sticky-BRK/' "$BEB"
   echo "  Injected: lighting opt-in no longer resets when the dialog reopens"
+  # Drop the ON NOW / HOST rows from the printed outline
+  sed -i '' 's/<div class="col-notes">${nowLine}${crewLines}${booLine}${cardLine}${standbyLine}<\/div>/<div class="col-notes">${crewLines}${booLine}${standbyLine}<\/div>/' "$BEB"
+  echo "  Injected: outline drops the ON NOW and HOST cue-card rows"
+  # Leak the print-only host into the derived NOW data (would poison standby)
+  sed -i '' "s/  if (!host || cue.prelive || (cue.stageType || '') !== 'pod') return people;/  if (!host) return people;/" "$BEB"
+  echo "  Injected: host added to NOW on every scene, not just the pod table"
   echo ""
 fi
 
@@ -1235,6 +1241,103 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 25: printed outline shows WHO IS ON (incl. the host at the pod table) + HOST card
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 25: printed outline ON NOW + HOST cue card ---"
+python3 - > /tmp/beb_ros.js <<'PYEOF'
+src=open('beb.html').read()
+def const_block(name):
+    i=src.find('const '+name)
+    if i<0: return '// MISSING '+name
+    eq=src.find('=',i); k=eq+1
+    while src[k] in ' \n\t': k+=1
+    if src[k] not in '[{': return src[i:src.find('\n',i)]
+    op,cl=src[k],(']' if src[k]=='[' else '}'); d=0; j=k
+    while j<len(src):
+        if src[j]==op: d+=1
+        elif src[j]==cl:
+            d-=1
+            if d==0: return src[i:j+1]+';'
+        j+=1
+def extract(name):
+    i=src.find('function '+name+'(')
+    if i<0: return '// MISSING '+name
+    b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG'): print(const_block(c))
+for fn in ('sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
+           'autoResolveNowPerson','resolveNowPeople','nowIdentities','nowIdentity','nowLabel',
+           'onNowForPrint','deriveStandby','deriveWarnings','recomputeStructuralFields','buildROSHtml'):
+    print(extract(fn)); print()
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+const HOST = CLIENT_CONFIG.hostName;
+assert(HOST, 'CLIENT_CONFIG.hostName must be set');
+const guests = [
+  { name:'Soyinka Rahim', stageType:'pod', songs:[] },
+  { name:'Shanik Hughes', stageType:'music', songs:[{name:'Agua a Tierra'}] },
+];
+
+// (a) Host is added at the pod table even when nowPeople never names him.
+let p = onNowForPrint({ scene:'SHOW CLOSE', stageType:'pod', nowPeople:[] }, guests);
+assert(p[0] === HOST, 'pod scene with no people should lead with the host, got ' + JSON.stringify(p));
+
+// (b) Host joins an existing pod guest rather than replacing them.
+p = onNowForPrint({ scene:'POD INTERVIEW — Soyinka Rahim', stageType:'pod', nowPeople:['Soyinka Rahim'] }, guests);
+assert(p.length === 2 && p[0] === HOST && p[1] === 'Soyinka Rahim',
+       'pod interview should read host + guest, got ' + JSON.stringify(p));
+
+// (c) Never doubled when he is already named.
+p = onNowForPrint({ scene:'SHOW OPENER', stageType:'pod', nowPeople:[HOST, 'Shanik Hughes'] }, guests);
+assert(p.filter(x => x === HOST).length === 1, 'host must not be duplicated, got ' + JSON.stringify(p));
+
+// (d) NOT added off the pod table — music, kitchen, video, or pre-show.
+for (const st of ['music','kitchen','video']) {
+  p = onNowForPrint({ scene:'X', stageType:st, nowPeople:[] }, guests);
+  assert(!p.includes(HOST), 'host must not appear on a ' + st + ' scene');
+}
+p = onNowForPrint({ scene:'COUNTDOWN', stageType:'pod', prelive:true, nowPeople:[] }, guests);
+assert(!p.includes(HOST), 'host must not appear on a pre-show scene');
+
+// (e) CLASS-PROOF: the print-only host must NOT leak into the derived data, or every
+// pod scene would emit a "GET READY <host>" on the scene before it.
+const cues = [
+  { scene:'VIDEO — roll', stageType:'video', nowPeople:[] },
+  { scene:'POD INTERVIEW — Soyinka Rahim', stageType:'pod', nowPeople:['Soyinka Rahim'] },
+];
+assert(!resolveNowPeople(cues[1], guests).includes(HOST), 'resolveNowPeople must stay host-free');
+assert(!nowIdentities(cues[1], guests).includes(HOST), 'nowIdentities must stay host-free');
+const r = recomputeStructuralFields(cues, guests);
+assert(r[0].standbyWho !== HOST, 'standby must not become the host, got ' + r[0].standbyWho);
+assert(r[0].standbyWho === 'Soyinka Rahim', 'standby should still be the real next person, got ' + r[0].standbyWho);
+
+// (f) The builder actually emits both new rows.
+globalThis.showData = { epNum:'11', epTitle:'T', epDate:'9-17-2026', guests, cues:[
+  { scene:'SHOW CLOSE', stageType:'pod', dur:3, nowPeople:[], camerasNow:'CAM 4', cueCard:'• Close the show\n• Thank crew' },
+]};
+const html = buildROSHtml();
+assert(html.indexOf('ON NOW') >= 0, 'outline must print an ON NOW row');
+assert(html.indexOf('>' + HOST + '<') >= 0 || html.indexOf(HOST) >= 0, 'outline must name the host on the close');
+assert(html.indexOf('HOST') >= 0, 'outline must print a HOST cue-card row');
+assert(html.indexOf('Thank crew') >= 0, 'cue card body must reach the page');
+assert(html.indexOf('• Close the show<br>• Thank crew') >= 0, 'cue card newlines should become <br>');
+console.log('OK');
+''')
+PYEOF
+ROS_RESULT=$(node /tmp/beb_ros.js 2>&1)
+if [[ "$ROS_RESULT" == *"OK"* ]] && [[ "$ROS_RESULT" != *"FAIL"* ]] && [[ "$ROS_RESULT" != *"MISSING"* ]]; then
+  pass "outline prints ON NOW (host at pod table) + HOST cue card; derived data stays host-free"
+else
+  fail "printed outline test: $ROS_RESULT"
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -1263,6 +1366,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/const src = \[ranked\[0\]\].find(p =>/const src = ranked.find(p =>/' "$BEB"
   sed -i '' "s/.filter(k => k !== 'nothingAtAll');/.filter(k => k !== 'lightingNow');/" "$BEB"
   sed -i '' 's/  \/\/ sticky-BRK/  _techIncludeLighting = false;   \/\/ opt-in per open, never sticky/' "$BEB"
+  sed -i '' 's/<div class="col-notes">${crewLines}${booLine}${standbyLine}<\/div>/<div class="col-notes">${nowLine}${crewLines}${booLine}${cardLine}${standbyLine}<\/div>/' "$BEB"
+  sed -i '' "s/  if (!host) return people;/  if (!host || cue.prelive || (cue.stageType || '') !== 'pod') return people;/" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

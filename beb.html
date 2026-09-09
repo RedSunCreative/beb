@@ -758,6 +758,20 @@ function nowIdentities(cue, guests) {
 // The scene name is always shown separately by each view; this is just the people.
 function nowLabel(cue, guests) { return resolveNowPeople(cue, guests).join(', '); }
 
+// Who to PRINT as on-camera for a scene. The host sits at the pod table for every pod
+// scene, but he's crew rather than a guest, so the roster-based resolver never returns
+// him — "SHOW CLOSE" came out reading like nobody was on.
+// Display-layer ONLY, deliberately not folded into resolveNowPeople(): that feeds
+// deriveStandby(), which would then emit a "GET READY Mark" before every pod scene.
+function onNowForPrint(cue, guests) {
+  cue = cue || {};
+  const people = resolveNowPeople(cue, guests);
+  const host = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.hostName) ? CLIENT_CONFIG.hostName : '';
+  if (!host || cue.prelive || (cue.stageType || '') !== 'pod') return people;
+  const already = people.some(p => new RegExp('\\b' + host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(p || ''));
+  return already ? people : [host].concat(people);
+}
+
 // Single source of truth for studio stages. `value` is what's stored on the cue and
 // trickles all the way to BSM (standby cues, get-ready cards). pod/music/kitchen/video
 // carry built-in transition semantics; the named stages are real studio sets used
@@ -3266,7 +3280,13 @@ function buildROSHtml() {
       const lines = c[d.key].split('\n').map(l => l.trim()).filter(Boolean).join('<br>');
       return `<div class="note-row"><span class="note-lbl">${d.lbl}</span><span class="note-val">${lines}</span></div>`;
     }).join('');
+    // WHO IS ON — printed first so a reader knows who's on camera before the tech notes.
+    // Without it the sheet only named people who happened to be in the scene title.
+    const onNow = onNowForPrint(c, showData.guests);
+    const nowLine = onNow.length ? `<div class="note-row"><span class="note-lbl now">ON NOW</span><span class="note-val now-val">${onNow.join(', ')}</span></div>` : '';
     const booLine = c.booMsg ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>` : '';
+    // The host's own script for the scene — authored in cueCard, previously print-invisible.
+    const cardLine = c.cueCard ? `<div class="note-row"><span class="note-lbl host">HOST</span><span class="note-val note-card">${c.cueCard.split('\n').map(l => l.trim()).filter(Boolean).join('<br>')}</span></div>` : '';
     const standbyStageLabel = STAGE_LABEL[c.standbyStage] || c.standbyStage || '';
     // Only cue a person to GET READY on the ONE scene right before they appear — otherwise the
     // auto-derived standby repeats them across every earlier scene (Kenneth was showing from 3
@@ -3279,7 +3299,7 @@ function buildROSHtml() {
     return `<div class="srow" style="border-left:4px solid ${color};">
       <div class="col-num"><div class="s-num" style="color:${color}">S${i+1}</div><div class="s-stage" style="color:${color}">${getStageLabel(c)}</div></div>
       <div class="col-name"><div class="s-name">${c.scene || '(untitled)'}</div><div class="s-time">${timeStr}</div></div>
-      <div class="col-notes">${crewLines}${booLine}${standbyLine}</div>
+      <div class="col-notes">${nowLine}${crewLines}${booLine}${cardLine}${standbyLine}</div>
     </div>`;
   }).join('');
 
@@ -3320,8 +3340,12 @@ body{background:#fff;color:#000;font-family:'Syne',sans-serif;font-size:13pt;-we
 .note-lbl{font-size:7pt;color:var(--muted);letter-spacing:1.5px;font-weight:700;text-transform:uppercase;flex-shrink:0;width:76px;line-height:1.2;}
 .stby{color:#8a6a00;}
 .stby-val{color:#8a6a00;}
+.now{color:#000;}
+.now-val{font-weight:700;}
+.host{color:#6b3fa0;}
 .note-val{font-size:11pt;line-height:1.3;}
 .note-boo{color:var(--teal);font-style:italic;}
+.note-card{color:#4a2d73;font-size:10.5pt;}
 .foot{margin-top:20px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
 .foot-text{font-size:8pt;color:var(--muted);letter-spacing:2px;}
 .print-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--gold);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;z-index:999;}
