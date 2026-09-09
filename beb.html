@@ -2754,14 +2754,22 @@ function _sceneTokens(s) {
     .filter(w => w.length > 2 && !['the', 'and', 'for', 'with', 'from'].includes(w));
 }
 let _techMatches = [];
+let _techPast = [];
+let _techIncludeLighting = false;
+let _techUnchecked = new Set();
 
 // Decide which tech fields a single scene can inherit from past episodes.
 // Pure — no DOM, no showData — so the test suite can drive it directly.
 //   cur  = the current cue
 //   past = [{scene, kind, epLabel, tech:{camerasNow,videoNow,audioNow,lightingNow}}], newest episode first
 // Returns { status: 'filled' | 'nomatch' | 'ready', fills: [{key, text, srcScene, srcEp}] }
-function matchTechForCue(cur, past) {
-  const empties = TECH_FIELDS.filter(f => !(cur[f.key] || '').trim()).map(f => f.key);
+// opts.fields limits which tech fields are eligible. LIGHTING is excluded by default:
+// on this show lighting is set once before doors and doesn't change per scene, so an
+// empty lighting field is a deliberate choice, not missing data. Importing it just
+// puts noise on the lighting op's card.
+function matchTechForCue(cur, past, opts) {
+  const allow = (opts && opts.fields) || TECH_FIELDS.map(f => f.key).filter(k => k !== 'lightingNow');
+  const empties = TECH_FIELDS.filter(f => allow.indexOf(f.key) >= 0 && !(cur[f.key] || '').trim()).map(f => f.key);
   if (!empties.length) return { status: 'filled', fills: [] };
   const kind = sceneKind(cur);
   const cands = past.filter(p => p.kind === kind);
@@ -2811,11 +2819,37 @@ async function openTechImport() {
         tech: { camerasNow: c.camerasNow || '', videoNow: c.videoNow || '', audioNow: c.audioNow || '', lightingNow: c.lightingNow || '' } });
     }
   }
+  _techPast = past;
+  _techIncludeLighting = false;   // opt-in per open, never sticky
+  _techUnchecked = new Set();
+  recomputeTechMatches();
+  renderTechImport();
+}
+
+// Recompute matches for the current LIGHTING setting. Kept separate from openTechImport
+// so the toggle re-matches instantly without re-reading every past episode.
+function recomputeTechMatches() {
+  const fields = TECH_FIELDS.map(f => f.key).filter(k => k !== 'lightingNow' || _techIncludeLighting);
   _techMatches = (showData.cues || []).map((cur, i) => {
-    const r = matchTechForCue(cur, past);
+    const r = matchTechForCue(cur, _techPast, { fields });
     return { i, scene: cur.scene || '', fills: r.fills, status: r.status };
   });
+}
+
+function toggleTechLighting(on) {
+  captureTechChecks();
+  _techIncludeLighting = !!on;
+  recomputeTechMatches();
   renderTechImport();
+}
+
+// Remember which scenes the host unticked, so re-rendering after a toggle doesn't
+// silently re-arm scenes they deliberately turned off.
+function captureTechChecks() {
+  document.querySelectorAll('.tech-imp-chk').forEach(chk => {
+    const i = +chk.dataset.i;
+    if (chk.checked) _techUnchecked.delete(i); else _techUnchecked.add(i);
+  });
 }
 
 function renderTechImport() {
@@ -2836,7 +2870,7 @@ function renderTechImport() {
         `<span style="color:var(--muted);">fills ${esc(g.lbls.join(', '))} from <span style="color:var(--teal);">${esc(g.scene)} · ${esc(g.ep)}</span></span>`
       ).join('<br>');
       return `<label style="display:flex;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;align-items:flex-start;">
-          <input type="checkbox" class="tech-imp-chk" data-i="${m.i}" checked style="width:16px;height:16px;flex-shrink:0;margin-top:2px;">
+          <input type="checkbox" class="tech-imp-chk" data-i="${m.i}"${_techUnchecked.has(m.i) ? '' : ' checked'} style="width:16px;height:16px;flex-shrink:0;margin-top:2px;">
           <span style="flex:1;font-size:12px;">
             <span style="font-weight:700;color:var(--white);">S${m.i + 1} · ${esc(m.scene || '(untitled)')}</span><br>
             ${srcLines}
@@ -2853,7 +2887,12 @@ function renderTechImport() {
         <div style="font-family:'Syne',sans-serif;font-weight:700;letter-spacing:0.1em;color:#F5A623;text-transform:uppercase;">Import Tech Cues</div>
         <button onclick="closeTechImport()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">×</button>
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Fills only EMPTY audio / video / camera / lighting cues — never overwrites what you've already written. Review each in EDIT after; they're a starting point.</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Fills only EMPTY camera / video / audio cues — never overwrites what you've already written. Review each in EDIT after; they're a starting point.</div>
+      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:7px 8px;margin-bottom:10px;border:1px solid var(--border);border-radius:5px;" title="Lighting is normally set once before doors — only pull it in if this show has lighting changes per scene">
+        <input type="checkbox" id="tech-imp-lighting" ${_techIncludeLighting ? 'checked' : ''} onchange="toggleTechLighting(this.checked)" style="width:14px;height:14px;accent-color:#F5A623;cursor:pointer;flex-shrink:0;">
+        <span style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:${_techIncludeLighting ? '#F5A623' : 'var(--muted)'};">ALSO IMPORT LIGHTING CUES</span>
+        <span style="font-size:10px;color:var(--muted);margin-left:auto;">off by default</span>
+      </label>
       ${ready.length ? `<div style="margin-bottom:4px;"><button onclick="toggleAllTechImport()" style="background:none;border:none;color:var(--teal);font-size:11px;letter-spacing:1px;cursor:pointer;padding:0;">SELECT / CLEAR ALL</button></div>` : ''}
       ${rows}
       <div style="display:flex;gap:8px;margin-top:16px;">

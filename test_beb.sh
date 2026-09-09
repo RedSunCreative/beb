@@ -91,6 +91,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Revert tech import to sourcing every field from one wholesale best match (drops lighting)
   sed -i '' 's/const src = ranked.find(p =>/const src = [ranked[0]].find(p =>/' "$BEB"
   echo "  Injected: tech import takes all fields from the single best match"
+  # Put LIGHTING back in the default import set (the clutter regression)
+  sed -i '' "s/.filter(k => k !== 'lightingNow');/.filter(k => k !== 'nothingAtAll');/" "$BEB"
+  echo "  Injected: lighting included in the default tech import set"
+  # Make the lighting opt-in sticky across opens
+  sed -i '' 's/  _techIncludeLighting = false;   \/\/ opt-in per open, never sticky/  \/\/ sticky-BRK/' "$BEB"
+  echo "  Injected: lighting opt-in no longer resets when the dialog reopens"
   echo ""
 fi
 
@@ -1146,38 +1152,54 @@ const past = [
     tech:{ camerasNow:'C3 two-shot', videoNow:'', audioNow:'Pod mics 1-4', lightingNow:'' } },
 ];
 const byKey = r => Object.fromEntries(r.fills.map(f => [f.key, f]));
+const ALL = ['camerasNow','videoNow','audioNow','lightingNow'];
 
-// (a) Newest episode wins the fields it HAS...
+// (a) Newest episode wins the fields it HAS.
 const music = { scene:'MUSIC — Something New', stageType:'music' };
 let r = matchTechForCue(music, past);
 assert(r.status === 'ready', 'music scene should be ready, got ' + r.status);
 let f = byKey(r);
 assert(f.camerasNow.srcEp === 'E10', 'cameras should come from E10, got ' + f.camerasNow.srcEp);
 assert(f.audioNow.srcEp === 'E10', 'audio should come from E10, got ' + f.audioNow.srcEp);
-// (b) ...but LIGHTING falls back to the older episode that actually recorded it.
-assert(f.lightingNow, 'lighting must be filled via fallback, not dropped');
+
+// (b) LIGHTING IS EXCLUDED BY DEFAULT. On this show lighting is set once before doors,
+// so an empty lighting field is deliberate — importing it puts noise on the lighting card.
+assert(!f.lightingNow, 'lighting must NOT be imported by default');
+
+// (c) Opting in turns it back on, and it still falls back to the older episode that has it.
+f = byKey(matchTechForCue(music, past, { fields: ALL }));
+assert(f.lightingNow, 'with fields=ALL, lighting should be offered');
 assert(f.lightingNow.srcEp === 'E9', 'lighting should fall back to E9, got ' + f.lightingNow.srcEp);
 assert(f.lightingNow.text === 'Warm amber wash, house at 30%', 'lighting text should come from the E9 scene');
+assert(byKey(matchTechForCue(music, past, { fields: ALL })).camerasNow.srcEp === 'E10',
+       'opting into lighting must not change where cameras come from');
 
-// (c) Fill-empty-only: an author-written field is never offered for overwrite.
+// (d) A scene whose ONLY empty field is lighting is 'filled' by default, 'ready' when opted in.
+const onlyLightingEmpty = { scene:'MUSIC — X', stageType:'music', camerasNow:'a', videoNow:'b', audioNow:'c' };
+assert(matchTechForCue(onlyLightingEmpty, past).status === 'filled',
+       'lighting-only gap should report filled when lighting is excluded');
+assert(matchTechForCue(onlyLightingEmpty, past, { fields: ALL }).status === 'ready',
+       'lighting-only gap should be ready once lighting is opted in');
+
+// (e) Fill-empty-only: an author-written field is never offered for overwrite.
 const partly = { scene:'MUSIC — Something New', stageType:'music', audioNow:'MY OWN AUDIO CUE' };
 r = matchTechForCue(partly, past);
 assert(!byKey(r).audioNow, 'a field the host already wrote must not be offered for fill');
 assert(byKey(r).camerasNow, 'other empty fields should still fill');
 
-// (d) All four already written -> nothing to do.
+// (f) All fields already written -> nothing to do.
 const full = { scene:'MUSIC — X', stageType:'music', camerasNow:'a', videoNow:'b', audioNow:'c', lightingNow:'d' };
-assert(matchTechForCue(full, past).status === 'filled', 'fully-authored scene should report filled');
+assert(matchTechForCue(full, past, { fields: ALL }).status === 'filled', 'fully-authored scene should report filled');
 
-// (e) No same-kind past scene -> nomatch, and nothing invented.
+// (g) No same-kind past scene -> nomatch, and nothing invented.
 const kitchen = { scene:'KITCHEN DISCO #1', stageType:'kitchen' };
-r = matchTechForCue(kitchen, past);
+r = matchTechForCue(kitchen, past, { fields: ALL });
 assert(r.status === 'nomatch', 'kitchen has no same-kind candidate, got ' + r.status);
 assert(r.fills.length === 0, 'nomatch must fill nothing');
 
-// (f) A kind whose only candidate lacks a field leaves that field alone (no cross-kind bleed).
+// (h) A kind whose only candidate lacks a field leaves that field alone (no cross-kind bleed).
 const interview = { scene:'POD INTERVIEW — Someone', stageType:'pod' };
-f = byKey(matchTechForCue(interview, past));
+f = byKey(matchTechForCue(interview, past, { fields: ALL }));
 assert(f.camerasNow.srcEp === 'E10', 'interview cameras from E10');
 assert(!f.videoNow, 'interview video must stay empty — no interview candidate has it');
 assert(!f.lightingNow, 'interview lighting must NOT bleed in from a music scene');
@@ -1186,9 +1208,30 @@ console.log('OK');
 PYEOF
 TM_RESULT=$(node /tmp/beb_techmatch.js 2>&1)
 if [[ "$TM_RESULT" == *"OK"* ]] && [[ "$TM_RESULT" != *"FAIL"* ]] && [[ "$TM_RESULT" != *"MISSING"* ]]; then
-  pass "tech import sources each field independently; lighting falls back across episodes"
+  pass "tech import: per-field sourcing; lighting opt-in (off by default)"
 else
   fail "tech import per-field test: $TM_RESULT"
+fi
+
+# The opt-in has to be reachable and non-sticky, or the default is meaningless.
+python3 - > /tmp/beb_lightui.txt <<'PYEOF'
+src=open('beb.html').read()
+errs=[]
+if 'id="tech-imp-lighting"' not in src: errs.append("FAIL: no LIGHTING opt-in checkbox in the tech import preview")
+if 'toggleTechLighting(this.checked)' not in src: errs.append("FAIL: LIGHTING checkbox not wired to toggleTechLighting")
+if 'function toggleTechLighting(' not in src: errs.append("FAIL: toggleTechLighting() missing")
+if 'function recomputeTechMatches(' not in src: errs.append("FAIL: recomputeTechMatches() missing")
+if '_techIncludeLighting = false;   // opt-in per open, never sticky' not in src:
+    errs.append("FAIL: lighting opt-in is not reset to OFF each time the dialog opens")
+if 'function captureTechChecks(' not in src: errs.append("FAIL: captureTechChecks() missing — toggling would re-arm unticked scenes")
+if '_techUnchecked.has(m.i)' not in src: errs.append("FAIL: render does not honour per-scene unticks across a re-render")
+print("\n".join(errs) if errs else "OK")
+PYEOF
+LIGHTUI=$(cat /tmp/beb_lightui.txt)
+if [[ "$LIGHTUI" == "OK" ]]; then
+  pass "LIGHTING opt-in is wired, defaults off per open, and preserves per-scene unticks"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_lightui.txt
 fi
 
 # ──────────────────────────────────────────────────────────────
@@ -1218,6 +1261,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's|// toggleCrewConfirmed( floated above NAME|// Layout order is deliberate: NAME first|' "$BEB"
   sed -i '' 's/document.querySelectorAll(".crew-sms")/document.querySelectorAll('"'"'[data-crew-sms]'"'"')/' "$BEB"
   sed -i '' 's/const src = \[ranked\[0\]\].find(p =>/const src = ranked.find(p =>/' "$BEB"
+  sed -i '' "s/.filter(k => k !== 'nothingAtAll');/.filter(k => k !== 'lightingNow');/" "$BEB"
+  sed -i '' 's/  \/\/ sticky-BRK/  _techIncludeLighting = false;   \/\/ opt-in per open, never sticky/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
