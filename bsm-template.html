@@ -19,7 +19,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
 .now-live-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 18px;background:#1a0000;border-radius:8px;border:2px solid #cc0000;box-shadow:0 0 14px #ff000044;}
 .nl-dot{width:11px;height:11px;border-radius:50%;background:#E8431A;flex-shrink:0;}
 .nl-label{font-size:19px;font-weight:900;letter-spacing:2px;color:#E8431A;font-family:'Helvetica Neue',Arial,sans-serif;}
-.now-people{font-size:16px;font-weight:800;color:#F5D03A;text-align:center;letter-spacing:1px;margin-top:6px;}
+.now-people{font-size:16px;font-weight:800;color:#E8431A;text-align:center;letter-spacing:1px;margin-top:6px;}
 .card{background:#5a6270;border-radius:12px;border:3px solid #464d59;overflow:hidden;}
 .top-bar{background:#464d59;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
 .boo-id{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
@@ -731,8 +731,9 @@ function getBooMsg(){
 
 function renderTechLines(lines){return (lines||[]).map(l=>`<div class="tech-line">${l}</div>`).join("")||`<div class="tech-line">—</div>`;}
 function setNowLiveLabels(label){const lbl=label||CUES[cueIdx]?.liveLabel||"";['tv-nl-label','tech-nl-label','host-nl-label'].forEach(id=>{const el=document.getElementById(id);if(el) el.textContent=lbl;});}
-// ON NOW people line under each now-live bar — reads the resolved `now` key BeB emits; hidden when empty.
-function setNowPeople(name){const txt=name?("ON NOW: "+name):"";['tv-now-people','tech-now-people','host-now-people'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=txt;el.style.display=name?"block":"none";}});}
+// NOW LIVE people line under each now-live bar — reads the resolved `now` key BeB emits
+// (people, plus the song when the scene performs one); hidden when empty. Red to match the bar.
+function setNowPeople(name){const txt=name?("NOW LIVE: "+name):"";['tv-now-people','tech-now-people','host-now-people'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent=txt;el.style.display=name?"block":"none";}});}
 
 function fireROSChangeMessage(nextName){
   const banner=document.getElementById("ros-change-banner"),msg=document.getElementById("ros-change-msg");

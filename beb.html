@@ -758,12 +758,42 @@ function nowIdentities(cue, guests) {
 // The scene name is always shown separately by each view; this is just the people.
 function nowLabel(cue, guests) { return resolveNowPeople(cue, guests).join(', '); }
 
-// Who to PRINT as on-camera for a scene. The host sits at the pod table for every pod
+// The song this scene performs, if its title names one from the roster. Scene titles carry
+// the song ("PERFORMANCE — Agua a Tierra") but BSM shows liveLabel + people, so the song
+// never reached the NOW LIVE line or Boo's warnings.
+function sceneSong(cue, guests) {
+  const scene = ((cue || {}).scene) || '';
+  if (!scene) return '';
+  const songs = [];
+  (guests || []).forEach(g => (g.songs || []).forEach(s => { const n = (s && s.name || '').trim(); if (n) songs.push(n); }));
+  if (!songs.length) return '';
+  const m = scene.match(/—\s*(.+)$/);
+  const tail = m ? m[1].trim().toLowerCase() : '';
+  // Exact title-tail match first, then a song named anywhere in the scene. Longest match
+  // wins so "Agua a Tierra" beats a shorter song whose name is a substring of it.
+  const exact = songs.find(n => n.toLowerCase() === tail);
+  if (exact) return exact;
+  const within = songs.filter(n => scene.toLowerCase().indexOf(n.toLowerCase()) >= 0)
+                      .sort((a, b) => b.length - a.length)[0];
+  return within || '';
+}
+
+// What BSM prints on the NOW LIVE line: who is on (host included at the pod table, same
+// rule as the printed outline), and what they're performing.
+function nowLiveLabel(cue, guests) {
+  const who = displayNowPeople(cue, guests).join(', ');
+  const song = sceneSong(cue, guests);
+  if (who && song) return who + ' — ' + song;
+  return who || song || '';
+}
+
+// Who to SHOW as on-camera for a scene — used by both the printed outline and BSM's
+// NOW LIVE line, so the two never disagree. The host sits at the pod table for every pod
 // scene, but he's crew rather than a guest, so the roster-based resolver never returns
 // him — "SHOW CLOSE" came out reading like nobody was on.
 // Display-layer ONLY, deliberately not folded into resolveNowPeople(): that feeds
 // deriveStandby(), which would then emit a "GET READY Mark" before every pod scene.
-function onNowForPrint(cue, guests) {
+function displayNowPeople(cue, guests) {
   cue = cue || {};
   const people = resolveNowPeople(cue, guests);
   const host = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.hostName) ? CLIENT_CONFIG.hostName : '';
@@ -819,12 +849,15 @@ function deriveWarnings(cues, i, guests) {
   if (!nxt) return { w5: "5 minutes — finishing the show!", w2: "2 minutes left — almost done!" };
   const who   = resolveNowPeople(nxt, guests).join(', ');
   const stage = STAGE_LABEL[nxt.stageType] || nxt.stageType || '';
+  // Name the song they're heading up to perform — a performer wants to hear which one.
+  const song  = sceneSong(nxt, guests);
+  const forSong = song ? ` for ${song}` : '';
   // If someone is featured next and we know their stage, direct them there by name —
   // works for every stage (pod / music / kitchen / named studio sets).
   if (who && stage) {
     return {
-      w5: `5 minutes — ${who}, please head to the ${stage}.`,
-      w2: `2 minutes — ${who}, to the ${stage} now.`
+      w5: `5 minutes — ${who}, please head to the ${stage}${forSong}.`,
+      w2: `2 minutes — ${who}, to the ${stage} now${forSong}.`
     };
   }
   if (nxt.stageType === 'kitchen') {
@@ -3059,7 +3092,7 @@ async function generateBSM() {
     return `  {
     dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
     prelive: ${c.prelive ? 'true' : 'false'}, stageType: ${q(c.stageType)},
-    now: ${q(nowLabel(c, showData.guests))},
+    now: ${q(nowLiveLabel(c, showData.guests))},
     booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
     w5: ${q(warn.w5)}, w2: ${q(warn.w2)},
     nextScene: ${q(nxt?.scene ?? '')},
@@ -3282,7 +3315,7 @@ function buildROSHtml() {
     }).join('');
     // WHO IS ON — printed first so a reader knows who's on camera before the tech notes.
     // Without it the sheet only named people who happened to be in the scene title.
-    const onNow = onNowForPrint(c, showData.guests);
+    const onNow = displayNowPeople(c, showData.guests);
     const nowLine = onNow.length ? `<div class="note-row"><span class="note-lbl now">ON NOW</span><span class="note-val now-val">${onNow.join(', ')}</span></div>` : '';
     const booLine = c.booMsg ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>` : '';
     // The host's own script for the scene — authored in cueCard, previously print-invisible.

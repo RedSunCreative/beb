@@ -103,6 +103,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Leak the print-only host into the derived NOW data (would poison standby)
   sed -i '' "s/  if (!host || cue.prelive || (cue.stageType || '') !== 'pod') return people;/  if (!host) return people;/" "$BEB"
   echo "  Injected: host added to NOW on every scene, not just the pod table"
+  # Blank out the song resolver (songs vanish from NOW LIVE and Boo's warnings)
+  sed -i '' "s/  const scene = ((cue || {}).scene) || '';/  const scene = '';/" "$BEB"
+  echo "  Injected: sceneSong always returns empty"
+  # Revert BSM's live line to the old ON NOW label
+  sed -i '' 's/"NOW LIVE: "+name/"ON NOW: "+name/' bsm-template.html
+  echo "  Injected: BSM live line reverted to ON NOW"
   echo ""
 fi
 
@@ -568,7 +574,7 @@ def extract(name):
         i += 1
     return ''
 out = []
-for fn in ('autoResolveNowPerson', 'resolveNameToRoster', 'splitNowEntry', 'resolveNowDisplay', 'nowIdentity', 'nowIdentities', 'resolveNowPeople', 'nowLabel', 'deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson', 'resolveNameToRoster', 'splitNowEntry', 'resolveNowDisplay', 'nowIdentity', 'nowIdentities', 'resolveNowPeople', 'nowLabel', 'sceneSong', 'deriveStandby', 'deriveWarnings', 'recomputeStructuralFields'):
     body = extract(fn)
     if not body:
         print('// MISSING ' + fn)
@@ -675,7 +681,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','sceneSong','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print("const CLIENT_CONFIG={hostName:'Mark'};")
@@ -736,7 +742,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','sceneSong','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print(r'''
@@ -785,7 +791,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('normalizeGuest','autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('normalizeGuest','autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','sceneSong','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print(r'''
@@ -893,7 +899,7 @@ if 'NOW: ${esc(nowWho)}' not in c:
     errors.append("FAIL: cue card missing NOW name line")
 if 'UP NEXT: ${esc(nextWho)}' not in c:
     errors.append("FAIL: cue card missing UP NEXT name line")
-if 'now: ${q(nowLabel(c' not in c:
+if 'now: ${q(nowLiveLabel(c' not in c:
     errors.append("FAIL: BSM cue data missing now/upNext names")
 # NOW must never be sourced from booName anywhere (the class bug we fixed)
 if 'autoResolveNowPerson(c, showData.guests))}, upNext' in c:
@@ -926,7 +932,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','sceneSong','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
@@ -998,7 +1004,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
     return ''
-for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','deriveStandby','deriveWarnings','recomputeStructuralFields'):
+for fn in ('autoResolveNowPerson','resolveNameToRoster','splitNowEntry','resolveNowDisplay','nowIdentity','nowIdentities','resolveNowPeople','nowLabel','sceneSong','deriveStandby','deriveWarnings','recomputeStructuralFields'):
     print(extract(fn) or ('// MISSING '+fn)); print()
 print("const STAGE_LABEL={pod:'Pod Stage',music:'Music Stage',kitchen:'Kitchen Disco',video:'Video'};")
 print("const CLIENT_CONFIG={hostName:'Mark'};")
@@ -1045,7 +1051,7 @@ errs=[]
 b=open('beb.html').read()
 t=open('bsm-template.html').read()
 # BeB still emits `now`, kept `nextScene`, and dropped the dead/redundant keys
-if 'now: ${q(nowLabel(c' not in b: errs.append("FAIL: generateBSM no longer emits `now`")
+if 'now: ${q(nowLiveLabel(c' not in b: errs.append("FAIL: generateBSM no longer emits `now`")
 if 'nextScene: ${q(nxt?.scene' not in b: errs.append("FAIL: `nextScene` emit dropped (BSM reads it for ALL CLEAR)")
 if 'upNext: ${q(nxt' in b: errs.append("FAIL: dead `upNext` emit still present")
 if 'stageLabel: ${q(STAGE_LABEL' in b: errs.append("FAIL: dead `stageLabel` emit still present")
@@ -1273,7 +1279,7 @@ def extract(name):
 for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG'): print(const_block(c))
 for fn in ('sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
            'autoResolveNowPerson','resolveNowPeople','nowIdentities','nowIdentity','nowLabel',
-           'onNowForPrint','deriveStandby','deriveWarnings','recomputeStructuralFields','buildROSHtml'):
+           'displayNowPeople','sceneSong','nowLiveLabel','deriveStandby','deriveWarnings','recomputeStructuralFields','buildROSHtml'):
     print(extract(fn)); print()
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
@@ -1285,24 +1291,24 @@ const guests = [
 ];
 
 // (a) Host is added at the pod table even when nowPeople never names him.
-let p = onNowForPrint({ scene:'SHOW CLOSE', stageType:'pod', nowPeople:[] }, guests);
+let p = displayNowPeople({ scene:'SHOW CLOSE', stageType:'pod', nowPeople:[] }, guests);
 assert(p[0] === HOST, 'pod scene with no people should lead with the host, got ' + JSON.stringify(p));
 
 // (b) Host joins an existing pod guest rather than replacing them.
-p = onNowForPrint({ scene:'POD INTERVIEW — Soyinka Rahim', stageType:'pod', nowPeople:['Soyinka Rahim'] }, guests);
+p = displayNowPeople({ scene:'POD INTERVIEW — Soyinka Rahim', stageType:'pod', nowPeople:['Soyinka Rahim'] }, guests);
 assert(p.length === 2 && p[0] === HOST && p[1] === 'Soyinka Rahim',
        'pod interview should read host + guest, got ' + JSON.stringify(p));
 
 // (c) Never doubled when he is already named.
-p = onNowForPrint({ scene:'SHOW OPENER', stageType:'pod', nowPeople:[HOST, 'Shanik Hughes'] }, guests);
+p = displayNowPeople({ scene:'SHOW OPENER', stageType:'pod', nowPeople:[HOST, 'Shanik Hughes'] }, guests);
 assert(p.filter(x => x === HOST).length === 1, 'host must not be duplicated, got ' + JSON.stringify(p));
 
 // (d) NOT added off the pod table — music, kitchen, video, or pre-show.
 for (const st of ['music','kitchen','video']) {
-  p = onNowForPrint({ scene:'X', stageType:st, nowPeople:[] }, guests);
+  p = displayNowPeople({ scene:'X', stageType:st, nowPeople:[] }, guests);
   assert(!p.includes(HOST), 'host must not appear on a ' + st + ' scene');
 }
-p = onNowForPrint({ scene:'COUNTDOWN', stageType:'pod', prelive:true, nowPeople:[] }, guests);
+p = displayNowPeople({ scene:'COUNTDOWN', stageType:'pod', prelive:true, nowPeople:[] }, guests);
 assert(!p.includes(HOST), 'host must not appear on a pre-show scene');
 
 // (e) CLASS-PROOF: the print-only host must NOT leak into the derived data, or every
@@ -1327,6 +1333,33 @@ assert(html.indexOf('>' + HOST + '<') >= 0 || html.indexOf(HOST) >= 0, 'outline 
 assert(html.indexOf('HOST') >= 0, 'outline must print a HOST cue-card row');
 assert(html.indexOf('Thank crew') >= 0, 'cue card body must reach the page');
 assert(html.indexOf('• Close the show<br>• Thank crew') >= 0, 'cue card newlines should become <br>');
+
+// (g) SONG TITLES reach BSM's NOW LIVE line and Boo's warnings.
+const singers = [{ name:'Shanik Hughes', stageType:'music',
+                   songs:[{name:'Agua a Tierra'},{name:'Listen to Your Soul'}] }];
+const perf = { scene:'PERFORMANCE — Agua a Tierra', stageType:'music', nowPeople:['Shanik Hughes'] };
+assert(sceneSong(perf, singers) === 'Agua a Tierra', 'song should resolve from the scene title');
+assert(nowLiveLabel(perf, singers) === 'Shanik Hughes — Agua a Tierra',
+       'NOW LIVE should read people then song, got ' + nowLiveLabel(perf, singers));
+// A scene that performs nothing must not gain a spurious dash.
+const talk = { scene:'POD INTERVIEW — Soyinka Rahim', stageType:'pod', nowPeople:['Soyinka Rahim'] };
+assert(nowLiveLabel(talk, singers).indexOf('—') < 0, 'non-performance scene must not append a song');
+// Song named mid-title, not just after the dash.
+assert(sceneSong({ scene:'COLD OPEN — Listen to Your Soul (acoustic)', stageType:'music' }, singers)
+       === 'Listen to Your Soul', 'song named inside the title should still resolve');
+assert(sceneSong({ scene:'SHOW CLOSE', stageType:'pod' }, singers) === '', 'no song, no match');
+// Boo's 5/2-minute warnings name the song the performer is heading up for.
+const w = deriveWarnings([{ scene:'POD INTERVIEW', stageType:'pod' }, perf], 0, singers);
+assert(w.w5.indexOf('Agua a Tierra') >= 0, 'w5 must name the song, got: ' + w.w5);
+assert(w.w2.indexOf('Agua a Tierra') >= 0, 'w2 must name the song, got: ' + w.w2);
+const wNoSong = deriveWarnings([{ scene:'A', stageType:'pod' }, talk], 0, singers);
+assert(wNoSong.w5.indexOf(' for ') < 0, 'a non-performance next scene must not get a "for" clause');
+
+// (h) The NOW LIVE line and the printed outline share ONE rule, so they cannot disagree.
+const podClose = { scene:'SHOW CLOSE', stageType:'pod', nowPeople:[] };
+assert(nowLiveLabel(podClose, singers) === HOST,
+       'BSM NOW LIVE must include the host at the pod table, got ' + nowLiveLabel(podClose, singers));
+assert(displayNowPeople(podClose, singers).join(', ') === HOST, 'outline and BSM must agree');
 console.log('OK');
 ''')
 PYEOF
@@ -1335,6 +1368,25 @@ if [[ "$ROS_RESULT" == *"OK"* ]] && [[ "$ROS_RESULT" != *"FAIL"* ]] && [[ "$ROS_
   pass "outline prints ON NOW (host at pod table) + HOST cue card; derived data stays host-free"
 else
   fail "printed outline test: $ROS_RESULT"
+fi
+
+# BSM's live line is labelled NOW LIVE and red, matching the now-live bar above it.
+python3 - > /tmp/beb_nowlive.txt <<'PYEOF'
+t=open('bsm-template.html').read()
+errs=[]
+if '"NOW LIVE: "+name' not in t: errs.append("FAIL: BSM people line is not labelled NOW LIVE")
+if '"ON NOW: "+name' in t:       errs.append("FAIL: stale ON NOW label still in bsm-template")
+i=t.find('.now-people{')
+css=t[i:t.find('}',i)] if i>=0 else ''
+if not css:                      errs.append("FAIL: .now-people style missing")
+elif 'color:#E8431A' not in css: errs.append("FAIL: NOW LIVE line is not red (expected #E8431A), got: "+css)
+print("\n".join(errs) if errs else "OK")
+PYEOF
+NOWLIVE=$(cat /tmp/beb_nowlive.txt)
+if [[ "$NOWLIVE" == "OK" ]]; then
+  pass "BSM live line reads NOW LIVE and is red"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_nowlive.txt
 fi
 
 # ──────────────────────────────────────────────────────────────
@@ -1368,6 +1420,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/  \/\/ sticky-BRK/  _techIncludeLighting = false;   \/\/ opt-in per open, never sticky/' "$BEB"
   sed -i '' 's/<div class="col-notes">${crewLines}${booLine}${standbyLine}<\/div>/<div class="col-notes">${nowLine}${crewLines}${booLine}${cardLine}${standbyLine}<\/div>/' "$BEB"
   sed -i '' "s/  if (!host) return people;/  if (!host || cue.prelive || (cue.stageType || '') !== 'pod') return people;/" "$BEB"
+  sed -i '' "s/  const scene = '';/  const scene = ((cue || {}).scene) || '';/" "$BEB"
+  sed -i '' 's/"ON NOW: "+name/"NOW LIVE: "+name/' bsm-template.html
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
