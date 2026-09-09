@@ -109,6 +109,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Revert BSM's live line to the old ON NOW label
   sed -i '' 's/"NOW LIVE: "+name/"ON NOW: "+name/' bsm-template.html
   echo "  Injected: BSM live line reverted to ON NOW"
+  # Drop the Kitchen Disco from the host's stages
+  sed -i '' "s/const HOST_STAGES = \['pod', 'kitchen'\];/const HOST_STAGES = ['pod'];/" "$BEB"
+  echo "  Injected: host no longer appears on Kitchen Disco scenes"
+  # Gate the all-hands line on auto-resolution again (the pod title-tail bug)
+  sed -i '' 's/  if (!authored \&\& !cue.prelive \&\& ALL_HANDS_RE/  if (!people.length \&\& !cue.prelive \&\& ALL_HANDS_RE/' "$BEB"
+  echo "  Injected: EVERYBODY suppressed when auto-resolution invents a performer"
   echo ""
 fi
 
@@ -1276,7 +1282,7 @@ def extract(name):
             d-=1
             if d==0: return src[i:j+1]
         j+=1
-for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG'): print(const_block(c))
+for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG','HOST_STAGES','ALL_HANDS_RE'): print(const_block(c))
 for fn in ('sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
            'autoResolveNowPerson','resolveNowPeople','nowIdentities','nowIdentity','nowLabel',
            'displayNowPeople','sceneSong','nowLiveLabel','deriveStandby','deriveWarnings','recomputeStructuralFields','buildROSHtml'):
@@ -1304,12 +1310,23 @@ p = displayNowPeople({ scene:'SHOW OPENER', stageType:'pod', nowPeople:[HOST, 'S
 assert(p.filter(x => x === HOST).length === 1, 'host must not be duplicated, got ' + JSON.stringify(p));
 
 // (d) NOT added off the pod table — music, kitchen, video, or pre-show.
-for (const st of ['music','kitchen','video']) {
+for (const st of ['music','video']) {
   p = displayNowPeople({ scene:'X', stageType:st, nowPeople:[] }, guests);
   assert(!p.includes(HOST), 'host must not appear on a ' + st + ' scene');
 }
 p = displayNowPeople({ scene:'COUNTDOWN', stageType:'pod', prelive:true, nowPeople:[] }, guests);
 assert(!p.includes(HOST), 'host must not appear on a pre-show scene');
+// Host works the Kitchen Disco too, not just the pod table.
+p = displayNowPeople({ scene:'KITCHEN DISCO #1', stageType:'kitchen', nowPeople:[] }, guests);
+assert(p[0] === HOST, 'host should appear on a Kitchen Disco scene, got ' + JSON.stringify(p));
+// The closing credits dance is EVERYBODY, not a name list — and not the host alone.
+p = displayNowPeople({ scene:'KITCHEN DISCO — Closing Credits', stageType:'kitchen', nowPeople:[] }, guests);
+assert(p.length === 1 && p[0] === 'EVERYBODY', 'credits dance should read EVERYBODY, got ' + JSON.stringify(p));
+p = displayNowPeople({ scene:'ENDING CREDITS — Guests/Crew Dance', stageType:'pod', nowPeople:[] }, guests);
+assert(p[0] === 'EVERYBODY', 'a credits/dance scene on any stage is all hands, got ' + JSON.stringify(p));
+// An authored cast still wins over the all-hands default.
+p = displayNowPeople({ scene:'CLOSING CREDITS', stageType:'kitchen', nowPeople:['Soyinka Rahim'] }, guests);
+assert(p.indexOf('EVERYBODY') < 0, 'an authored nowPeople must override EVERYBODY, got ' + JSON.stringify(p));
 
 // (e) CLASS-PROOF: the print-only host must NOT leak into the derived data, or every
 // pod scene would emit a "GET READY <host>" on the scene before it.
@@ -1422,6 +1439,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "s/  if (!host) return people;/  if (!host || cue.prelive || (cue.stageType || '') !== 'pod') return people;/" "$BEB"
   sed -i '' "s/  const scene = '';/  const scene = ((cue || {}).scene) || '';/" "$BEB"
   sed -i '' 's/"ON NOW: "+name/"NOW LIVE: "+name/' bsm-template.html
+  sed -i '' "s/const HOST_STAGES = \['pod'\];/const HOST_STAGES = ['pod', 'kitchen'];/" "$BEB"
+  sed -i '' 's/  if (!people.length \&\& !cue.prelive \&\& ALL_HANDS_RE/  if (!authored \&\& !cue.prelive \&\& ALL_HANDS_RE/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

@@ -787,17 +787,28 @@ function nowLiveLabel(cue, guests) {
   return who || song || '';
 }
 
+// Stages the host is on camera for. He sits at the pod table for every pod scene and works
+// the Kitchen Disco, but he's crew rather than a guest, so the roster-based resolver never
+// returns him — "SHOW CLOSE" came out reading like nobody was on.
+const HOST_STAGES = ['pod', 'kitchen'];
+// The closing credits dance is an all-hands moment — guests and crew are all on camera, so
+// naming individuals would be wrong as well as long.
+const ALL_HANDS_RE = /credits|dancing|\bdance\b/i;
+
 // Who to SHOW as on-camera for a scene — used by both the printed outline and BSM's
-// NOW LIVE line, so the two never disagree. The host sits at the pod table for every pod
-// scene, but he's crew rather than a guest, so the roster-based resolver never returns
-// him — "SHOW CLOSE" came out reading like nobody was on.
+// NOW LIVE line, so the two never disagree.
 // Display-layer ONLY, deliberately not folded into resolveNowPeople(): that feeds
 // deriveStandby(), which would then emit a "GET READY Mark" before every pod scene.
 function displayNowPeople(cue, guests) {
   cue = cue || {};
   const people = resolveNowPeople(cue, guests);
+  // Gate on an AUTHORED cast, not on whatever auto-resolution produced: a pod-stage scene
+  // treats its title tail as a person, so "ENDING CREDITS — Guests/Crew Dance" resolved to
+  // a fake performer named "Guests/Crew Dance" and suppressed the all-hands line.
+  const authored = Array.isArray(cue.nowPeople) && cue.nowPeople.length > 0;
+  if (!authored && !cue.prelive && ALL_HANDS_RE.test(cue.scene || '')) return ['EVERYBODY'];
   const host = (typeof CLIENT_CONFIG !== 'undefined' && CLIENT_CONFIG.hostName) ? CLIENT_CONFIG.hostName : '';
-  if (!host || cue.prelive || (cue.stageType || '') !== 'pod') return people;
+  if (!host || cue.prelive || HOST_STAGES.indexOf(cue.stageType || '') < 0) return people;
   const already = people.some(p => new RegExp('\\b' + host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(p || ''));
   return already ? people : [host].concat(people);
 }
