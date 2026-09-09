@@ -2335,34 +2335,39 @@ function renderCrewList() {
         const smsHref = m.mobile ? `sms:${m.mobile}?body=${msgBody}` : '';
         const gmailHref = m.email ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m.email)}&su=${subject}&body=${emailBody}` : '';
         const roleLabel = (m.role || 'CREW').toUpperCase();
+        // Layout order is deliberate: NAME first, so every checkbox below it has an
+        // unambiguous subject. Role sits directly under the name because the checklist
+        // label reads "SEND {ROLE} CHECKLIST". Contact fields + send actions go last.
         return `<div class="crew-item">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;" title="${m.confirmed ? 'Mark unconfirmed' : 'Mark confirmed'}">
-              <input type="checkbox" ${m.confirmed ? 'checked' : ''} onchange="toggleCrewConfirmed(${i})" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer;">
-              <span style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:${m.confirmed ? 'var(--green)' : 'var(--muted)'};">${m.confirmed ? 'CONFIRMED' : 'UNCONFIRMED'}</span>
-            </label>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <input class="crew-inp" data-crew-name="${i}" placeholder="Name" value="${esc(m.name||'')}" onchange="updateCrew(${i},'name',this.value)" style="flex:1;font-weight:700;">
             <button class="crew-remove" onclick="removeCrew(${i})" title="Remove">✕</button>
           </div>
+          <input class="crew-inp" placeholder="Role" value="${esc(m.role||'')}" onchange="updateCrew(${i},'role',this.value)" style="margin-bottom:6px;">
+          <div style="border-top:1px solid var(--border);opacity:0.6;margin-bottom:6px;"></div>
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:5px;" title="${m.confirmed ? 'Mark unconfirmed' : 'Mark confirmed'}">
+            <input type="checkbox" ${m.confirmed ? 'checked' : ''} onchange="toggleCrewConfirmed(${i})" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0;">
+            <span style="font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;color:${m.confirmed ? 'var(--green)' : 'var(--muted)'};">${m.confirmed ? 'CONFIRMED' : 'UNCONFIRMED'}</span>
+          </label>
           <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:5px;" title="Include in Guest and Crew Docs — crew checklist">
             <input type="checkbox" ${m.includeChecklist ? 'checked' : ''} onchange="toggleCrewChecklist(${i})" style="width:13px;height:13px;accent-color:#6366f1;cursor:pointer;flex-shrink:0;">
             <span style="font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;color:${m.includeChecklist ? '#6366f1' : 'var(--muted)'};">SEND ${roleLabel} CHECKLIST</span>
           </label>
-          ${m.includeChecklist ? `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:5px;">
+          ${m.includeChecklist ? `<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:5px;padding-left:18px;">
             <button onclick="window.open(generateCrewChecklistShareUrl(${i}),'_blank')" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--teal);color:#fff;border:none;font-weight:700;cursor:pointer;">VIEW / PDF</button>
             ${m.email ? `<button onclick="openCrewChecklistEmail(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:#6366f1;color:#fff;border:none;font-weight:700;cursor:pointer;">EMAIL</button>` : ''}
             ${m.mobile ? `<button onclick="openCrewChecklistSMS(${i})" style="font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:#4f46e5;color:#fff;border:none;font-weight:700;cursor:pointer;">TEXT</button>` : ''}
           </div>` : ''}
-          <div class="crew-fields">
-            <input class="crew-inp" placeholder="Name" value="${esc(m.name||'')}" onchange="updateCrew(${i},'name',this.value)">
-            <input class="crew-inp" placeholder="Role" value="${esc(m.role||'')}" onchange="updateCrew(${i},'role',this.value)">
-            <input class="crew-inp" placeholder="Mobile" value="${esc(m.mobile||'')}" onchange="updateCrew(${i},'mobile',this.value)">
-          </div>
-          <div class="crew-fields" style="margin-top:4px;">
-            <input class="crew-inp" placeholder="Email" value="${esc(m.email||'')}" onchange="updateCrew(${i},'email',this.value)" style="grid-column:span 2;">
+          <div style="border-top:1px solid var(--border);opacity:0.6;margin:6px 0;"></div>
+          <div class="crew-fields" style="grid-template-columns:2fr 1fr;">
+            <input class="crew-inp" placeholder="Email" value="${esc(m.email||'')}" onchange="updateCrew(${i},'email',this.value)">
             <input class="crew-inp" placeholder="Call time" value="${esc(m.callTime||'')}" onchange="updateCrew(${i},'callTime',this.value)" title="Call time for this crew member">
           </div>
-          <div class="crew-actions" style="margin-top:4px;">
-            ${smsHref ? `<a class="crew-sms" href="${smsHref}">TEXT</a>` : ''}
+          <div class="crew-fields" style="grid-template-columns:1fr;">
+            <input class="crew-inp" placeholder="Mobile" value="${esc(m.mobile||'')}" onchange="updateCrew(${i},'mobile',this.value)">
+          </div>
+          <div class="crew-actions">
+            ${smsHref ? `<a class="crew-sms" data-crew-sms="${i}" href="${smsHref}">TEXT</a>` : ''}
             ${gmailHref ? `<a class="crew-sms" href="${gmailHref}" target="_blank" style="background:var(--teal);">EMAIL</a>` : ''}
             ${!smsHref && !gmailHref ? '<span style="font-size:10px;color:var(--muted)">no contact</span>' : ''}
           </div>
@@ -2407,8 +2412,11 @@ function updateCrewMsg(value) {
   showData.crewReminderMsg = value;
   saveState();
   const msgBody = encodeURIComponent(value || crewDefaultMsg());
-  document.querySelectorAll('.crew-sms').forEach((a, i) => {
-    const mobile = showData.crew[i]?.mobile;
+  // Key off the crew index, not DOM order: .crew-sms is on both the TEXT and EMAIL
+  // anchors, and a member with no mobile emits neither — so positional indexing
+  // silently pointed at the wrong person's row.
+  document.querySelectorAll('[data-crew-sms]').forEach(a => {
+    const mobile = showData.crew[+a.dataset.crewSms]?.mobile;
     if (mobile) a.href = `sms:${mobile}?body=${msgBody}`;
   });
 }
@@ -2581,8 +2589,10 @@ function addCrewMember() {
   document.getElementById('crew-count').textContent = showData.crew.length;
   saveState();
   renderCrewList();
-  const inputs = document.querySelectorAll('.crew-inp');
-  if (inputs.length) inputs[inputs.length - 3].focus();
+  // Focus the new member's Name field directly. The old inputs[length-3] walk counted
+  // every .crew-inp on the page — including the reminder textarea and the Quick Messages
+  // inputs — so it landed outside the crew list entirely once quick-messages existed.
+  document.querySelector(`[data-crew-name="${showData.crew.length - 1}"]`)?.focus();
 }
 
 // ─── IMPORT PAST CREW ────────────────────────────────────────────────────────

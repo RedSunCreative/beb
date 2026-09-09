@@ -82,6 +82,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Make resolveNameToRoster silently pick the first match on an ambiguous partial name
   sed -i '' 's/if (firstMatches.length === 1) return firstMatches\[0\].name;/if (firstMatches.length >= 1) return firstMatches[0].name;/' "$BEB"
   echo "  Injected: resolveNameToRoster guesses first match on ambiguous name"
+  # Float the confirm checkbox above the crew member's name (the exact layout bug we fixed)
+  sed -i '' 's|// Layout order is deliberate: NAME first|// toggleCrewConfirmed( floated above NAME|' "$BEB"
+  echo "  Injected: confirm checkbox marker floated above the crew name"
+  # Revert the SMS href keying to the positional .crew-sms walk
+  sed -i '' 's/document.querySelectorAll(.\[data-crew-sms\].)/document.querySelectorAll(".crew-sms")/' "$BEB"
+  echo "  Injected: updateCrewMsg reverted to positional .crew-sms walk"
   echo ""
 fi
 
@@ -1041,9 +1047,69 @@ print("\n".join(errs) if errs else "OK")
 PYEOF
 BSMWIRE=$(cat /tmp/beb_bsmwire.txt)
 if [[ "$BSMWIRE" == "OK" ]]; then
-  pass "BSM ON NOW reads `now` (3 views); UP NEXT reads live next person; dead emits dropped"
+  pass "BSM ON NOW reads \`now\` (3 views); UP NEXT reads live next person; dead emits dropped"
 else
   while IFS= read -r line; do fail "$line"; done < /tmp/beb_bsmwire.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
+# TEST 23: crew row layout order — every checkbox has a visible subject above it
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 23: crew row layout order + index-keyed hooks ---"
+python3 - > /tmp/beb_crewlayout.txt <<'PYEOF'
+src=open('beb.html').read()
+def extract(name):
+    i=src.find('function '+name+'('); b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+    return ''
+errs=[]
+body=extract('renderCrewList')
+if not body:
+    errs.append("FAIL: renderCrewList() missing")
+else:
+    # The row must read top-to-bottom: name, role, confirm, checklist, email, call time,
+    # mobile, send actions. A checkbox rendered above the name has no visible subject.
+    ORDER=[('name input','data-crew-name='),
+           ('role input','placeholder="Role"'),
+           ('confirmed checkbox','toggleCrewConfirmed('),
+           ('checklist checkbox','toggleCrewChecklist('),
+           ('email field','placeholder="Email"'),
+           ('call time field','placeholder="Call time"'),
+           ('mobile field','placeholder="Mobile"'),
+           ('send actions','crew-actions')]
+    pos=[]
+    for label,marker in ORDER:
+        k=body.find(marker)
+        if k<0: errs.append("FAIL: crew row is missing the "+label+" ("+marker+")")
+        pos.append((label,k))
+    if all(k>=0 for _,k in pos):
+        for a,b2 in zip(pos,pos[1:]):
+            if a[1]>=b2[1]:
+                errs.append("FAIL: crew row order wrong — "+a[0]+" must render above "+b2[0])
+# Index-keyed hooks: DOM-position walks silently target the wrong crew member.
+um=extract('updateCrewMsg')
+if um and '[data-crew-sms]' not in um:
+    errs.append("FAIL: updateCrewMsg does not key SMS hrefs off data-crew-sms (positional .crew-sms walk)")
+if um and 'forEach((a, i)' in um:
+    errs.append("FAIL: updateCrewMsg still walks .crew-sms by DOM index")
+ac=extract('addCrewMember')
+if ac and 'data-crew-name' not in ac:
+    errs.append("FAIL: addCrewMember does not focus the new row via data-crew-name")
+if ac and 'inputs.length - 3' in ac:
+    errs.append("FAIL: addCrewMember still uses the inputs[length-3] positional focus walk")
+print("\n".join(errs) if errs else "OK")
+PYEOF
+CREWLAYOUT=$(cat /tmp/beb_crewlayout.txt)
+if [[ "$CREWLAYOUT" == "OK" ]]; then
+  pass "crew row renders name -> confirm -> checklist -> contact; hooks keyed by index"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_crewlayout.txt
 fi
 
 # ──────────────────────────────────────────────────────────────
@@ -1070,6 +1136,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/function _brk_deleteScene(/function deleteScene(/' "$BEB"
   sed -i '' 's/  return auto ? \[auto\] : (cue.booName ? \[cue.booName\] : \[\]);/  return auto ? [auto] : [];/' "$BEB"
   sed -i '' 's/if (firstMatches.length >= 1) return firstMatches\[0\].name;/if (firstMatches.length === 1) return firstMatches[0].name;/' "$BEB"
+  sed -i '' 's|// toggleCrewConfirmed( floated above NAME|// Layout order is deliberate: NAME first|' "$BEB"
+  sed -i '' 's/document.querySelectorAll(".crew-sms")/document.querySelectorAll('"'"'[data-crew-sms]'"'"')/' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
