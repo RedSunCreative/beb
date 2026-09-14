@@ -127,6 +127,15 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Strip escaping from the outline (INV-6)
   sed -i '' 's|color:#333;">\${esc(person)}<|color:#333;">\${person}<|' "$BEB"
   echo "  Injected: outline interpolates WHO without esc()"
+  # Revert crew identity to name-only (the duplicate-Lalo class)
+  sed -i '' "s|  if (tel.length >= 7) out.push('t:' + tel.slice(-10));|  // phone key removed|" "$BEB"
+  echo "  Injected: person identity is name-only again"
+  # Drop includeChecklist from the crew import payload
+  sed -i '' 's|        includeChecklist: !!m.includeChecklist,|        includeChecklistBRK: false,|' "$BEB"
+  echo "  Injected: crew import drops the checklist preference"
+  # Carry songs forward on guest import (stale songs mislabel performances)
+  sed -i '' "s|const GUEST_CARRY = \['name','role','stageType','mobile','email','bio','about','intro',|const GUEST_CARRY = ['songs','name','role','stageType','mobile','email','bio','about','intro',|" "$BEB"
+  echo "  Injected: guest import carries stale songs forward"
   echo ""
 fi
 
@@ -1592,6 +1601,121 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 28: cross-episode carry-forward (what a NEW episode inherits)
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 28: person identity + carry-forward into a new episode ---"
+python3 - > /tmp/beb_carry.js <<'PYEOF'
+src=open('beb.html').read()
+def const_block(name):
+    i=src.find('const '+name)
+    if i<0: return '// MISSING '+name
+    eq=src.find('=',i); k=eq+1
+    while src[k] in ' \n\t': k+=1
+    if src[k] not in '[{': return src[i:src.find('\n',i)]
+    op,cl=src[k],(']' if src[k]=='[' else '}'); d=0; j=k
+    while j<len(src):
+        if src[j]==op: d+=1
+        elif src[j]==cl:
+            d-=1
+            if d==0: return src[i:j+1]+';'
+        j+=1
+def extract(name):
+    i=src.find('function '+name+'(')
+    if i<0: return '// MISSING '+name
+    b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+print(const_block('GUEST_CARRY'))
+for fn in ('personKeys','personKeySet','normalizeGuest'): print(extract(fn))
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+
+// (a) The duplicate-Lalo class: one human, two spellings, one phone.
+const e10 = { name:'Lalo Rothgeb-Pem', mobile:'512-350-1296', role:'Video Operator' };
+const e9  = { name:'Lalo Rothgeb',     mobile:'512.350.1296', role:'Video Mixer' };
+const seen = personKeySet([e10]);
+assert(personKeys(e9).some(k => seen.has(k)),
+       'same phone in a different format must match the same person (got ' + JSON.stringify(personKeys(e9)) + ')');
+
+// (b) Different people who share nothing must NOT collapse together.
+const other = { name:'Jon Butler', mobile:'512-288-9025' };
+assert(!personKeys(other).some(k => seen.has(k)), 'distinct people must stay distinct');
+
+// (c) A renamed person with no phone on either record still matches by name.
+assert(personKeys({name:'Sam Wofford'}).some(k => personKeySet([{name:'sam wofford'}]).has(k)),
+       'name match must be case-insensitive');
+
+// (d) Too-short junk in the phone field must not become an identity key.
+assert(personKeys({name:'X', mobile:'12'}).filter(k => k.startsWith('t:')).length === 0,
+       'a 2-digit phone must not be used as an identity key');
+// ...and someone with NO usable identity at all yields no keys, so a blank row can't import.
+assert(personKeys({name:'   ', mobile:''}).length === 0, 'a blank person must produce no keys');
+
+// (e) Guest carry-forward: the person travels, the episode-specific bits do not.
+for (const f of ['name','role','stageType','mobile','bio','socials','sendKit'])
+  assert(GUEST_CARRY.indexOf(f) >= 0, 'GUEST_CARRY should carry ' + f);
+for (const f of ['songs','confirmed'])
+  assert(GUEST_CARRY.indexOf(f) < 0, f + ' must NOT carry forward — it is per-episode');
+console.log('OK');
+''')
+PYEOF
+CARRY=$(node /tmp/beb_carry.js 2>&1)
+if [[ "$CARRY" == *"OK"* ]] && [[ "$CARRY" != *"FAIL"* ]] && [[ "$CARRY" != *"MISSING"* ]]; then
+  pass "person identity matches across name variants by phone; guest carry-forward keeps the person, not the episode"
+else
+  fail "carry-forward test: $CARRY"
+fi
+
+# The crew importer must carry the checklist preference and be reachable; guests likewise.
+python3 - > /tmp/beb_imports.txt <<'PYEOF'
+src=open('beb.html').read()
+errs=[]
+def body(n):
+    for pre in ('function ','async function '):
+        i=src.find(pre+n+'(')
+        if i>=0:
+            b=src.find('{',i); d=0; j=b
+            while j<len(src):
+                if src[j]=='{': d+=1
+                elif src[j]=='}':
+                    d-=1
+                    if d==0: return src[i:j+1]
+                j+=1
+    return ''
+for n in ('openGuestImport','renderGuestImport','confirmGuestImport','closeGuestImport','toggleAllGuestImport'):
+    if not body(n): errs.append("FAIL: %s() missing — Import Past Guest is not wired" % n)
+if 'onclick="openGuestImport()"' not in src:
+    errs.append("FAIL: no IMPORT PAST GUEST button in the Guests section")
+cc = body('confirmCrewImport')
+if cc and 'includeChecklist: !!m.includeChecklist' not in cc:
+    errs.append("FAIL: crew import drops includeChecklist — the checklist boxes must be re-ticked every episode")
+oc = body('openCrewImport')
+if oc and 'personKeySet' not in oc:
+    errs.append("FAIL: crew import does not use personKeySet — name-variant duplicates return")
+if oc and 'includeChecklist: !!m.includeChecklist' not in oc:
+    errs.append("FAIL: crew import candidates do not carry includeChecklist")
+cg = body('confirmGuestImport')
+if cg and 'songs: []' not in cg:
+    errs.append("FAIL: guest import must start songs empty (stale songs would mislabel a performance)")
+if cg and 'addBooMessage' not in cg:
+    errs.append("FAIL: guest import writes guest records without announcing what it did")
+if cg and 'normalizeGuest' not in cg:
+    errs.append("FAIL: imported guests bypass normalizeGuest")
+print("\n".join(errs) if errs else "OK")
+PYEOF
+IMP=$(cat /tmp/beb_imports.txt)
+if [[ "$IMP" == "OK" ]]; then
+  pass "Import Past Guest is wired end-to-end; crew import carries the checklist preference"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_imports.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -1630,6 +1754,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "/if (\/clos|credit\/i.test(cue.scene||'')) return 'All Cast & Crew';/d" "$BEB"
   sed -i '' 's|    ghostKey: |    cueCard: |' "$BEB"
   sed -i '' 's|color:#333;">\${person}<|color:#333;">\${esc(person)}<|' "$BEB"
+  sed -i '' "s|  // phone key removed|  if (tel.length >= 7) out.push('t:' + tel.slice(-10));|" "$BEB"
+  sed -i '' 's|        includeChecklistBRK: false,|        includeChecklist: !!m.includeChecklist,|' "$BEB"
+  sed -i '' "s|const GUEST_CARRY = \['songs','name'|const GUEST_CARRY = ['name'|" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
