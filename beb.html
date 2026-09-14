@@ -3088,59 +3088,63 @@ async function uploadToGitHub(filename, content) {
 }
 
 // ─── GENERATE BSM ───
+// The BSM payload, built as a pure function of show data — no DOM, no network — so the
+// test suite can diff it directly instead of only grepping the emit source.
+function buildBSMConfigBlock(sd) {
+  const split = s => s ? s.split('\n').map(l => l.trim()).filter(Boolean) : [];
+  const q = s => s ? `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"` : 'null';
+
+  const episodeBlock = `const EPISODE = {
+  num: ${q(sd.epNum)},
+  title: ${q(sd.epTitle)},
+  subtitle: ${q(sd.epSubtitle)},
+  showMins: ${sd.epLen || 90},
+  pin: ${q(sd.pin || '5000')},
+  prelivePerformer: ${q(sd.prelivePerformer)}
+};`;
+
+  // ONE derivation pass, shared with the printed script and the outline. This used to
+  // rebuild nextScene / *Next / standby / warnings inline — a second copy that would
+  // silently skip any field later added to recomputeStructuralFields.
+  const cues = recomputeStructuralFields(sd.cues || [], sd.guests);
+
+  const cueLines = cues.map(c => `  {
+    dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
+    prelive: ${c.prelive ? 'true' : 'false'}, stageType: ${q(c.stageType)},
+    now: ${q(nowLiveLabel(c, sd.guests))},
+    booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
+    w5: ${q(c.w5)}, w2: ${q(c.w2)},
+    nextScene: ${q(c.nextScene ?? '')},
+    audio: [${split(c.audioNow).map(q).join(', ')}],
+    video: [${split(c.videoNow).map(q).join(', ')}],
+    cameras: [${split(c.camerasNow).map(q).join(', ')}],
+    lighting: [${split(c.lightingNow).map(q).join(', ')}],
+    audioNext: [${split(c.audioNext ?? '').map(q).join(', ')}],
+    videoNext: [${split(c.videoNext ?? '').map(q).join(', ')}],
+    camerasNext: [${split(c.camerasNext ?? '').map(q).join(', ')}],
+    lightingNext: [${split(c.lightingNext ?? '').map(q).join(', ')}],
+    cueCard: ${q(c.cueCard || '')}
+  }`).join(',\n');
+
+  const standbyLines = cues.map(c => {
+    if (!c.standbyWho) return 'null';
+    return `{who: ${q(c.standbyWho)}, stage: ${q(STAGE_LABEL[c.standbyStage] || c.standbyStage)}, isPod: ${c.standbyStage === 'pod'}}`;
+  }).join(', ');
+
+  const qmStudio = (sd.quickMessages?.studio || []).map(m => `  {label:${q(m.label)},text:${q(m.text)}}`).join(',\n');
+  const qmCrew = (sd.quickMessages?.crew || []).map(m => `  {label:${q(m.label)},text:${q(m.text)}}`).join(',\n');
+  const quickMsgsBlock = `const QUICK_MESSAGES = {\n  studio: [\n${qmStudio}\n  ],\n  crew: [\n${qmCrew}\n  ]\n};`;
+
+  return `${episodeBlock}\n\nconst BASE_CUES = [\n${cueLines || '  // no cues yet'}\n];\n\nconst STANDBY_DEFS = [${standbyLines}];\n\n${quickMsgsBlock}`;
+}
+
 async function generateBSM() {
   // `btn` was referenced for status text but never defined here (same copy/paste leftover that
   // broke generateROS). Without this, the GitHub auto-upload path threw ReferenceError before
   // uploadToGitHub ran — so Publish only ever downloaded. Safe stub restores auto-publish.
   const btn = { textContent: '', disabled: false, style: {} };
 
-  const split = s => s ? s.split('\n').map(l => l.trim()).filter(Boolean) : [];
-  const q = s => s ? `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r/g, '\\r').replace(/\n/g, '\\n')}"` : 'null';
-
-  const episodeBlock = `const EPISODE = {
-  num: ${q(showData.epNum)},
-  title: ${q(showData.epTitle)},
-  subtitle: ${q(showData.epSubtitle)},
-  showMins: ${showData.epLen || 90},
-  pin: ${q(showData.pin || '5000')},
-  prelivePerformer: ${q(showData.prelivePerformer)}
-};`;
-
-  const cueLines = showData.cues.map((c, i, arr) => {
-    const nxt = arr[i + 1];
-    const warn = deriveWarnings(arr, i, showData.guests);
-    return `  {
-    dur: ${c.dur || 10}, scene: ${q(c.scene)}, liveLabel: ${q(c.liveLabel || 'NOW LIVE: ' + (c.scene || ''))},
-    prelive: ${c.prelive ? 'true' : 'false'}, stageType: ${q(c.stageType)},
-    now: ${q(nowLiveLabel(c, showData.guests))},
-    booName: ${q(c.booName)}, booTpl: ${q(c.booMsg)},
-    w5: ${q(warn.w5)}, w2: ${q(warn.w2)},
-    nextScene: ${q(nxt?.scene ?? '')},
-    audio: [${split(c.audioNow).map(q).join(', ')}],
-    video: [${split(c.videoNow).map(q).join(', ')}],
-    cameras: [${split(c.camerasNow).map(q).join(', ')}],
-    lighting: [${split(c.lightingNow).map(q).join(', ')}],
-    audioNext: [${split(nxt?.audioNow ?? '').map(q).join(', ')}],
-    videoNext: [${split(nxt?.videoNow ?? '').map(q).join(', ')}],
-    camerasNext: [${split(nxt?.camerasNow ?? '').map(q).join(', ')}],
-    lightingNext: [${split(nxt?.lightingNow ?? '').map(q).join(', ')}],
-    cueCard: ${q(c.cueCard || '')}
-  }`;
-  }).join(',\n');
-
-  const standbyLines = showData.cues.map((c, i, arr) => {
-    const sb = deriveStandby(arr, i, showData.guests);
-    if (!sb.standbyWho) return 'null';
-    const isPod = sb.standbyStage === 'pod';
-    return `{who: ${q(sb.standbyWho)}, stage: ${q(STAGE_LABEL[sb.standbyStage] || sb.standbyStage)}, isPod: ${isPod}}`;
-  }).join(', ');
-
-  const qmStudio = (showData.quickMessages?.studio || []).map(m => `  {label:${q(m.label)},text:${q(m.text)}}`).join(',\n');
-  const qmCrew = (showData.quickMessages?.crew || []).map(m => `  {label:${q(m.label)},text:${q(m.text)}}`).join(',\n');
-  const quickMsgsBlock = `const QUICK_MESSAGES = {\n  studio: [\n${qmStudio}\n  ],\n  crew: [\n${qmCrew}\n  ]\n};`;
-
-  const configBlock =
-    `${episodeBlock}\n\nconst BASE_CUES = [\n${cueLines || '  // no cues yet'}\n];\n\nconst STANDBY_DEFS = [${standbyLines}];\n\n${quickMsgsBlock}`;
+  const configBlock = buildBSMConfigBlock(showData);
 
   try {
     const res = await fetch('bsm-template.html');
@@ -3330,16 +3334,16 @@ function buildROSHtml() {
     const runAtStart = runMins;
     if (!c.prelive) runMins += dur;
     const crewLines = crewDefs.filter(d => c[d.key]).map(d => {
-      const lines = c[d.key].split('\n').map(l => l.trim()).filter(Boolean).join('<br>');
+      const lines = c[d.key].split('\n').map(l => esc(l.trim())).filter(Boolean).join('<br>');
       return `<div class="note-row"><span class="note-lbl">${d.lbl}</span><span class="note-val">${lines}</span></div>`;
     }).join('');
     // WHO IS ON — printed first so a reader knows who's on camera before the tech notes.
     // Without it the sheet only named people who happened to be in the scene title.
     const onNow = displayNowPeople(c, showData.guests);
-    const nowLine = onNow.length ? `<div class="note-row"><span class="note-lbl now">ON NOW</span><span class="note-val now-val">${onNow.join(', ')}</span></div>` : '';
-    const booLine = c.booMsg ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${c.booMsg}</span></div>` : '';
+    const nowLine = onNow.length ? `<div class="note-row"><span class="note-lbl now">ON NOW</span><span class="note-val now-val">${esc(onNow.join(', '))}</span></div>` : '';
+    const booLine = c.booMsg ? `<div class="note-row"><span class="note-lbl">BOO</span><span class="note-val note-boo">${esc(c.booMsg)}</span></div>` : '';
     // The host's own script for the scene — authored in cueCard, previously print-invisible.
-    const cardLine = c.cueCard ? `<div class="note-row"><span class="note-lbl host">HOST</span><span class="note-val note-card">${c.cueCard.split('\n').map(l => l.trim()).filter(Boolean).join('<br>')}</span></div>` : '';
+    const cardLine = c.cueCard ? `<div class="note-row"><span class="note-lbl host">HOST</span><span class="note-val note-card">${c.cueCard.split('\n').map(l => esc(l.trim())).filter(Boolean).join('<br>')}</span></div>` : '';
     const standbyStageLabel = STAGE_LABEL[c.standbyStage] || c.standbyStage || '';
     // Only cue a person to GET READY on the ONE scene right before they appear — otherwise the
     // auto-derived standby repeats them across every earlier scene (Kenneth was showing from 3
@@ -3347,11 +3351,11 @@ function buildROSHtml() {
     const nextCue = cues[i + 1];
     const nextIds = nextCue ? nowIdentities(nextCue, showData.guests).map(s => s.toLowerCase()) : [];
     const showStandby = c.standbyWho && nextIds.includes((c.standbyWho || '').toLowerCase());
-    const standbyLine = showStandby ? `<div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">${c.standbyWho}${standbyStageLabel ? ' → ' + standbyStageLabel : ''} &nbsp;·&nbsp; ~3 min</span></div>` : '';
+    const standbyLine = showStandby ? `<div class="note-row"><span class="note-lbl stby">GET READY</span><span class="note-val stby-val">${esc(c.standbyWho)}${standbyStageLabel ? ' → ' + esc(standbyStageLabel) : ''} &nbsp;·&nbsp; ~3 min</span></div>` : '';
     const timeStr = c.prelive ? `${dur}m` : `${dur}m &nbsp;·&nbsp; <span class="runtime">show: ${runAtStart}m</span>`;
     return `<div class="srow" style="border-left:4px solid ${color};">
       <div class="col-num"><div class="s-num" style="color:${color}">S${i+1}</div><div class="s-stage" style="color:${color}">${getStageLabel(c)}</div></div>
-      <div class="col-name"><div class="s-name">${c.scene || '(untitled)'}</div><div class="s-time">${timeStr}</div></div>
+      <div class="col-name"><div class="s-name">${esc(c.scene || '(untitled)')}</div><div class="s-time">${timeStr}</div></div>
       <div class="col-notes">${nowLine}${crewLines}${booLine}${cardLine}${standbyLine}</div>
     </div>`;
   }).join('');
@@ -3436,7 +3440,7 @@ body{background:#fff;color:#000;font-family:'Syne',sans-serif;font-size:13pt;-we
     <div>
       <div class="hdr-show">${cfg.showName}</div>
       <div class="hdr-epnum">E${epNum}</div>
-      ${showData.epTitle ? `<div class="hdr-title">${showData.epTitle}</div>` : ''}
+      ${showData.epTitle ? `<div class="hdr-title">${esc(showData.epTitle)}</div>` : ''}
       <div class="hdr-sub">${[showData.epDate, showRuntime + ' MIN', cues.length + ' SCENES'].filter(Boolean).join(' · ')}</div>
     </div>
     <div class="hdr-right">
@@ -3588,8 +3592,8 @@ async function generateSceneList() {
     const durFmt = dur % 1 === 0 ? `${dur}m` : `${Math.floor(dur)}m ${Math.round((dur%1)*60)}s`;
     return `<tr style="background:${i%2===0?'#fff':'#f7f7f7'}">
       <td style="padding:7px 10px;color:#666;font-size:9pt;">${i+1}</td>
-      <td style="padding:7px 10px;font-weight:600;font-size:10pt;">${c.scene||''}</td>
-      <td style="padding:7px 10px;font-size:10pt;color:#333;">${person}</td>
+      <td style="padding:7px 10px;font-weight:600;font-size:10pt;">${esc(c.scene||'')}</td>
+      <td style="padding:7px 10px;font-size:10pt;color:#333;">${esc(person)}</td>
       <td style="padding:7px 10px;text-align:right;color:#555;font-size:9pt;white-space:nowrap;">${durFmt}</td>
     </tr>`;
   }).join('');
@@ -3609,7 +3613,7 @@ async function generateSceneList() {
   @media print{.print-btn{display:none;} body{margin:20px;}}
 </style>
 </head><body>
-<h1>${epTitle} — Episode ${epNum}</h1>
+<h1>${esc(epTitle)} — Episode ${esc(String(epNum))}</h1>
 <h2>${epDate ? epDate + ' &nbsp;·&nbsp; ' : ''}${total} min runtime &nbsp;·&nbsp; ${cues.length} scenes</h2>
 <table>
   <thead><tr><th>#</th><th>Scene</th><th>Who</th><th>Duration</th></tr></thead>

@@ -121,6 +121,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Outline invents a cast for the show close again
   sed -i '' "s/    const who  = displayNowPeople(cue, showData.guests).join(', ');/    if (\/clos|credit\/i.test(cue.scene||'')) return 'All Cast \& Crew';\n    const who  = displayNowPeople(cue, showData.guests).join(', ');/" "$BEB"
   echo "  Injected: outline hardcodes All Cast & Crew for close/credits"
+  # Emit a BSM payload key nothing reads (INV-5 dead payload)
+  sed -i '' 's|    cueCard: |    ghostKey: |' "$BEB"
+  echo "  Injected: BSM payload gains a key BSM never reads"
+  # Strip escaping from the outline (INV-6)
+  sed -i '' 's|color:#333;">\${esc(person)}<|color:#333;">\${person}<|' "$BEB"
+  echo "  Injected: outline interpolates WHO without esc()"
   echo ""
 fi
 
@@ -902,7 +908,7 @@ for v in ["value: 'pod'","value: 'music'","value: 'kitchen'","value: 'video'"]:
 if 'replace(/Sun Set Stage' in c:
     errors.append("FAIL: loadState still rewrites 'Sun Set Stage' to 'Sunset'")
 # BSM standby must map by label (not the old kitchen-disco default), and stageType must trickle to BSM
-if 'STAGE_LABEL[sb.standbyStage]' not in c:
+if 'STAGE_LABEL[c.standbyStage]' not in c:
     errors.append("FAIL: generateBSM standby not mapped via STAGE_LABEL (named stages would mislabel)")
 if 'stageType: ${q(c.stageType)}' not in c:
     errors.append("FAIL: cue stageType not emitted into BSM cue data")
@@ -1064,7 +1070,7 @@ b=open('beb.html').read()
 t=open('bsm-template.html').read()
 # BeB still emits `now`, kept `nextScene`, and dropped the dead/redundant keys
 if 'now: ${q(nowLiveLabel(c' not in b: errs.append("FAIL: generateBSM no longer emits `now`")
-if 'nextScene: ${q(nxt?.scene' not in b: errs.append("FAIL: `nextScene` emit dropped (BSM reads it for ALL CLEAR)")
+if 'nextScene: ${q(c.nextScene' not in b: errs.append("FAIL: `nextScene` emit dropped (BSM reads it for ALL CLEAR)")
 if 'upNext: ${q(nxt' in b: errs.append("FAIL: dead `upNext` emit still present")
 if 'stageLabel: ${q(STAGE_LABEL' in b: errs.append("FAIL: dead `stageLabel` emit still present")
 if 'next: ${q(nxt?.booName' in b: errs.append("FAIL: dead `next` emit still present")
@@ -1289,7 +1295,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
 for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG','HOST_STAGES','ALL_HANDS_RE'): print(const_block(c))
-for fn in ('sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
+for fn in ('esc','sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
            'autoResolveNowPerson','resolveNowPeople','nowIdentities','nowIdentity','nowLabel',
            'displayNowPeople','sceneSong','nowLiveLabel','deriveStandby','deriveWarnings','recomputeStructuralFields','buildROSHtml'):
     print(extract(fn)); print()
@@ -1473,6 +1479,119 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 27: ARCHITECTURE INVARIANTS — every export, BEB + BSM
+# Encodes the defect classes that shipped bugs, so they can't come back quietly.
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 27: architecture invariants across all exports ---"
+python3 - > /tmp/beb_invariants.txt <<'PYEOF'
+import re
+src=open('beb.html').read()
+tpl=open('bsm-template.html').read()
+errs=[]
+
+def body(n):
+    for pre in ('function ','async function '):
+        i=src.find(pre+n+'(')
+        if i>=0:
+            b=src.find('{',i); d=0; j=b
+            while j<len(src):
+                if src[j]=='{': d+=1
+                elif src[j]=='}':
+                    d-=1
+                    if d==0: return src[i:j+1]
+                j+=1
+    return ''
+
+# Every artifact BEB hands to a human or another tool.
+EXPORTS = ['buildROSHtml','generateSceneList','buildBSMConfigBlock','generateWelcomeKitHTML',
+           'generateHospHTML','generateFloorMgrHTML','generateCrewMemberChecklistHTML',
+           'generateCrewChecklistShareUrl','generateGuestKitShareUrl']
+for n in EXPORTS:
+    if not body(n): errs.append("FAIL: export %s() is missing — the invariant sweep cannot cover it" % n)
+
+# ── INV-1: no export may resolve "who is on a scene" privately.
+# Roster-listing docs group guests by stageType and never touch cues, so they're exempt.
+ROSTER_DOCS = {'generateWelcomeKitHTML','generateHospHTML','generateFloorMgrHTML',
+               'generateCrewMemberChecklistHTML','generateGuestKitShareUrl','generateCrewChecklistShareUrl'}
+SHARED = ('displayNowPeople','nowLiveLabel','resolveNowPeople','nowLabel')
+for n in EXPORTS:
+    b = body(n)
+    if not b or n in ROSTER_DOCS: continue
+    if re.search(r'(showData|sd|ep)\.cues', b) and not any(s in b for s in SHARED):
+        errs.append("FAIL: %s renders scenes but resolves people without a shared resolver (INV-1)" % n)
+
+# ── INV-2: any export rendering cues must recompute derived fields first.
+# This is the exact bug that made the show outline disagree with the printed script.
+for n in EXPORTS:
+    b = body(n)
+    if not b or n in ROSTER_DOCS: continue
+    if re.search(r'(showData|sd)\.cues', b) and 'recomputeStructuralFields' not in b:
+        errs.append("FAIL: %s reads cues without recomputeStructuralFields — it will render stale derived fields (INV-2)" % n)
+
+# ── INV-3: no export may invent a cast or person. ("All Cast & Crew" on SHOW CLOSE.)
+for n in EXPORTS:
+    b = body(n)
+    if b and re.search(r"return\s+'(All [A-Z]|Crew'|Everyone|Cast )", b):
+        errs.append("FAIL: %s hardcodes a cast/person string instead of using show data (INV-3)" % n)
+
+# ── INV-4: no positional DOM index walks. (addCrewMember focused the wrong field;
+# updateCrewMsg rewrote the wrong person's SMS link.)
+for m in re.finditer(r'querySelectorAll\([^)]*\)[^;\n]{0,90}?(\[\s*\w+\.length\s*-\s*\d+\s*\]|forEach\(\s*\([^)]*,\s*i\s*\)\s*=>)', src):
+    errs.append("FAIL: positional DOM index walk at beb.html line %d — key off a data-* index instead (INV-4)"
+                % (src[:m.start()].count("\n")+1))
+
+# ── INV-5: the BEB->BSM payload contract stays symmetric both ways.
+i = src.find('const cueLines = cues.map')
+block = src[i:src.find('}).join(', i)] if i >= 0 else ''
+if not block:
+    errs.append("FAIL: cannot locate the BSM cue emit — INV-5 unverifiable")
+else:
+    emitted = set(re.findall(r'(\w+):\s*[\$\[]', block))
+    for k in sorted(emitted):
+        if not re.search(r'[\.\[\'"]' + k + r'\b', tpl):
+            errs.append("FAIL: BEB emits `%s` to BSM but BSM never reads it — dead payload (INV-5)" % k)
+    reads = (set(re.findall(r'\bc\.(\w+)', tpl)) | set(re.findall(r'\bcue\.(\w+)', tpl))
+             | set(re.findall(r'\bnc\.(\w+)', tpl)))
+    for k in sorted(reads - emitted - {'length','forEach','map','now'}):
+        errs.append("FAIL: BSM reads `c.%s` but BEB never emits it — missing payload (INV-5)" % k)
+
+# ── INV-6: every HTML export escapes show data at the point of interpolation.
+# Checking only that esc() appears somewhere in the function is too weak — one unescaped
+# field hides behind its escaped neighbours. So inspect each ${...} individually.
+# BSM is exempt: buildBSMConfigBlock emits a JS literal and escapes via q(), not esc().
+USER_DATA = re.compile(r'\b(?:c|g|m|cue|guest)\.(?:scene|name|role|booMsg|cueCard|standbyWho|title|bio|socials|segment)'
+                       r'|\bperson\b|\bepTitle\b|\bonNow\.join')
+for n in EXPORTS:
+    b = body(n)
+    if not b or n in ('buildBSMConfigBlock','generateCrewChecklistShareUrl','generateGuestKitShareUrl'): continue
+    for m in re.finditer(r'\$\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}', b):
+        expr = m.group(1)
+        if USER_DATA.search(expr) and 'esc(' not in expr:
+            errs.append("FAIL: %s interpolates show data without esc(): %s (INV-6)" % (n, expr.strip()[:60]))
+
+# ── INV-7: share URLs use base64url, never encodeURIComponent(JSON) (SMS double-encoding).
+for n in ('generateCrewChecklistShareUrl','generateGuestKitShareUrl'):
+    b = body(n)
+    if b and 'toBase64Url' not in b:
+        errs.append("FAIL: %s does not use toBase64Url — share links will double-encode (INV-7)" % n)
+
+# ── INV-8: everything the Show Scripts / Docs UI calls must actually exist.
+for m in re.finditer(r'onclick="(\w+)\(', src):
+    n = m.group(1)
+    if n.startswith(('generate','build','open','show')) and not body(n) and ('const '+n) not in src and ('function '+n) not in src:
+        errs.append("FAIL: UI calls %s() which is not defined (INV-8)" % n)
+
+print("\n".join(sorted(set(errs))) if errs else "OK")
+PYEOF
+INV=$(cat /tmp/beb_invariants.txt)
+if [[ "$INV" == "OK" ]]; then
+  pass "architecture invariants hold across all 9 exports (resolver, recompute, no invented cast, no DOM index walks, BEB<->BSM contract, escaping, share encoding, UI wiring)"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_invariants.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -1509,6 +1628,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/  if (!people.length \&\& !cue.prelive \&\& ALL_HANDS_RE/  if (!authored \&\& !cue.prelive \&\& ALL_HANDS_RE/' "$BEB"
   sed -i '' 's/  const cues = showData.cues.filter(c => !c.prelive);/  const cues = recomputeStructuralFields(showData.cues).filter(c => !c.prelive);/' "$BEB"
   sed -i '' "/if (\/clos|credit\/i.test(cue.scene||'')) return 'All Cast & Crew';/d" "$BEB"
+  sed -i '' 's|    ghostKey: |    cueCard: |' "$BEB"
+  sed -i '' 's|color:#333;">\${person}<|color:#333;">\${esc(person)}<|' "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi
