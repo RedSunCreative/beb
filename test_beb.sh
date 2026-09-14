@@ -115,6 +115,12 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Gate the all-hands line on auto-resolution again (the pod title-tail bug)
   sed -i '' 's/  if (!authored \&\& !cue.prelive \&\& ALL_HANDS_RE/  if (!people.length \&\& !cue.prelive \&\& ALL_HANDS_RE/' "$BEB"
   echo "  Injected: EVERYBODY suppressed when auto-resolution invents a performer"
+  # Outline stops recomputing (the stale-outline bug)
+  sed -i '' 's/  const cues = recomputeStructuralFields(showData.cues).filter(c => !c.prelive);/  const cues = showData.cues.filter(c => !c.prelive);/' "$BEB"
+  echo "  Injected: show outline no longer recomputes structural fields"
+  # Outline invents a cast for the show close again
+  sed -i '' "s/    const who  = displayNowPeople(cue, showData.guests).join(', ');/    if (\/clos|credit\/i.test(cue.scene||'')) return 'All Cast \& Crew';\n    const who  = displayNowPeople(cue, showData.guests).join(', ');/" "$BEB"
+  echo "  Injected: outline hardcodes All Cast & Crew for close/credits"
   echo ""
 fi
 
@@ -1407,6 +1413,66 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 26: show outline tracks the run of show and uses the shared WHO resolver
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 26: show outline parity with the printed script ---"
+python3 - > /tmp/beb_outline.txt <<'PYEOF'
+src=open('beb.html').read()
+def extract(name):
+    i=src.find('function '+name+'(')
+    if i<0:
+        i=src.find('async function '+name+'(')
+    if i<0: return ''
+    b=src.find('{',i); d=0; j=b
+    while j<len(src):
+        if src[j]=='{': d+=1
+        elif src[j]=='}':
+            d-=1
+            if d==0: return src[i:j+1]
+        j+=1
+    return ''
+errs=[]
+g=extract('generateSceneList')
+if not g:
+    errs.append("FAIL: generateSceneList() missing")
+else:
+    # Stale-outline bug: the printed script recomputed, the outline didn't, so the two
+    # disagreed after any run-of-show edit.
+    if 'recomputeStructuralFields' not in g:
+        errs.append("FAIL: outline does not recomputeStructuralFields — it will render stale derived fields")
+    # One resolver across all three views.
+    if 'displayNowPeople' not in g:
+        errs.append("FAIL: outline WHO column does not use displayNowPeople (host would be missing)")
+    if 'sceneSong' not in g:
+        errs.append("FAIL: outline WHO column does not include the song title")
+    # No invented cast.
+    if "return 'All Cast" in g:
+        errs.append("FAIL: outline still hardcodes an 'All Cast & Crew' cast for close/credits scenes")
+    if "return 'Crew'" in g:
+        errs.append("FAIL: outline still hardcodes a 'Crew' cast")
+    # SHARE must actually produce a stable link, or a shared outline can never update.
+    if 'uploadToGitHub' not in g:
+        errs.append("FAIL: outline is never published — the share link cannot reflect later edits")
+    if 'outline-e' not in g:
+        errs.append("FAIL: outline published under an unexpected filename")
+# The host/show-close rules must reach Boo, not just the renderer.
+p_host = 'Include him in nowPeople for pod and' in src
+p_close = 'THE SHOW CLOSE IS NOT A FIXED CAST' in src
+if not p_host:  errs.append("FAIL: system prompt does not tell Boo the host is on pod/kitchen scenes")
+if not p_close: errs.append("FAIL: system prompt does not tell Boo to ask who closes the show")
+if 'never invent a stand-in like "All Cast & Crew"' not in src:
+    errs.append("FAIL: system prompt does not forbid inventing a close cast")
+print("\n".join(errs) if errs else "OK")
+PYEOF
+OUTL=$(cat /tmp/beb_outline.txt)
+if [[ "$OUTL" == "OK" ]]; then
+  pass "outline recomputes, shares one WHO resolver, invents no cast, and publishes a stable link"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_outline.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -1441,6 +1507,8 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' 's/"ON NOW: "+name/"NOW LIVE: "+name/' bsm-template.html
   sed -i '' "s/const HOST_STAGES = \['pod'\];/const HOST_STAGES = ['pod', 'kitchen'];/" "$BEB"
   sed -i '' 's/  if (!people.length \&\& !cue.prelive \&\& ALL_HANDS_RE/  if (!authored \&\& !cue.prelive \&\& ALL_HANDS_RE/' "$BEB"
+  sed -i '' 's/  const cues = showData.cues.filter(c => !c.prelive);/  const cues = recomputeStructuralFields(showData.cues).filter(c => !c.prelive);/' "$BEB"
+  sed -i '' "/if (\/clos|credit\/i.test(cue.scene||'')) return 'All Cast & Crew';/d" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

@@ -1676,6 +1676,15 @@ A scene has TWO different person concepts, and they must never be mixed:
   • booName — who is coming up NEXT (the forward studio-TV "get ready" tease). Route here: "David is up
     next", "get David ready", "David is coming up". Leave booName "" unless an up-next is specified.
 NEVER put a now-person into booName, and never put a next-up person into nowPeople.
+THE HOST IS ON CAMERA TOO. Mark sits at the pod table for essentially every pod scene and works the
+Kitchen Disco — roughly 90% of the time he is IN the scene. Include him in nowPeople for pod and
+kitchen scenes (e.g. nowPeople: ["Mark", "Soyinka Rahim"]), host first. If you genuinely don't know
+whether he's on a given pod/kitchen scene, ASK — don't silently leave him out. He is never in
+nowPeople for a video roll, a countdown, or a music-stage performance he isn't part of.
+THE SHOW CLOSE IS NOT A FIXED CAST. Who closes the show changes episode to episode — sometimes just
+Mark, sometimes guests join him. When you build or revise a SHOW CLOSE / credits / finale scene, ASK
+who is on it rather than assuming, and never invent a stand-in like "All Cast & Crew". Leave
+nowPeople [] until Mark tells you, so the outline shows the gap instead of a wrong answer.
 When a performance song is named that is not yet on that performer's songs list, ADD it to the guest's
 songs (return the updated guests array) so it resolves everywhere — and say so in your reply
 (e.g. "Added 'Water from the Well' to David's songs."). Never change a guest record silently.
@@ -3550,8 +3559,11 @@ function showScriptsSharePanel(label, url, hasLink) {
 }
 
 // ─── GENERATE SCENE LIST ──────────────────────────────────────────────────────
-function generateSceneList() {
-  const cues = showData.cues.filter(c => !c.prelive);
+async function generateSceneList() {
+  // Recompute exactly like the full printed script does. Reading showData.cues raw meant
+  // the outline rendered stale derived fields after a run-of-show edit while the printed
+  // script (which recomputes) showed the new ones — the two disagreed.
+  const cues = recomputeStructuralFields(showData.cues).filter(c => !c.prelive);
   if (!cues.length) { addBooMessage("No scenes yet — ask Boo to build the run of show first."); return; }
 
   const epNum  = showData.epNum  || 'X';
@@ -3559,15 +3571,15 @@ function generateSceneList() {
   const epDate  = showData.epDate  || '';
   const total   = Math.round(showData.cues.reduce((a,c) => a + (c.prelive ? 0 : parseDur(c.dur)), 0) * 10) / 10;
 
-  // Try to find a person's name for each scene
-  const guestNames = (showData.guests || []).map(g => g.name).filter(Boolean);
+  // ONE resolver for every view — the same displayNowPeople + sceneSong the printed script
+  // and BSM's NOW LIVE line use, so the three can't disagree.
+  // The old version hardcoded "All Cast & Crew" for anything matching /clos|credit|.../ —
+  // which swallowed "SHOW CLOSE" and asserted a cast nobody authored. Who is on the close
+  // varies by episode, so it's left to the real data (and Boo asks).
   function personFor(cue) {
-    const s = (cue.scene || '').toLowerCase();
-    if (/clos|credit|goodbye|finale|danc/i.test(s)) return 'All Cast & Crew';
-    if (/crew|shout/i.test(s)) return 'Crew';
-    // Same resolver as the scene list / BSM: authored nowPeople, else guest in title / performer
-    // by song / kitchen by stage / host. Never booName.
-    return nowLabel(cue, showData.guests) || '';
+    const who  = displayNowPeople(cue, showData.guests).join(', ');
+    const song = sceneSong(cue, showData.guests);
+    return who && song ? who + ' — ' + song : (who || song || '');
   }
 
   const rows = cues.map((c, i) => {
@@ -3611,9 +3623,26 @@ function generateSceneList() {
 </body></html>`;
 
   const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
-  showScriptsSharePanel('✓ Scene list ready — print or save as PDF', '', false);
+  if (win) { win.document.write(html); win.document.close(); }
+
+  // The menu item says SHARE, but this only ever opened a local tab — there was no file and
+  // no link, so anything already shared could never reflect a run-of-show change. Publish it
+  // the same way the full printed script is published.
+  const filename = `outline-e${epNum}.html`;
+  if (localStorage.getItem('beb_github_pat') || CLIENT_CONFIG.githubPAT) {
+    const ok = await uploadToGitHub(filename, html);
+    if (ok) {
+      const url = `https://${CLIENT_CONFIG.githubRepo?.split('/')[0]?.toLowerCase()}.github.io/${CLIENT_CONFIG.githubRepo?.split('/')[1]}/${filename}`;
+      showScriptsSharePanel('✓ Show outline published', url, true);
+      addBooMessage(`✓ <b>Show outline published.</b> Same link every time, so anyone holding it sees the current run of show. <a href="${url}" target="_blank" style="color:var(--teal);">Open ↗</a>`);
+      return;
+    }
+    showScriptsSharePanel('⚠️ Outline opened locally — upload failed', '', false);
+    addBooMessage(`⚠️ <b>Couldn't publish the outline.</b> Token is likely missing, expired, or lacks Contents write on <code>${CLIENT_CONFIG.githubRepo}</code>. It's open in a tab — print from there.`);
+    return;
+  }
+  showScriptsSharePanel('✓ Show outline ready — print or save as PDF', '', false);
+  addBooMessage(`⬇️ Outline opened in a tab, but it did <b>not</b> go live: no GitHub token set. Add one in ⚙ Settings to publish a shareable link.`);
 }
 
 // ─── SHOW DOCS ───────────────────────────────────────────────────────────────
