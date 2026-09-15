@@ -1448,9 +1448,12 @@ def extract(name):
         j+=1
     return ''
 errs=[]
-g=extract('generateSceneList')
-if not g:
+g=extract('buildSceneListHtml')
+pub=extract('generateSceneList')
+if not pub:
     errs.append("FAIL: generateSceneList() missing")
+if not g:
+    errs.append("FAIL: buildSceneListHtml() missing — the outline has no pure builder")
 else:
     # Stale-outline bug: the printed script recomputed, the outline didn't, so the two
     # disagreed after any run-of-show edit.
@@ -1466,11 +1469,14 @@ else:
         errs.append("FAIL: outline still hardcodes an 'All Cast & Crew' cast for close/credits scenes")
     if "return 'Crew'" in g:
         errs.append("FAIL: outline still hardcodes a 'Crew' cast")
-    # SHARE must actually produce a stable link, or a shared outline can never update.
-    if 'uploadToGitHub' not in g:
+# SHARE must actually produce a stable link, or a shared outline can never update.
+if pub:
+    if 'uploadToGitHub' not in pub:
         errs.append("FAIL: outline is never published — the share link cannot reflect later edits")
-    if 'outline-e' not in g:
+    if 'outline-e' not in pub:
         errs.append("FAIL: outline published under an unexpected filename")
+    if 'buildSceneListHtml' not in pub:
+        errs.append("FAIL: generateSceneList does not call the shared builder")
 # The host/show-close rules must reach Boo, not just the renderer.
 p_host = 'Include him in nowPeople for pod and' in src
 p_close = 'THE SHOW CLOSE IS NOT A FIXED CAST' in src
@@ -1513,7 +1519,7 @@ def body(n):
     return ''
 
 # Every artifact BEB hands to a human or another tool.
-EXPORTS = ['buildROSHtml','generateSceneList','buildBSMConfigBlock','generateWelcomeKitHTML',
+EXPORTS = ['buildROSHtml','buildSceneListHtml','buildBSMConfigBlock','generateWelcomeKitHTML',
            'generateHospHTML','generateFloorMgrHTML','generateCrewMemberChecklistHTML',
            'generateCrewChecklistShareUrl','generateGuestKitShareUrl']
 for n in EXPORTS:

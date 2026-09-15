@@ -3704,12 +3704,15 @@ function showScriptsSharePanel(label, url, hasLink) {
 }
 
 // ─── GENERATE SCENE LIST ──────────────────────────────────────────────────────
-async function generateSceneList() {
+// Pure builder, matching buildROSHtml / buildBSMConfigBlock: HTML in, no DOM, no network,
+// so the suite (and any headless regeneration) drives the real renderer rather than a copy.
+// Returns null when there are no live scenes.
+function buildSceneListHtml() {
   // Recompute exactly like the full printed script does. Reading showData.cues raw meant
   // the outline rendered stale derived fields after a run-of-show edit while the printed
   // script (which recomputes) showed the new ones — the two disagreed.
   const cues = recomputeStructuralFields(showData.cues).filter(c => !c.prelive);
-  if (!cues.length) { addBooMessage("No scenes yet — ask Boo to build the run of show first."); return; }
+  if (!cues.length) return null;
 
   const epNum  = showData.epNum  || 'X';
   const epTitle = showData.epTitle || 'Little Big Voices';
@@ -3766,6 +3769,13 @@ async function generateSceneList() {
 </table>
 <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
 </body></html>`;
+  return html;
+}
+
+async function generateSceneList() {
+  const html = buildSceneListHtml();
+  if (!html) { addBooMessage("No scenes yet — ask Boo to build the run of show first."); return; }
+  const epNum = showData.epNum || 'X';
 
   const win = window.open('', '_blank');
   if (win) { win.document.write(html); win.document.close(); }
