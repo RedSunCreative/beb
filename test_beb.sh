@@ -136,6 +136,15 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   # Carry songs forward on guest import (stale songs mislabel performances)
   sed -i '' "s|const GUEST_CARRY = \['name','role','stageType','mobile','email','bio','about','intro',|const GUEST_CARRY = ['songs','name','role','stageType','mobile','email','bio','about','intro',|" "$BEB"
   echo "  Injected: guest import carries stale songs forward"
+  # Downgrade a stale BSM from STOP to a note (E11 shipped because nothing stopped it)
+  sed -i '' "s|    { f: \`bsm-e\${epNum}.html\`,     what: 'Boo Show Manager',  level: 'stop' },|    { f: \`bsm-e\${epNum}.html\`,     what: 'Boo Show Manager',  level: 'note' },|" "$BEB"
+  echo "  Injected: stale BSM downgraded from STOP to note"
+  # Stop pre-flight running unless asked
+  sed -i '' 's|      setTimeout(() => { try { runPreflight(true); } catch(_) {} }, 400);|      // preflight-autorun removed|' "$BEB"
+  echo "  Injected: pre-flight no longer auto-runs on load"
+  # Blind the get-ready mismatch check
+  sed -i '' "s#!onNext(c.booName)#false \&\& !onNext(c.booName)#" "$BEB"
+  echo "  Injected: get-ready mismatch check disabled"
   echo ""
 fi
 
@@ -1722,6 +1731,187 @@ else
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 29: PRE-FLIGHT — catch potholes before the show, not after
+# Built from the real E11 failure: aired 2026-09-13 from a BSM published 3 min
+# before the interviews were reordered.
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 29: pre-flight checks ---"
+python3 - > /tmp/beb_preflight.js <<'PYEOF'
+src=open('beb.html').read()
+def const_block(n):
+    i=src.find('const '+n)
+    if i<0: return '// MISSING '+n
+    eq=src.find('=',i); k=eq+1
+    while src[k] in ' \n\t': k+=1
+    if src[k] not in '[{': return src[i:src.find('\n',i)]
+    op,cl=src[k],(']' if src[k]=='[' else '}'); d=0; j=k
+    while j<len(src):
+        if src[j]==op: d+=1
+        elif src[j]==cl:
+            d-=1
+            if d==0: return src[i:j+1]+';'
+        j+=1
+def extract(n):
+    for pre in ('function ','async function '):
+        i=src.find(pre+n+'(')
+        if i>=0:
+            b=src.find('{',i); d=0; j=b
+            while j<len(src):
+                if src[j]=='{': d+=1
+                elif src[j]=='}':
+                    d-=1
+                    if d==0: return src[i:j+1]
+                j+=1
+    return '// MISSING '+n
+for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG','HOST_STAGES','ALL_HANDS_RE'):
+    print(const_block(c))
+for fn in ('sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
+           'autoResolveNowPerson','resolveNowPeople','nowIdentities','nowIdentity','nowLabel',
+           'displayNowPeople','sceneSong','nowLiveLabel','deriveStandby','deriveWarnings',
+           'recomputeStructuralFields','preflightEpisode'):
+    print(extract(fn))
+print(r'''
+function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
+const codes = f => f.map(x => x.code);
+const lvl = (f,c) => (f.find(x => x.code === c) || {}).level;
+
+const guests = [
+  { name:'Shanik Hughes', stageType:'music', mobile:'512-111-1111', confirmed:true, songs:[{name:'Agua a Tierra'}] },
+  { name:'Clifton Pappas', stageType:'pod', mobile:'512-222-2222', confirmed:true, songs:[] },
+];
+const crew = [{ name:'Sam Wofford', role:'Lighting/Cameras', mobile:'773-398-4615' }];
+const base = { epNum:'12', epTitle:'T', epDate:'10-4-2026', epTime:'16:30', epLen:10, guests, crew };
+
+// (a) A healthy episode is quiet. Noise here would train Mark to ignore it.
+const good = Object.assign({}, base, { cues:[
+  { scene:'POD INTERVIEW — Clifton Pappas', stageType:'pod', dur:5, nowPeople:['Clifton Pappas'],
+    camerasNow:'CAM 3', videoNow:'CAM 3', audioNow:'Pod mics', booName:'Shanik Hughes' },
+  { scene:'PERFORMANCE — Agua a Tierra', stageType:'music', dur:5, nowPeople:['Shanik Hughes'],
+    camerasNow:'CAM 1', videoNow:'CAM 1', audioNow:'Music mics' },
+]});
+let f = preflightEpisode(good);
+assert(!f.some(x => x.level === 'stop'), 'a healthy episode must raise no STOP, got ' + JSON.stringify(codes(f)));
+assert(!f.some(x => x.code === 'no-tech'), 'fully-cued scenes must not be flagged');
+assert(!f.some(x => x.code === 'song-unlinked'), 'a song on the roster must not be flagged');
+
+// (b) Header gaps.
+assert(codes(preflightEpisode(Object.assign({}, good, {epDate:''}))).includes('no-date'), 'missing air date must STOP');
+assert(lvl(preflightEpisode(Object.assign({}, good, {epDate:''})), 'no-date') === 'stop', 'no-date is a STOP');
+assert(codes(preflightEpisode(Object.assign({}, good, {epTime:''}))).includes('no-time'), 'missing air time must be raised');
+
+// (c) No scenes at all, and it must not keep walking a broken episode.
+const empty = preflightEpisode(Object.assign({}, base, {cues:[]}));
+assert(codes(empty).includes('no-cues'), 'an episode with no scenes must STOP');
+assert(empty.length === 1, 'no-cues should short-circuit rather than pile on, got ' + JSON.stringify(codes(empty)));
+
+// (d) THE E11 CLASS: a get-ready left pointing at the wrong guest after a reorder.
+const stale = Object.assign({}, base, { cues:[
+  { scene:'VIDEO — roll', stageType:'video', dur:2, nowPeople:[], videoNow:'GO', camerasNow:'x', audioNow:'y',
+    booName:'Shanik Hughes' },
+  { scene:'POD INTERVIEW — Clifton Pappas', stageType:'pod', dur:5, nowPeople:['Clifton Pappas'],
+    camerasNow:'CAM 3', videoNow:'CAM 3', audioNow:'Pod mics' },
+]});
+f = preflightEpisode(stale);
+assert(codes(f).includes('getready-mismatch'),
+       'a get-ready naming someone absent from the next scene must be caught, got ' + JSON.stringify(codes(f)));
+assert(lvl(f, 'getready-mismatch') === 'stop', 'a wrong get-ready is a STOP — it shows on the studio screen');
+
+// (e) NOT checked by design: camerasNext/videoNext/audioNext are derived from the next
+// scene's *Now by recomputeStructuralFields, so they self-correct and cannot go stale in
+// the row. Staleness there only exists in a PUBLISHED file — preflightPublish's job.
+const derivedNext = Object.assign({}, base, { cues:[
+  { scene:'VIDEO — roll', stageType:'video', dur:2, nowPeople:[], videoNow:'GO', camerasNow:'x', audioNow:'y',
+    camerasNext:'CAM 4: Shanik Hughes' },
+  { scene:'POD INTERVIEW — Clifton Pappas', stageType:'pod', dur:5, nowPeople:['Clifton Pappas'],
+    camerasNow:'CAM 3', videoNow:'CAM 3', audioNow:'Pod mics' },
+]});
+assert(recomputeStructuralFields(derivedNext.cues, guests)[0].camerasNext === 'CAM 3',
+       'camerasNext must be re-derived from the next scene, not trusted from the row');
+
+// (f) Untechnicked scene, missing duration, empty scene name.
+const rough = Object.assign({}, base, { cues:[
+  { scene:'', stageType:'pod', dur:0, nowPeople:['Clifton Pappas'] },
+]});
+f = preflightEpisode(rough);
+['blank-scene','no-tech','no-dur'].forEach(c =>
+  assert(codes(f).includes(c), 'should flag ' + c + ', got ' + JSON.stringify(codes(f))));
+
+// (g) Unreachable people, blank rows.
+f = preflightEpisode(Object.assign({}, good, { guests:[{name:'No Contact', stageType:'pod'}], crew:[{name:'', role:'x'}] }));
+assert(codes(f).includes('guest-unreachable'), 'a guest with no mobile or email must be raised');
+assert(codes(f).includes('blank-crew') && lvl(f,'blank-crew') === 'stop', 'a nameless crew row must STOP');
+
+// (h) A performance whose song is on nobody's list — sceneSong() would return nothing,
+// so the song never reaches the live screen or Boo's warnings.
+f = preflightEpisode(Object.assign({}, base, { cues:[
+  { scene:'PERFORMANCE — Some Other Song', stageType:'music', dur:10, nowPeople:['Shanik Hughes'],
+    camerasNow:'a', videoNow:'b', audioNow:'c' },
+]}));
+assert(codes(f).includes('song-unlinked'), 'an unlinked performance song must be raised');
+
+// (i) Runtime drift against the target.
+f = preflightEpisode(Object.assign({}, good, { epLen:60 }));
+assert(codes(f).includes('runtime-drift'), '10 min of scenes against a 60 min target must be raised');
+console.log('OK');
+''')
+PYEOF
+PF=$(node /tmp/beb_preflight.js 2>&1)
+if [[ "$PF" == *"OK"* ]] && [[ "$PF" != *"FAIL"* ]] && [[ "$PF" != *"MISSING"* ]]; then
+  pass "pre-flight catches header gaps, untechnicked scenes, wrong get-ready/NEXT cues, unreachable people, unlinked songs, runtime drift — and stays quiet on a healthy episode"
+else
+  fail "pre-flight test: $PF"
+fi
+
+# The publish-freshness guard — the only check that could have caught E11 — plus its wiring.
+python3 - > /tmp/beb_pfwire.txt <<'PYEOF'
+src=open('beb.html').read()
+errs=[]
+def body(n):
+    for pre in ('function ','async function '):
+        i=src.find(pre+n+'(')
+        if i>=0:
+            b=src.find('{',i); d=0; j=b
+            while j<len(src):
+                if src[j]=='{': d+=1
+                elif src[j]=='}':
+                    d-=1
+                    if d==0: return src[i:j+1]
+                j+=1
+    return ''
+for n in ('preflightEpisode','preflightPublish','runPreflight'):
+    if not body(n): errs.append("FAIL: %s() missing" % n)
+pp = body('preflightPublish')
+if pp:
+    for need,msg in [('api.github.com','does not query the GitHub API for publish times'),
+                     ('bsm-e','does not check the BSM artifact'),
+                     ('ros-e','does not check the printed script'),
+                     ('outline-e','does not check the show outline'),
+                     ('never-published','does not report a never-published artifact'),
+                     ('publish-stale','does not report a stale artifact')]:
+        if need not in pp: errs.append("FAIL: preflightPublish %s" % msg)
+    if "{ f: `bsm-e${epNum}.html`,     what: 'Boo Show Manager',  level: 'stop' }" not in pp:
+        errs.append("FAIL: a stale BSM must be a STOP — it is what the live show runs from")
+# It has to run WITHOUT being asked, and gate the publish.
+if 'runPreflight(true)' not in src:
+    errs.append("FAIL: pre-flight does not auto-run on episode load — Mark would have to remember to ask")
+if '_lastSavedAt = ts' not in src:
+    errs.append("FAIL: the save timestamp is not captured, so freshness cannot be compared")
+gb = body('generateBSM')
+if gb and 'preflightEpisode' not in gb:
+    errs.append("FAIL: publishing to BSM does not pre-flight first")
+if 'onclick="runPreflight(false)"' not in src:
+    errs.append("FAIL: no Pre-Flight Check item in the Show Scripts menu")
+print("\n".join(errs) if errs else "OK")
+PYEOF
+PFW=$(cat /tmp/beb_pfwire.txt)
+if [[ "$PFW" == "OK" ]]; then
+  pass "publish-freshness guard wired: stale BSM is a STOP, auto-runs on load, gates the BSM publish"
+else
+  while IFS= read -r line; do fail "$line"; done < /tmp/beb_pfwire.txt
+fi
+
+# ──────────────────────────────────────────────────────────────
 # BREAK-TEST CLEANUP
 # ──────────────────────────────────────────────────────────────
 if [[ "$BREAK_MODE" == "--break" ]]; then
@@ -1763,6 +1953,9 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
   sed -i '' "s|  // phone key removed|  if (tel.length >= 7) out.push('t:' + tel.slice(-10));|" "$BEB"
   sed -i '' 's|        includeChecklistBRK: false,|        includeChecklist: !!m.includeChecklist,|' "$BEB"
   sed -i '' "s|const GUEST_CARRY = \['songs','name'|const GUEST_CARRY = ['name'|" "$BEB"
+  sed -i '' "s|    { f: \`bsm-e\${epNum}.html\`,     what: 'Boo Show Manager',  level: 'note' },|    { f: \`bsm-e\${epNum}.html\`,     what: 'Boo Show Manager',  level: 'stop' },|" "$BEB"
+  sed -i '' 's|      // preflight-autorun removed|      setTimeout(() => { try { runPreflight(true); } catch(_) {} }, 400);|' "$BEB"
+  sed -i '' "s#false \&\& !onNext(c.booName)#!onNext(c.booName)#" "$BEB"
   echo ""
   echo "  (break-test injections removed — file restored)"
 fi

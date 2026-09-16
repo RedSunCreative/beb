@@ -494,7 +494,11 @@ body{background:var(--dark);min-height:100vh;font-family:'DM Sans',sans-serif;co
         <div class="data-section-title">Show Scripts <span class="tip-q" data-tip="Publish or print your show scripts. Edit scenes before you publish." onclick="event.stopPropagation()">?</span></div>
       </div>
       <div class="data-section-body" id="scripts-body" style="display:none;">
-        <div class="ros-menu-item" onclick="showROSEditPanel()" style="margin:-14px -16px 0;border-radius:0;">
+        <div class="ros-menu-item" onclick="runPreflight(false)" style="margin:-14px -16px 0;border-radius:0;">
+          <div class="ros-item-name">&#9989; Pre-Flight Check</div>
+          <div class="ros-item-desc">Scenes, people, forward cues, and whether what's published matches what's saved</div>
+        </div>
+        <div class="ros-menu-item" onclick="showROSEditPanel()" style="margin:0 -16px;border-radius:0;">
           <div class="ros-item-name">✏️ Edit Show Script</div>
           <div class="ros-item-desc">Review and adjust scene names, timings, and notes before publishing</div>
         </div>
@@ -982,6 +986,8 @@ async function loadState(rowId) {
       updateAllDisplays();
       setSaveBadge("● LOADED", "var(--green)");
       if (epRes.data.updated_at) setSavedTime(epRes.data.updated_at);
+      // Surface potholes on the way IN, not after a show. Silent when nothing is wrong.
+      setTimeout(() => { try { runPreflight(true); } catch(_) {} }, 400);
       return true;
     }
   } catch(e) {}
@@ -1077,7 +1083,9 @@ function updateEpSwitchBtn() {
   btn.textContent = (showData.epNum ? `E${showData.epNum}` : 'EP') + ' ▾';
 }
 
+let _lastSavedAt = null;
 function setSavedTime(ts) {
+  _lastSavedAt = ts;              // what pre-flight compares published files against
   const el = document.getElementById('d-saved');
   if (!el) return;
   try {
@@ -2663,6 +2671,157 @@ function addCrewMember() {
   document.querySelector(`[data-crew-name="${showData.crew.length - 1}"]`)?.focus();
 }
 
+// ─── PRE-FLIGHT ──────────────────────────────────────────────────────────────
+// Find the potholes BEFORE the show, not after. E11 aired from a BSM published two
+// minutes before a scene reorder: Boo's studio card teased the wrong guest and CAM 4
+// was pre-assigned to the wrong person for the whole show, and nothing said a word.
+// Every check below exists because something actually went wrong, or would have.
+// Pure — no DOM, no network — so the suite drives it directly.
+//   Returns [{level:'stop'|'warn'|'note', code, msg, fix}]
+function preflightEpisode(sd, nowISO) {
+  sd = sd || {};
+  const out = [];
+  const add = (level, code, msg, fix) => out.push({ level, code, msg, fix });
+  const cues = recomputeStructuralFields(sd.cues || [], sd.guests);
+  const live = cues.filter(c => !c.prelive);
+  const guests = sd.guests || [];
+  const crew = sd.crew || [];
+
+  // ── Episode header
+  if (!(sd.epDate || '').trim()) add('stop', 'no-date', 'No air date set.', 'Set the episode date.');
+  if (!(sd.epTime || '').trim()) add('warn', 'no-time', 'No air time set.', 'Set the episode time.');
+  if (!(sd.epTitle || '').trim()) add('warn', 'no-title', 'No episode title.', 'Title shows on the script, outline and BSM header.');
+
+  // ── Scenes
+  if (!cues.length) { add('stop', 'no-cues', 'No scenes yet.', 'Ask Boo to build the run of show.'); return out; }
+  cues.forEach((c, i) => {
+    const label = `S${i + 1} "${c.scene || '(untitled)'}"`;
+    if (!(c.scene || '').trim()) add('stop', 'blank-scene', `${label} has no name.`, 'Name it or delete it.');
+    const tech = ['camerasNow', 'videoNow', 'audioNow'].filter(k => (c[k] || '').trim());
+    if (!tech.length) add('warn', 'no-tech', `${label} has no camera, video or audio cue.`, 'Import Tech Cues from a past episode, or write them.');
+    if (!parseDur(c.dur)) add('warn', 'no-dur', `${label} has no duration.`, 'Timings drive the whole runtime.');
+  });
+
+  // ── THE E11 BUG CLASS: forward-looking cues that name the wrong person.
+  // A get-ready tease, a standby, or a *Next camera assignment must refer to somebody who
+  // is actually on the NEXT scene. After a reorder these silently point at the old guest.
+  cues.forEach((c, i) => {
+    const nxt = cues[i + 1];
+    if (!nxt) return;
+    const label = `S${i + 1} "${c.scene || '(untitled)'}"`;
+    const nextIds = nowIdentities(nxt, guests).map(s => (s || '').toLowerCase());
+    const nextNames = displayNowPeople(nxt, guests).map(s => (s || '').toLowerCase());
+    const onNext = n => {
+      const k = (n || '').trim().toLowerCase();
+      if (!k) return true;
+      return nextIds.concat(nextNames).some(x => x && (x.includes(k) || k.includes(x)));
+    };
+    // booName is AUTHORED, so a reorder can leave it pointing at the guest who used to be
+    // next. That is the one that reaches a human: it's the get-ready card on the studio TV.
+    if ((c.booName || '').trim() && !onNext(c.booName)) {
+      add('stop', 'getready-mismatch',
+          `${label} tells "${c.booName}" to get ready, but the next scene is "${nxt.scene}".`,
+          'Left over from a reorder — a wrong name here goes on the studio screen.');
+    }
+    // Deliberately NOT checking camerasNext/videoNext/audioNext. recomputeStructuralFields
+    // derives them from the next scene's *Now on every save and load, so they self-correct
+    // and cannot be stale in the row. They CAN be stale in a published file — which is what
+    // preflightPublish() is for, and is how E11's CAM 4 ended up on the wrong guest.
+  });
+
+  // ── People
+  live.forEach((c, i) => {
+    const st = c.stageType || '';
+    if ((st === 'pod' || st === 'kitchen' || st === 'music') && !displayNowPeople(c, guests).length) {
+      add('warn', 'no-people', `"${c.scene}" has nobody on it.`, 'Tell Boo who is in this scene.');
+    }
+  });
+  guests.forEach(g => {
+    if (!(g.name || '').trim()) { add('stop', 'blank-guest', 'There is a guest row with no name.', 'Name it or remove it.'); return; }
+    if (!(g.mobile || '').trim() && !(g.email || '').trim())
+      add('warn', 'guest-unreachable', `${g.name} has no mobile or email.`, 'No way to send them the welcome kit or a call time.');
+    if (!g.confirmed) add('note', 'guest-unconfirmed', `${g.name} is still unconfirmed.`, 'Tick confirmed once they are locked.');
+  });
+  crew.forEach(m => {
+    if (!(m.name || '').trim()) { add('stop', 'blank-crew', 'There is a crew row with no name.', 'Name it or remove it.'); return; }
+    if (!(m.mobile || '').trim()) add('warn', 'crew-unreachable', `${m.name} has no mobile.`, 'Cannot be texted a call time or checklist.');
+  });
+
+  // ── A performance whose song is not on anyone's list: sceneSong() returns nothing, so the
+  // song never reaches the NOW LIVE line or Boo's warnings.
+  live.forEach(c => {
+    if ((c.stageType || '') !== 'music') return;
+    if (!sceneSong(c, guests) && /—/.test(c.scene || ''))
+      add('warn', 'song-unlinked', `"${c.scene}" does not match any guest's song list.`,
+          'Add the song to that performer so it shows on the live screen and in Boo\'s warnings.');
+  });
+
+  // ── Runtime vs target
+  const total = live.reduce((a, c) => a + parseDur(c.dur), 0);
+  const target = parseFloat(sd.epLen) || 0;
+  if (target && Math.abs(total - target) / target > 0.1)
+    add('warn', 'runtime-drift', `Runtime is ${Math.round(total)} min against a ${target} min target.`, 'Adjust durations or the target.');
+
+  return out;
+}
+
+// Is what's PUBLISHED older than what's SAVED? Unauthenticated GitHub API — no token needed.
+// This is the check that would have caught E11: the row was saved two minutes after BSM
+// was published, and nothing compared the two.
+async function preflightPublish(epNum, rowUpdatedAt) {
+  const out = [];
+  if (!epNum || !rowUpdatedAt) return out;
+  const repo = CLIENT_CONFIG.githubRepo || 'RedSunCreative/beb';
+  const saved = new Date(rowUpdatedAt).getTime();
+  const files = [
+    { f: `bsm-e${epNum}.html`,     what: 'Boo Show Manager',  level: 'stop' },
+    { f: `ros-e${epNum}.html`,     what: 'printed script',    level: 'warn' },
+    { f: `outline-e${epNum}.html`, what: 'show outline',      level: 'note' },
+  ];
+  await Promise.all(files.map(async ({ f, what, level }) => {
+    try {
+      const r = await fetch(`https://api.github.com/repos/${repo}/commits?path=${f}&per_page=1`);
+      if (!r.ok) return;
+      const j = await r.json();
+      if (!Array.isArray(j) || !j.length) {
+        out.push({ level: level === 'stop' ? 'stop' : 'note', code: 'never-published',
+                   msg: `The ${what} has never been published for E${epNum}.`, fix: `Publish it (${f}).` });
+        return;
+      }
+      const pub = new Date(j[0].commit.committer.date).getTime();
+      const mins = Math.round((saved - pub) / 60000);
+      if (mins > 1) out.push({ level, code: 'publish-stale',
+          msg: `The ${what} is ${mins} min older than your last save.`,
+          fix: `Republish ${f} — this is exactly how E11 went live with the wrong interview order.` });
+    } catch(_) {}
+  }));
+  return out;
+}
+
+// UI entry: run everything, show it, and say it out loud rather than hiding it in a panel.
+async function runPreflight(silentIfClean) {
+  const findings = preflightEpisode(showData);
+  let pub = [];
+  try { pub = await preflightPublish(showData.epNum, _lastSavedAt); } catch(_) {}
+  const all = findings.concat(pub);
+  const stop = all.filter(f => f.level === 'stop');
+  const warn = all.filter(f => f.level === 'warn');
+  const note = all.filter(f => f.level === 'note');
+  if (!all.length) {
+    if (!silentIfClean) addBooMessage('✓ <b>Pre-flight clean.</b> Scenes, people, forward cues and published files all line up.');
+    return all;
+  }
+  if (silentIfClean && !stop.length && !warn.length) return all;
+  const row = f => `<div style="margin:3px 0;">• ${f.msg}${f.fix ? ` <span style="color:var(--muted);">— ${f.fix}</span>` : ''}</div>`;
+  addBooMessage(
+    `<b>Pre-flight on E${showData.epNum || '?'}</b>`
+    + (stop.length ? `<div style="margin-top:6px;color:var(--orange);font-weight:700;">NEEDS FIXING (${stop.length})</div>${stop.map(row).join('')}` : '')
+    + (warn.length ? `<div style="margin-top:6px;color:#F5A623;font-weight:700;">WORTH A LOOK (${warn.length})</div>${warn.map(row).join('')}` : '')
+    + (note.length ? `<div style="margin-top:6px;color:var(--muted);font-weight:700;">FYI (${note.length})</div>${note.map(row).join('')}` : '')
+  );
+  return all;
+}
+
 // ─── IMPORT PAST GUESTS ──────────────────────────────────────────────────────
 // The guest twin of Import Past Crew. A returning guest's bio, links and contact details
 // are stable facts about the person — re-typing them every episode was the last manual
@@ -3280,6 +3439,17 @@ function buildBSMConfigBlock(sd) {
 }
 
 async function generateBSM() {
+  // Pre-flight BEFORE publishing the artifact the live show runs from. A 'stop' finding
+  // here is almost always a leftover from a reorder — exactly what shipped on E11.
+  try {
+    const pre = preflightEpisode(showData).filter(f => f.level === 'stop');
+    if (pre.length) {
+      addBooMessage(`⚠️ <b>Hold on — ${pre.length} thing${pre.length === 1 ? '' : 's'} to fix before this goes live:</b>`
+        + pre.map(f => `<div style="margin:3px 0;">• ${f.msg}${f.fix ? ` <span style="color:var(--muted);">— ${f.fix}</span>` : ''}</div>`).join('')
+        + `<div style="margin-top:6px;color:var(--muted);">Publishing anyway — but fix these and republish.</div>`);
+    }
+  } catch(_) {}
+
   // `btn` was referenced for status text but never defined here (same copy/paste leftover that
   // broke generateROS). Without this, the GitHub auto-upload path threw ReferenceError before
   // uploadToGitHub ran — so Publish only ever downloaded. Safe stub restores auto-publish.
