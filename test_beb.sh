@@ -1961,6 +1961,17 @@ if [[ "$BREAK_MODE" == "--break" ]]; then
 fi
 
 # ──────────────────────────────────────────────────────────────
+# TEST 30: GUEST WELCOME KIT — one template (welcome-kit.js), published page fresh
+#   Contract lives in test_welcome.js. Break-proof: each fault injected into a
+#   throwaway copy of the template, in isolation, must be caught.
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 30: guest welcome kit ---"
+while IFS= read -r line; do
+  case "$line" in PASS:*) pass "${line#PASS: }";; FAIL:*) fail "${line#FAIL: }";; esac
+done < <(node test_welcome.js 2>&1 || true)
+
+# ──────────────────────────────────────────────────────────────
 # SUMMARY
 # ──────────────────────────────────────────────────────────────
 echo ""

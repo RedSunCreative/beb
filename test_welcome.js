@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+// Welcome Kit contract checks. Usage: node test_welcome.js [path/to/welcome-kit.js]
+// Prints "PASS: ..." / "FAIL: ..." lines; exit code = number of failures.
+const fs = require('fs'), path = require('path'), cp = require('child_process');
+const modPath = path.resolve(process.argv[2] || './welcome-kit.js');
+let fails = 0;
+const ok = (c, m) => { console.log((c ? 'PASS: ' : 'FAIL: ') + m); if (!c) fails++; };
+let W;
+try { delete require.cache[modPath]; W = require(modPath); }
+catch (e) { ok(false, 'welcome-kit.js loads: ' + e.message); process.exit(1); }
+
+const e12 = JSON.parse(fs.readFileSync(path.join(__dirname, 'welcome-e12.json'), 'utf8'));
+const html = W.renderWelcomeKit(e12);
+
+// 1. Dates Mark actually types all read the same; garbage reads as null, never "undefined".
+const want = 'Sunday, November 15, 2026';
+ok(['2026-11-15', '11/15/2026', '11-15-2026'].every(d => W.fmtDateLong(d) === want), 'date: ISO, m/d/y and m-d-y all → ' + want);
+ok(W.parseEpDate('Nov 15') === null && W.parseEpDate('2026-02-30') === null, 'date: unreadable/impossible date → null, not a guess');
+ok(!/undefined|NaN/.test(W.renderWelcomeKit({ ...e12, epDate: '8/16/2026' })), 'date: E10-style date never renders undefined/NaN');
+
+// 2. Every time on the E12 kit reaches the page.
+for (const s of ['3:15 pm, Sound Check at 3:30 pm', '3:45 pm', '4:30 pm', '5:00 pm - 6:55 pm', '7:15 pm'])
+  ok(html.includes(s), 'E12 times: "' + s + '" on the page');
+ok(html.includes('What am I grateful for now, that at the time, I did not see as a gift?'), 'E12: wondering question on the page');
+ok(html.includes('Melba Martinez') && html.includes('512-293-3593'), 'E12: green room host + guest services phone on the page');
+ok(html.includes('window.print()') && /@media print\{[\s\S]*\.print-btn\{display:none\}/.test(html), 'printable: print button present and hidden in print');
+
+// 3. Show data is escaped at every interpolation.
+const evil = '<img src=x onerror=alert(1)>';
+const hostile = { ...e12, epNum: evil, epTitle: evil, wonderingQuestion: evil, greenRoomHost: evil, greenRoomHostPronoun: evil,
+  cameraNote: evil, guestListNote: evil, themeIntro: evil, themeOutro: evil, watchURL: 'https://x"' + evil,
+  guestServices: { name: evil, phone: evil } };
+ok(!W.renderWelcomeKit(hostile).includes('<img src=x'), 'escaping: hostile text in every field stays inert');
+
+// 4. Gaps block the kit — nothing goes to a guest with a hole in it.
+const g = W.welcomeKitGaps({ ...e12, wonderingQuestion: '', epDate: '8/16', times: { ...e12.times, podCall: '' } });
+ok(g.some(x => /wondering/.test(x)) && g.some(x => /air date/.test(x)) && g.some(x => /pod call/.test(x)), 'gaps: missing question / bad date / missing call time all reported');
+ok(W.welcomeKitGaps(e12).length === 0, 'gaps: complete E12 kit reports none');
+
+// 5. The published page is what the template + data produce (no hand edits, no stale build).
+const pub = path.join(__dirname, 'welcome-e12.html');
+if (modPath === path.resolve(__dirname, 'welcome-kit.js')) {
+  ok(fs.existsSync(pub) && fs.readFileSync(pub, 'utf8') === html, 'freshness: welcome-e12.html == render(welcome-e12.json)');
+  const tmp = path.join(require('os').tmpdir(), 'wk-gap-' + process.pid + '.json');
+  fs.writeFileSync(tmp, JSON.stringify({ ...e12, epNum: '99x', wonderingQuestion: '' }));
+  const r = cp.spawnSync('node', [path.join(__dirname, 'build-welcome.js'), tmp], { cwd: require('os').tmpdir() });
+  ok(r.status === 1 && !fs.existsSync(path.join(require('os').tmpdir(), 'welcome-e99x.html')), 'builder: refuses to write a kit with gaps');
+  fs.unlinkSync(tmp);
+}
+process.exit(fails);
