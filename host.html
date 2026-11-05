@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Boo Show Manager · Producer</title>
+<!-- Permanent Producer screen. Generated shell — logic lives in bsm-live.js (shared by tv/crew/host). -->
+<style>
+  html,body{margin:0;height:100%;background:#1a1e26;overflow:hidden}
+  #live-frame{position:fixed;inset:0;width:100%;height:100%;border:0;display:none;background:#1a1e26}
+  #holding{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+    font-family:'Helvetica Neue',Arial,sans-serif;color:#fff;text-align:center;padding:24px}
+  #holding .show{font-size:clamp(28px,5vw,56px);font-weight:900;letter-spacing:-0.5px}
+  #holding .sub{font-size:clamp(14px,2vw,22px);color:#C4B9A8;letter-spacing:2px;text-transform:uppercase}
+  #holding-status{position:fixed;bottom:12px;right:16px;font-size:11px;color:#5a6270;letter-spacing:1px}
+</style>
+<script>window.BSM_LIVE_VIEW='host';</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="bsm-live.js"></script>
+</head><body>
+<div id="holding">
+  <svg width="180" height="180" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-label="l.b.v.">
+    <circle cx="100" cy="100" r="96" fill="none" stroke="#fff" stroke-width="6"/>
+    <text x="28" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#E8431A">l.</text>
+    <text x="72" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#F5D03A">b.</text>
+    <text x="134" y="128" font-family="'Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="900" fill="#3BB8C9">v.</text>
+  </svg>
+  <div class="show">Little Big Voices</div>
+  <div class="sub">Producer screen · stand by for the live show</div>
+</div>
+<iframe id="live-frame" title="Boo Show Manager — Producer" allow="screen-wake-lock; fullscreen; autoplay"></iframe>
+<div id="holding-status">connecting…</div>
+</body></html>

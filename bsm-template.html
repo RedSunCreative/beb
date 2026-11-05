@@ -257,6 +257,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <div class="welcome-instruction-text" style="font-size:16px;">1. Please complete your pre-show checks.<br>2. Stand by at your stations.<br>3. Show Circle is in progress — Mark will start the show shortly. Thank you! ❤️</div>
     </div>
     <div class="standby-pulse"><div class="standby-pulse-dot"></div><div class="standby-pulse-text">STAND BY FOR SHOW CIRCLE</div></div>
+    <div class="live-ptr" style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;font-size:11px;letter-spacing:1px;font-weight:700;"><span class="live-ptr-status">PERMANENT SCREENS: CHECKING…</span><button class="live-ptr-btn" onclick="setAsLive()" style="background:#3BB8C9;color:#000;border:none;border-radius:4px;padding:5px 12px;font-weight:900;font-size:11px;letter-spacing:1px;cursor:pointer;">SET AS LIVE</button></div>
   </div>
 
   <!-- PIN -->
@@ -402,6 +403,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <div class="tech-next"><div class="tech-next-label" id="tech-next-label">UP NEXT</div><div class="tech-next-lines" id="tech-next-lines"></div></div>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="tech-progress" style="width:0%"></div></div>
+    <div style="padding:0 16px 10px;"><div class="live-ptr" style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;font-size:11px;letter-spacing:1px;font-weight:700;"><span class="live-ptr-status">PERMANENT SCREENS: CHECKING…</span><button class="live-ptr-btn" onclick="setAsLive()" style="background:#3BB8C9;color:#000;border:none;border-radius:4px;padding:5px 12px;font-weight:900;font-size:11px;letter-spacing:1px;cursor:pointer;">SET AS LIVE</button></div></div>
   </div>
 
   <!-- HOST LIVE VIEW -->
@@ -546,17 +548,25 @@ const{createClient}=supabase;
 const sbClient=createClient(SB_URL,SB_KEY);
 
 async function sbGet(){try{const{data,error}=await sbClient.from('show_state').select('*').eq('id',ROW_ID).single();if(error)throw error;return data;}catch(e){return null;}}
-async function sbSet(patch){try{const{error}=await sbClient.from('show_state').update({...patch,updated_at:new Date().toISOString()}).eq('id',ROW_ID);if(error)throw error;}catch(e){console.error('sbSet:',e);}}
+let lastLocalWriteAt=0;
+async function sbSet(patch){try{const ts=new Date();lastLocalWriteAt=ts.getTime();const{error}=await sbClient.from('show_state').update({...patch,updated_at:ts.toISOString()}).eq('id',ROW_ID);if(error)throw error;}catch(e){console.error('sbSet:',e);}}
 
 let _poll=null;
+let _everSubscribed=false;
 function startRealtime(){
   sbClient.channel('boo_e'+(EPISODE.num||'x'))
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'show_state'},payload=>{
       if(view!=='host'&&view!=='host-welcome') applyRemoteState(payload.new);
     })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'bsm_settings'},()=>{ readLivePointer(); })
     .subscribe(status=>{
-      if(status==='SUBSCRIBED') setSyncBadge('● LIVE SYNC ACTIVE','#4ade80');
-      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setSyncBadge('● SYNC ERROR','#E8431A');startFallbackPoll();}
+      if(status==='SUBSCRIBED'){
+        setSyncBadge('● LIVE SYNC ACTIVE','#4ade80');
+        if(_poll){clearInterval(_poll);_poll=null;}
+        if(_everSubscribed) resyncAll();   // came back from a drop — we may have missed updates
+        _everSubscribed=true;
+      }
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){setSyncBadge('● SYNC ERROR','#E8431A');startFallbackPoll();}
       else setSyncBadge('○ CONNECTING...','#F5D03A');
     });
 }
@@ -569,6 +579,67 @@ function startFallbackPoll(){
   },1000);
 }
 function setSyncBadge(t,c){const el=document.getElementById('sync-badge');if(el){el.textContent=t;el.style.color=c;}}
+
+// Re-read everything from Supabase. Runs when the page becomes visible again (phones/tablets
+// waking up) and whenever Realtime reconnects, so no screen keeps showing what it saw before sleeping.
+// The Producer (host) drives the show, so it only adopts remote state that is NEWER than its own
+// last write — i.e. another Producer device moved the show while this one slept.
+async function resyncAll(){
+  const s=await sbGet();
+  if(s){
+    if(view==='host'||view==='host-welcome'){
+      if(Date.parse(s.updated_at||0)>lastLocalWriteAt) applyRemoteState(s,{force:true});
+    } else applyRemoteState(s);
+  }
+  readLivePointer();
+}
+
+// ─── LIVE SHOW POINTER ───────────────────────────────────────────────────────
+// bsm_settings.live_show_id says which episode the permanent screens (tv.html / crew.html /
+// host.html) show. "Set as live" (Crew view) points it at THIS episode's builder_state row.
+let livePtr={setup:null,row:null,myRow:undefined};
+async function myEpisodeRow(){
+  if(livePtr.myRow!==undefined) return livePtr.myRow;
+  if(!EPISODE.num) return (livePtr.myRow=null);
+  try{
+    const{data,error}=await sbClient.from('builder_state').select('id').eq('data->>epNum',String(EPISODE.num));
+    if(error) throw error;
+    livePtr.myRow=(data&&data.length===1)?data[0].id:null;   // ambiguous or missing → refuse
+  }catch(e){return null;}
+  return livePtr.myRow;
+}
+async function readLivePointer(){
+  try{
+    const{data,error}=await sbClient.from('bsm_settings').select('live_show_id').eq('id',1).maybeSingle();
+    if(error||!data) throw (error||new Error('no settings row'));
+    livePtr.setup=true;livePtr.row=data.live_show_id;
+  }catch(e){livePtr.setup=false;}
+  await myEpisodeRow();
+  renderLivePointer();
+}
+function renderLivePointer(){
+  const isMine=livePtr.setup&&livePtr.row!=null&&livePtr.row===livePtr.myRow;
+  document.querySelectorAll('.live-ptr-status').forEach(el=>{
+    el.textContent=livePtr.setup===false?'PERMANENT SCREENS: NOT SET UP YET'
+      :isMine?'● THIS SHOW IS LIVE ON THE PERMANENT SCREENS'
+      :livePtr.row==null?'PERMANENT SCREENS: HOLDING SCREEN':'PERMANENT SCREENS: ANOTHER EPISODE';
+    el.style.color=isMine?'#4ade80':'#C4B9A8';
+  });
+  document.querySelectorAll('.live-ptr-btn').forEach(b=>{
+    b.disabled=livePtr.setup===false||isMine||livePtr.myRow==null;
+    b.textContent=isMine?'LIVE ✓':'SET AS LIVE';
+  });
+}
+async function setAsLive(){
+  const row=await myEpisodeRow();
+  if(row==null){alert(`Couldn't find E${EPISODE.num} in Boo Episode Builder, so it can't be set as live.`);return;}
+  if(!confirm(`Put E${EPISODE.num} on the permanent TV, Crew and Producer screens?`)) return;
+  try{
+    const{error}=await sbClient.from('bsm_settings').update({live_show_id:row,updated_at:new Date().toISOString()}).eq('id',1);
+    if(error) throw error;
+  }catch(e){alert("Couldn't set it live — check the connection and try again.");console.error('setAsLive:',e);}
+  readLivePointer();
+}
 
 // ─── PASTE BEB OUTPUT BELOW ──────────────────────────────────────────────
 const EPISODE={num:"",title:"",subtitle:"",showMins:90,pin:"5000",prelivePerformer:""};
@@ -628,8 +699,10 @@ window.addEventListener('load',async()=>{
     if(el) new QRCode(el,{text:window.location.href,width:100,height:100,colorDark:"#3a3f4a",colorLight:"#ffffff"});
   });
   renderQuickBtns();
-  setView('tv');
+  const _qv=new URLSearchParams(location.search).get('view');   // set by tv.html / crew.html / host.html
+  if(_qv==='host') tryHost(); else setView(_qv==='tech'?'tech':'tv');
   startRealtime();
+  readLivePointer();
   const state=await sbGet();
   if(state){
     // If stuck on applause or end state, clear it automatically on load
@@ -641,7 +714,7 @@ window.addEventListener('load',async()=>{
       showLive=!!state.is_live;
       showTimerStarted=cueIdx>0;
       showLiveUI();
-      running=true;timerInt=setInterval(tick,1000);
+      running=true;startTicking();
       applyRemoteState(state);
     }
   }
@@ -811,8 +884,8 @@ function showLiveUI(){
   const bw=document.getElementById("bcast-wrap");if(bw) bw.style.display="block";
 }
 
-function applyRemoteState(state){
-  if(view==="host"||view==="host-welcome") return;
+function applyRemoteState(state,opts){
+  if((view==="host"||view==="host-welcome")&&!(opts&&opts.force)) return;
   const newIdx=parseInt(state.cue_idx)||0;
   const wasLive=showLive;
   showLive=!!state.is_live;
@@ -829,10 +902,10 @@ function applyRemoteState(state){
   }
   if(showLive&&!wasLive){
     cueIdx=newIdx;segSecs=CUES[newIdx]?.dur*60||0;
-    showLiveUI();running=true;timerInt=setInterval(tick,1000);
+    showLiveUI();running=true;startTicking();
   } else if(showLive&&newIdx!==cueIdx){
     cueIdx=newIdx;segSecs=CUES[newIdx]?.dur*60||0;
-    warning=null;setFlashRate(700);clearInterval(timerInt);running=true;timerInt=setInterval(tick,1000);
+    warning=null;setFlashRate(700);clearInterval(timerInt);running=true;startTicking();
     fireFlash();
   }
   const newStandby=!!state.standby_active;
@@ -962,7 +1035,12 @@ function render(){
   }
 }
 
-function tick(){
+// Timers follow the wall clock, not the number of interval callbacks: a phone/tablet that sleeps
+// (intervals paused) catches up on wake instead of showing a frozen countdown. Every second is still
+// stepped through tickOnce(), so 5-/2-minute warnings that fell inside the gap still fire.
+let _lastTickAt=0;
+function startTicking(){clearInterval(timerInt);_lastTickAt=Date.now();timerInt=setInterval(tick,1000);}
+function tickOnce(){
   segSecs--;
   if(showTimerStarted) showSecs=Math.max(showSecs-1,0);
   const c=CUES[cueIdx];
@@ -970,12 +1048,20 @@ function tick(){
   if(segSecs===300&&c?.w5) warning="5";
   else if(segSecs===120&&c?.w2){warning="2";stopBooFlash();setFlashRate(300);}
   else if(segSecs<=0){warning="over";setFlashRate(300);}
+}
+function tick(){
+  const now=Date.now();
+  if(!_lastTickAt) _lastTickAt=now-1000;
+  const steps=Math.min(Math.floor((now-_lastTickAt)/1000),6*3600);
+  if(steps<1) return;
+  _lastTickAt+=steps*1000;
+  for(let i=0;i<steps;i++) tickOnce();
   render();
 }
 
 function startShowCircle(){
   showLive=true;cueIdx=0;segSecs=CUES[0]?.dur*60||0;showSecs=EPISODE.showMins*60;showTimerStarted=false;
-  showLiveUI();running=true;timerInt=setInterval(tick,1000);
+  showLiveUI();running=true;startTicking();
   sbSet({cue_idx:0,is_live:true,standby_active:false,prelive_active:false,ros_change_msg:""});
   render();
 }
@@ -999,7 +1085,7 @@ function goNext(){
   if(cueIdx===1&&!showTimerStarted){showTimerStarted=true;showSecs=90*60;}
   if(CUES[cueIdx].scene==="APPLAUSE") fireApplause();
   currentInsertStandby=null;
-  running=true;timerInt=setInterval(tick,1000);
+  running=true;startTicking();
   sbSet({cue_idx:cueIdx,is_live:true,standby_active:false,prelive_active:false});
   render();
 }
@@ -1008,7 +1094,7 @@ function goPrev(){
   if(cueIdx<=0) return;
   clearInterval(timerInt);warning=null;setFlashRate(700);stopBooFlash();scheduleOffset=0;clearBanners();
   cueIdx--;segSecs=CUES[cueIdx].dur*60;
-  running=true;timerInt=setInterval(tick,1000);
+  running=true;startTicking();
   sbSet({cue_idx:cueIdx,is_live:true,standby_active:false,prelive_active:false});
   render();
 }
@@ -1215,10 +1301,9 @@ function setView(v){
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       if (!lock) requestWakeLock();
-      // Re-sync cue state immediately in case we missed updates while hidden
-      if (typeof sbGet === 'function' && typeof applyRemoteState === 'function') {
-        sbGet().then(s => { if (s) applyRemoteState(s); });
-      }
+      // Re-sync everything immediately in case we missed updates while hidden (all views)
+      if (typeof resyncAll === 'function') resyncAll();
+      if (typeof tick === 'function' && running) tick();   // catch the timers up right away
     }
   });
 

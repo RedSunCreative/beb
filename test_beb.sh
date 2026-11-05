@@ -1983,6 +1983,17 @@ while IFS= read -r line; do
 done < <(node test_boo_safety.js "$BEB" 2>&1 || true)
 
 # ──────────────────────────────────────────────────────────────
+# TEST 32: LIVE-SHOW POINTER + WAKE/RECONNECT RESYNC — test_live_pointer.js
+#   tv/crew/host.html follow bsm_settings.live_show_id; every view re-syncs on wake and
+#   Realtime reconnect; timers catch up after sleep; the migration is additive.
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 32: live-show pointer + wake/reconnect resync ---"
+while IFS= read -r line; do
+  case "$line" in PASS:*) pass "${line#PASS: }";; FAIL:*) fail "${line#FAIL: }";; esac
+done < <(node test_live_pointer.js 2>&1 || true)
+
+# ──────────────────────────────────────────────────────────────
 # SUMMARY
 # ──────────────────────────────────────────────────────────────
 echo ""
