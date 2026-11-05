@@ -161,8 +161,8 @@
     <ul>
       <li>Cloister's West Apartments</li>
       <li>1507 Kinney Ave. #109, Austin, TX</li>
-      <li>We're in the second building you pass as you enter off Kinney Avenue</li>
-      <li>Park in back of that building and walk back around to the courtyard between the first set of buildings</li>
+      <li>We're in the second building you pass as you enter off Kinney Avenue.</li>
+      <li>Park in back of that building and walk back around to the courtyard between the first set of buildings.</li>
       <li>Look for us on the ground floor with the purple light - please just walk on in - no need to knock. When you get inside, make your way to the green room for some snacks before sound check!</li>
     </ul>
   </li>
@@ -172,19 +172,19 @@
   ${li('Pod Guests Call Time', fmtTime(t.podCall))}
   ${li('Show Circle', fmtTime(t.circle), ' (we gather together in a circle before going live)')}
   ${li('Go Live on YouTube', goLive + (showEnd ? ' - ' + showEnd : ''))}
-  ${li('Show Dinner', fmtTime(t.dinner), ' (we convert the studio into a sit down candlelight dinner - it’s pretty magical and we hope you stay!)')}
+  ${li('Show Dinner', fmtTime(t.dinner), ' (we convert the studio into a sit down candlelight dinner - it’s pretty magical and we hope you’ll stay!)')}
 </ul>
 <p><span class="label em">Early Arrival Hospitality:</span> Need to do makeup, get dressed, or shower after you arrive? Just let us know ahead of time and plan to come early — we'll make it happen! We have make up and hair products here for you if you forget anything.</p>
 </section>
 
 <section>
 <h2>What to Bring:</h2>
-<ul><li>Your stories, songs, and open mind and heart!</li><li>Your authentic self</li></ul>
+<ul><li>Your stories, songs, and open mind and heart!</li><li>Your authentic self.</li></ul>
 </section>
 
 <section>
 <h2>What to Wear:</h2>
-<ul><li>Clothes that help you feel peaceful and comfortable</li><li>Whatever best expresses who you are</li></ul>
+<ul><li>Clothes that help you feel peaceful and comfortable.</li><li>Whatever best expresses who you are.</li></ul>
 </section>
 
 <section>

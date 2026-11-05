@@ -30,6 +30,7 @@ const body = html.slice(html.indexOf('<body>'));
 ok(!/&nbsp;/.test(body) && !/style="/.test(body), 'spacing: no &nbsp; spacers or inline styles in the page body');
 ok(html.includes('make up and hair products'), 'E12: hair + makeup line on the page');
 ok(html.includes('but just wondering it will be your only preparation!'), 'E12: theme closing line as Mark wrote it');
+ok(html.includes('we hope you\u2019ll stay!)') && ['Your authentic self.', 'peaceful and comfortable.', 'who you are.'].every(x => html.includes(x + '</li>')), 'E12: dinner line + bring/wear punctuation as Mark wrote it');
 const split = W.renderWelcomeKit({ ...e12, times: { ...e12.times, musicCall: '15:15', soundCheck: '15:30' } });
 ok(split.includes('Musical Guests Call Time:</b> 3:15 pm, Sound Check at 3:30 pm'), 'music line: separate call + sound check when they differ');
 for (const a of new Set(html.match(/assets\/[\w.-]+/g) || []))
