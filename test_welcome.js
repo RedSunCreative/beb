@@ -19,11 +19,21 @@ ok(W.parseEpDate('Nov 15') === null && W.parseEpDate('2026-02-30') === null, 'da
 ok(!/undefined|NaN/.test(W.renderWelcomeKit({ ...e12, epDate: '8/16/2026' })), 'date: E10-style date never renders undefined/NaN');
 
 // 2. Every time on the E12 kit reaches the page.
-for (const s of ['3:15 pm, Sound Check at 3:30 pm', '3:45 pm', '4:30 pm', '5:00 pm - 6:55 pm', '7:15 pm'])
+for (const s of ['Musical Guests Call Time and Sound Check:</b> 3:30 pm', 'Pod Guests Call Time:</b> 4:00 pm', '4:30 pm', '5:00 pm - 6:55 pm', '7:15 pm'])
   ok(html.includes(s), 'E12 times: "' + s + '" on the page');
 ok(html.includes('What am I grateful for now, that at the time, I did not see as a gift?'), 'E12: wondering question on the page');
 ok(html.includes('Melba Martinez') && html.includes('512-293-3593'), 'E12: green room host + guest services phone on the page');
 ok(html.includes('window.print()') && /@media print\{[\s\S]*\.print-btn\{display:none\}/.test(html), 'printable: print button present and hidden in print');
+
+// 2b. One spacing system: no blank-line spacers, no one-off inline styles in the body.
+const body = html.slice(html.indexOf('<body>'));
+ok(!/&nbsp;/.test(body) && !/style="/.test(body), 'spacing: no &nbsp; spacers or inline styles in the page body');
+ok(html.includes('make up and hair products'), 'E12: hair + makeup line on the page');
+ok(html.includes('but just wondering it will be your only preparation!'), 'E12: theme closing line as Mark wrote it');
+const split = W.renderWelcomeKit({ ...e12, times: { ...e12.times, musicCall: '15:15', soundCheck: '15:30' } });
+ok(split.includes('Musical Guests Call Time:</b> 3:15 pm, Sound Check at 3:30 pm'), 'music line: separate call + sound check when they differ');
+for (const a of new Set(html.match(/assets\/[\w.-]+/g) || []))
+  ok(fs.existsSync(path.join(__dirname, a)), 'asset exists: ' + a);
 
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';

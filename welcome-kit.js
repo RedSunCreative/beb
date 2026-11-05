@@ -48,7 +48,7 @@
   }
 
   const DEFAULT_THEME_INTRO = 'We’ll be exploring what happens when some real people from different backgrounds, cultures, and beliefs get together to deeply listen to each other and contemplate our wondering question for this episode:';
-  const DEFAULT_THEME_OUTRO = 'You may or may not share your response on the show - that’s up to you - but just wondering it will be the only preparation you need!';
+  const DEFAULT_THEME_OUTRO = 'You may or may not share your response on the show - that’s up to you - but just wondering it will be your only preparation!';
   const DEFAULT_GUEST_LIST = 'As the studio is “intimate”, and with the number of guests this episode, we are intentional about who else joins beyond the guests and crew - that said, we’ll make room for those you feel would benefit from being here - or that you feel important to support you. Please just let {gs} know ahead of time and we’ll plan accordingly!';
 
   // Fields the kit can't be sent without. Returned as human-readable gaps.
@@ -87,64 +87,69 @@
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
 <title>Little Big Voices LIVE Guest Welcome Kit — Episode ${esc(k.epNum)}</title>
 <meta property="og:title" content="You're invited — Little Big Voices LIVE! Episode ${esc(k.epNum)}: ${esc(k.epTitle)}">
 <meta property="og:description" content="${esc(dateLong)}${goLive ? ' · Go live ' + esc(goLive) + ' CT' : ''}. Your Guest Welcome Kit.">
-<meta property="og:image" content="${assetBase}lbv-welcome-cover.jpg">
+<meta property="og:image" content="${assetBase}lbv-welcome-cover-qr.jpg">
 <style>
+  /* One spacing system. --gap: between sections. --space: between blocks inside a section.
+     Both in em so screen, phone and print keep the same rhythm. Nothing else sets vertical margins. */
   *{box-sizing:border-box;margin:0;padding:0}
-  :root{--orange:#F29A1F;--ink:#1d1d1d;--muted:#555}
+  :root{--orange:#F29A1F;--ink:#1d1d1d;--gap:1.4em;--space:.6em}
   body{font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:#f4f1ec;font-size:16px;line-height:1.5}
-  .page{max-width:8.5in;margin:24px auto;background:#fff;padding:48px 56px 40px;box-shadow:0 2px 18px rgba(0,0,0,.08)}
-  .print-btn{position:sticky;top:12px;float:right;background:var(--orange);color:#fff;border:0;border-radius:6px;padding:10px 18px;font:700 14px Arial,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15)}
-  .cover{display:block;width:340px;max-width:80%;margin:8px auto 28px}
-  h1{color:var(--orange);font-size:24px;text-align:center;margin-bottom:28px;line-height:1.25}
-  h2{color:var(--orange);font-size:17px;margin:22px 0 4px}
-  p{margin-bottom:6px}
-  .theme{color:#444;font-size:15px}
-  .question{display:block;margin:10px 0;padding:12px 16px;border-left:4px solid var(--orange);background:#fff7ec;font-size:17px;color:var(--ink);font-style:italic}
-  ul{margin:10px 0 10px 28px}
-  ul ul{list-style:circle;margin:4px 0 4px 28px}
-  li{margin-bottom:4px}
-  .em{color:var(--orange);font-weight:700;font-style:italic}
-  hr{border:0;border-top:1px solid #999;margin:28px 0}
-  .sig b{display:block;margin-top:2px}
-  .card{display:block;width:210px;margin-top:10px;border:1px solid #222}
+  .page{position:relative;max-width:8.5in;margin:24px auto;background:#fff;padding:48px 56px;box-shadow:0 2px 18px rgba(0,0,0,.08)}
+  .print-btn{position:absolute;top:20px;right:20px;background:var(--orange);color:#fff;border:0;border-radius:6px;padding:10px 18px;font:700 14px Arial,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  .cover{display:block;width:340px;max-width:80%;margin:0 auto var(--gap)}
+  h1{color:var(--orange);font-size:1.5em;line-height:1.25;text-align:center}
+  h2,.label{color:var(--orange);font-weight:700}
+  h2{font-size:1.06em}
+  section{margin-top:var(--gap);break-inside:avoid;page-break-inside:avoid}
+  section > * + *{margin-top:var(--space)}
+  h2 + *{margin-top:.3em}
+  ul{padding-left:1.75em}
+  li + li, li > ul{margin-top:.25em}
+  ul ul{list-style:circle}
+  .theme{color:#444}
+  .question{padding:.7em 1em;border-left:4px solid var(--orange);background:#fff7ec;font-size:1.06em;font-style:italic;color:var(--ink)}
+  .em{font-style:italic}
+  hr{border:0;border-top:1px solid #999;margin-top:var(--gap)}
+  .sig .lines{line-height:1.4}
+  .signature{font-family:'Great Vibes',cursive;font-size:2.6em;line-height:1;color:#b0357a;margin:.05em 0 .1em}
+  .card{display:block;width:210px;border:1px solid #222}
   a{color:#1155cc}
-  .foot{margin-top:36px;font-size:12px;color:#888;font-weight:700}
-  section{break-inside:avoid;page-break-inside:avoid}
-  @media (max-width:640px){.page{margin:0;padding:28px 20px;box-shadow:none}.print-btn{position:static;float:none;display:block;width:100%;margin-bottom:16px}h1{font-size:21px}}
+  .foot{margin-top:var(--gap);font-size:.75em;color:#888;font-weight:700}
+  @media (max-width:640px){.page{margin:0;padding:28px 20px;box-shadow:none}.print-btn{position:static;display:block;width:100%;margin-bottom:var(--gap)}}
   @page{size:letter;margin:0.6in 0.75in}
   @media print{
-    body{background:#fff;font-size:11pt;line-height:1.4}
-    h1{font-size:18pt;margin-bottom:16px}
-    h2{font-size:12.5pt;margin-top:14px}
-    section.sig{break-inside:auto;page-break-inside:auto}
-    .card{width:1.9in;break-inside:avoid}
+    body{background:#fff;font-size:11pt}
+    :root{--gap:1.15em}
     .page{margin:0;padding:0;box-shadow:none;max-width:none}
     .print-btn{display:none}
-    .cover{width:2.6in;margin-bottom:16px}
-    a{color:#1155cc;text-decoration:underline}
+    .cover{width:2.6in}
+    .card{width:1.7in}
+    section.sig{break-inside:auto;page-break-inside:auto}
+    .card{break-inside:avoid}
     h2{break-after:avoid;page-break-after:avoid}
   }
 </style></head>
 <body><div class="page">
 <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
-<img class="cover" src="${assetBase}lbv-welcome-cover.jpg" alt="You're invited! littlebigvoices.com — Podcast &amp; Live TV Show">
+<img class="cover" src="${assetBase}lbv-welcome-cover-qr.jpg" alt="You're invited! littlebigvoices.com — Podcast &amp; Live TV Show">
 <h1>Little Big Voices LIVE Guest Welcome Kit: Episode ${esc(k.epNum)}!</h1>
 
 <section>
 <h2>Welcome to Little Big Voices LIVE!</h2>
 <p><b>What This Show Is About:</b> Little Big Voices creates understanding, compassion, and connection through authentic conversations and performances. We explore the fabric of our shared humanity — discovering that we have more in common than we have differences. This isn't about perfection or performance; it's about being genuinely seen and heard.</p>
-<p>&nbsp;</p>
 <p><b>Why You're Here:</b> Mark invited you because often Spirit will whisper to him who to invite - and often because your story/energy/presence strikes a chord in him—you inspire him and strengthen him as he lives out his story and mission. Also, sharing your experience may do the same for our audience as they navigate their own journeys. Your voice and story matter, and we're honored to hold space for you to express it.</p>
 </section>
 
 <section>
 <h2>The Theme: ${esc(k.epTitle)}</h2>
-<p class="theme">${esc(k.themeIntro || DEFAULT_THEME_INTRO)}
-<span class="question">“${esc(k.wonderingQuestion)}”</span>
-${esc(k.themeOutro || DEFAULT_THEME_OUTRO)}</p>
+<p class="theme">${esc(k.themeIntro || DEFAULT_THEME_INTRO)}</p>
+<p class="question">“${esc(k.wonderingQuestion)}”</p>
+<p class="theme">${esc(k.themeOutro || DEFAULT_THEME_OUTRO)}</p>
 </section>
 
 <section>
@@ -161,24 +166,29 @@ ${esc(k.themeOutro || DEFAULT_THEME_OUTRO)}</p>
       <li>Look for us on the ground floor with the purple light - please just walk on in - no need to knock. When you get inside, make your way to the green room for some snacks before sound check!</li>
     </ul>
   </li>
-  ${musicCall ? `<li><b>Musical Guests Call Time:</b> ${esc(musicCall)}${soundCheck ? ', Sound Check at ' + esc(soundCheck) : ''}</li>` : ''}
-  ${li('Pod-Guests Call Time', fmtTime(t.podCall))}
+  ${musicCall ? (soundCheck === musicCall
+    ? `<li><b>Musical Guests Call Time and Sound Check:</b> ${esc(musicCall)}</li>`
+    : `<li><b>Musical Guests Call Time:</b> ${esc(musicCall)}${soundCheck ? ', Sound Check at ' + esc(soundCheck) : ''}</li>`) : ''}
+  ${li('Pod Guests Call Time', fmtTime(t.podCall))}
   ${li('Show Circle', fmtTime(t.circle), ' (we gather together in a circle before going live)')}
   ${li('Go Live on YouTube', goLive + (showEnd ? ' - ' + showEnd : ''))}
   ${li('Show Dinner', fmtTime(t.dinner), ' (we convert the studio into a sit down candlelight dinner - it’s pretty magical and we hope you stay!)')}
 </ul>
-<p><span class="em">Early Arrival Hospitality:</span> Need to do makeup, get dressed, or shower after you arrive? Just let us know ahead of time and plan to come early — we'll make it happen!</p>
+<p><span class="label em">Early Arrival Hospitality:</span> Need to do makeup, get dressed, or shower after you arrive? Just let us know ahead of time and plan to come early — we'll make it happen! We have make up and hair products here for you if you forget anything.</p>
 </section>
 
 <section>
 <h2>What to Bring:</h2>
 <ul><li>Your stories, songs, and open mind and heart!</li><li>Your authentic self</li></ul>
+</section>
+
+<section>
 <h2>What to Wear:</h2>
 <ul><li>Clothes that help you feel peaceful and comfortable</li><li>Whatever best expresses who you are</li></ul>
 </section>
 
 <section>
-<p><b style="color:var(--orange)">Guest List for Audience:</b> ${esc(guestList)}</p>
+<p><span class="label">Guest List for Audience:</span> ${esc(guestList)}</p>
 </section>
 
 <section>
@@ -197,7 +207,7 @@ ${k.cameraNote ? `<section>
 </section>` : ''}
 
 <section>
-<p><b style="color:var(--orange)">Share the Love!</b> You'll receive social media promotions to share if you'd like. In the meantime, invite people to watch live:</p>
+<p><span class="label">Share the Love!</span> You'll receive social media promotions to share if you'd like. In the meantime, invite people to watch live:</p>
 <ul>
   <li><b>To Watch:</b> <a href="${esc(watchURL)}">${esc(watchLabel)}</a></li>
   ${goLive && dateLong ? `<li><b>Time and Date: ${esc(goLive)} CT, ${esc(dateLong)}</b></li>` : ''}
@@ -205,15 +215,17 @@ ${k.cameraNote ? `<section>
 </section>
 
 <section>
-<p><b style="color:var(--orange)">Please Remember:</b> This show is about cultivating community by creating space for sincere human connection. We’re not here to convince anyone of anything but rather are curious about other's stories and experiences. Thank you for sharing yours!</p>
+<p><span class="label">Please Remember:</span> This show is about cultivating community by creating space for sincere human connection. We’re not here to convince anyone of anything but rather are curious about other's stories and experiences. Thank you for sharing yours!</p>
 </section>
 
 <hr>
 <section class="sig">
 <p>Mark and I are here for you anytime you have questions or need anything at all.</p>
-<p>&nbsp;</p>
-<p>Peace,<br>${esc(gsFirst)}<br>—--</p>
-<p><b>${esc(gs.name || '')}</b>Guest Services, LBV LIVE!${gs.phone ? `<br><a href="tel:${esc(String(gs.phone).replace(/[^\d+]/g, ''))}">${esc(gs.phone)}</a>` : ''}</p>
+<div>
+<p>Peace,</p>
+<div class="signature">${esc(gsFirst)}</div>
+<p class="lines">—--<br><b>${esc(gs.name || '')}</b><br>Guest Services, LBV LIVE!${gs.phone ? `<br><a href="tel:${esc(String(gs.phone).replace(/[^\d+]/g, ''))}">${esc(gs.phone)}</a>` : ''}</p>
+</div>
 <img class="card" src="${assetBase}lbv-mark-card.png" alt="Mark Caddell, producer/host — 512.762.8511 — mark@littlebigvoices.com">
 </section>
 <div class="foot">LBV LIVE! Welcome Kit · Episode ${esc(k.epNum)}</div>
