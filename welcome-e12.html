@@ -35,12 +35,14 @@
   a{color:#1155cc}
   .foot{margin-top:var(--gap);font-size:.75em;color:#888;font-weight:700}
   @media (max-width:640px){.page{margin:0;padding:28px 20px;box-shadow:none}.print-btn{position:static;display:block;width:100%;margin-bottom:var(--gap)}}
-  @page{size:letter;margin:0.6in 0.75in;@bottom-right{content:counter(page);font:700 9pt Arial,Helvetica,sans-serif;color:#888}}
+  @page{size:letter;margin:0.6in 0.75in;
+    @bottom-left{content:"LBV LIVE! Welcome Kit · Episode 12";font:700 9pt Arial,Helvetica,sans-serif;color:#888}
+    @bottom-right{content:counter(page);font:700 9pt Arial,Helvetica,sans-serif;color:#888}}
   @media print{
     body{background:#fff;font-size:11pt}
     :root{--gap:1.15em}
     .page{margin:0;padding:0;box-shadow:none;max-width:none}
-    .print-btn{display:none}
+    .print-btn,.foot{display:none}
     .cover{width:2.6in}
     .card{width:1.7in}
     section.sig{break-inside:auto;page-break-inside:auto}
