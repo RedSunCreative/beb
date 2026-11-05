@@ -48,7 +48,7 @@
   }
 
   const DEFAULT_THEME_INTRO = 'We’ll be exploring what happens when some real people from different backgrounds, cultures, and beliefs get together to deeply listen to each other and contemplate our wondering question for this episode:';
-  const DEFAULT_THEME_OUTRO = 'You might or might not share your response on the show - that’s up to you - but just wondering it will be your only preparation!';
+  const DEFAULT_THEME_OUTRO = 'You might or might not share your response on the show - that’s up to you - but just wondering it will be your best preparation!';
   const DEFAULT_GUEST_LIST = 'As the studio is “intimate”, and with the number of guests this episode, we are intentional about who else joins beyond the guests and crew - that said, we’ll make room for those you feel would benefit from being here - or that you feel important to support you. Please just let {gs} know ahead of time and we’ll plan accordingly!';
 
   // Fields the kit can't be sent without. Returned as human-readable gaps.
@@ -144,7 +144,7 @@
 <section>
 <h2>Welcome to Little Big Voices LIVE!</h2>
 <p><b>What This Show Is About:</b> Little Big Voices creates understanding, compassion, and connection through authentic conversations and performances. We explore the fabric of our shared humanity — discovering that we have more in common than we have differences. This isn't about perfection or performance; it's about being genuinely seen and heard.</p>
-<p><b>Why You're Here:</b> Mark invited you because often Spirit will whisper to him who to invite - and often because your story/energy/presence strikes a chord in him—you inspire him and strengthen him as he lives out his story and mission. Also, sharing your experience may do the same for our audience as they navigate their own journeys. Your voice and story matter, and we're honored to hold space for you to express it.</p>
+<p><b>Why You're Here:</b> You're here because you are a YES! Mark invited you because often Spirit will whisper to him who to invite - and often because your story/energy/presence strikes a chord in him—you inspire him and strengthen him as he lives out his story and mission. Also, sharing your experience may do the same for our audience as they navigate their own journeys. Your voice and story matter, and we're honored to hold space for you to share it.</p>
 </section>
 
 <section>

@@ -29,7 +29,7 @@ ok(html.includes('window.print()') && /@media print\{[\s\S]*\.print-btn(,[.\w-]+
 const body = html.slice(html.indexOf('<body>'));
 ok(!/&nbsp;/.test(body) && !/style="/.test(body), 'spacing: no &nbsp; spacers or inline styles in the page body');
 ok(html.includes('make up and hair products'), 'E12: hair + makeup line on the page');
-ok(html.includes('but just wondering it will be your only preparation!'), 'E12: theme closing line as Mark wrote it');
+ok(html.includes('but just wondering it will be your best preparation!'), 'E12: theme closing line as Mark wrote it');
 ok(html.includes('we hope you\u2019ll stay!)') && ['Your authentic self.', 'peaceful and comfortable.', 'who you are.'].every(x => html.includes(x + '</li>')), 'E12: dinner line + bring/wear punctuation as Mark wrote it');
 const split = W.renderWelcomeKit({ ...e12, times: { ...e12.times, musicCall: '15:15', soundCheck: '15:30' } });
 ok(split.includes('Musical Guests Call Time:</b> 3:15 pm, Sound Check at 3:30 pm'), 'music line: separate call + sound check when they differ');
@@ -43,6 +43,8 @@ ok(html.includes('GO LIVE Time and Date: 5:00 pm CT, Sunday, November 15, 2026')
 ok(html.includes('You might or might not share your response'), 'E12: "might or might not" as Mark wrote it');
 ok(/@bottom-right\{content:counter\(page\)/.test(html), 'print: page number bottom right');
 ok(/@bottom-left\{content:"LBV LIVE! Welcome Kit/.test(html), 'print: kit name in the footer of every page');
+
+ok(html.includes("You're here because you are a YES! Mark invited you") && html.includes('hold space for you to share it.'), 'E12: "Why You\'re Here" as Mark wrote it');
 
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';
