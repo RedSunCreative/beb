@@ -674,8 +674,8 @@ if re.search(r'showData\.cues\s*=\s*fix\.updates\.cues\b', content):
     errors.append("FAIL: raw 'showData.cues = fix.updates.cues' bypasses setCues (auto-correct)")
 if 'setCues(u.cues)' not in content:
     errors.append("FAIL: API apply does not call setCues(u.cues)")
-if 'setCues(fix.updates.cues)' not in content:
-    errors.append("FAIL: auto-correct does not call setCues(fix.updates.cues)")
+if 'setCues(fix.updates.cues)' not in content and 'applyBooUpdates({ cues: fix.updates.cues })' not in content:
+    errors.append("FAIL: auto-correct does not route fix.updates.cues through setCues/applyBooUpdates")
 # Edit Show Script + FULL DETAILS saves must recompute
 for fn in ('saveROSEditAll', 'saveSceneEdit'):
     mm = re.search(r'function ' + fn + r'\([^)]*\)\s*\{', content)
@@ -1313,7 +1313,7 @@ def extract(name):
             if d==0: return src[i:j+1]
         j+=1
 for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG','HOST_STAGES','ALL_HANDS_RE'): print(const_block(c))
-for fn in ('esc','sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
+for fn in ('esc','parseEpDate','formatDateLong','sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
            'autoResolveNowPerson','resolveNowPeople','nowIdentities','nowIdentity','nowLabel',
            'displayNowPeople','sceneSong','nowLiveLabel','deriveStandby','deriveWarnings','recomputeStructuralFields','buildROSHtml'):
     print(extract(fn)); print()
@@ -1769,7 +1769,7 @@ for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG','HOST_STAGES','A
 for fn in ('sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
            'autoResolveNowPerson','resolveNowPeople','nowIdentities','nowIdentity','nowLabel',
            'displayNowPeople','sceneSong','nowLiveLabel','deriveStandby','deriveWarnings',
-           'recomputeStructuralFields','preflightEpisode'):
+           'recomputeStructuralFields','parseEpDate','preflightEpisode'):
     print(extract(fn))
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
@@ -1970,6 +1970,17 @@ echo "--- Test 30: guest welcome kit ---"
 while IFS= read -r line; do
   case "$line" in PASS:*) pass "${line#PASS: }";; FAIL:*) fail "${line#FAIL: }";; esac
 done < <(node test_welcome.js 2>&1 || true)
+
+# ──────────────────────────────────────────────────────────────
+# TEST 31: BOO SAFETY — replays the 2026-11-04 failures against the real code
+#   "start E12" never overwrites the loaded episode; no "Done" without data;
+#   unreadable replies retried then admitted; dates read every way. test_boo_safety.js
+# ──────────────────────────────────────────────────────────────
+echo ""
+echo "--- Test 31: Boo safety (episode overwrite, false Done, dates) ---"
+while IFS= read -r line; do
+  case "$line" in PASS:*) pass "${line#PASS: }";; FAIL:*) fail "${line#FAIL: }";; esac
+done < <(node test_boo_safety.js "$BEB" 2>&1 || true)
 
 # ──────────────────────────────────────────────────────────────
 # SUMMARY

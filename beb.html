@@ -570,6 +570,48 @@ const XI_KEY = "";
 const XI_VOICE = "FPpdnlvxEUXCNHKHbJwP";
 const GLOBAL_MEM_ROW = 9000;
 let currentEpRow = parseInt(localStorage.getItem('beb_current_ep_row') || '99');
+// The episode number that OWNS currentEpRow (set on load / claim). A row never changes owner:
+// a different episode number means a different episode, which gets its own row.
+let currentRowEpNum = '';
+
+function blankShowData(booMemory, quickMessages) {
+  return { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: booMemory || [], crewReminderMsg:'', quickMessages: quickMessages };
+}
+
+// What an episode-number change means for the loaded row. Pure.
+//   'keep'   same number, or the row has no owner yet (this is its first number)
+//   'assign' nothing saved yet (row 0) — claim a row for this number
+//   'fork'   the row belongs to a DIFFERENT episode — open that episode separately, never rename
+function episodeNumberChange(currentRow, rowOwnerEpNum, newEpNum) {
+  const cur = String(rowOwnerEpNum == null ? '' : rowOwnerEpNum).trim();
+  const nxt = String(newEpNum == null ? '' : newEpNum).trim();
+  if (!nxt || nxt === cur) return 'keep';
+  if (!currentRow) return 'assign';
+  if (!cur) return 'keep';
+  return 'fork';
+}
+
+// Last line of defence: true if saving would write one episode's data into another's row.
+function saveWouldOverwrite(rowOwnerEpNum, epNum) {
+  const owner = String(rowOwnerEpNum == null ? '' : rowOwnerEpNum).trim();
+  const ep = String(epNum == null ? '' : epNum).trim();
+  return !!owner && !!ep && owner !== ep;
+}
+
+// Where episode N lives. Pure over a listEpisodes()-shaped array ({id, data}).
+//   { action:'switch', row }  N already exists — use it
+//   { action:'claim',  row }  row N is free
+//   { action:'none' }         row N is held by something else (another tool / episode)
+function rowForEpisode(rows, epNum) {
+  if (!Array.isArray(rows)) return { action: 'none' };   // couldn't look — never assume a row is free
+  const want = String(epNum == null ? '' : epNum).trim();
+  const existing = (rows || []).find(r => String(r?.data?.epNum || '').trim() === want);
+  if (existing) return { action: 'switch', row: existing.id };
+  const n = parseInt(want, 10);
+  if (!(n > 0) || n >= GLOBAL_MEM_ROW) return { action: 'none' };
+  if ((rows || []).some(r => r.id === n)) return { action: 'none' };
+  return { action: 'claim', row: n };
+}
 
 // ─── CLIENT CONFIG ───────────────────────────────────────────────────────────
 // To adapt for a different show or client, edit this block only.
@@ -939,7 +981,16 @@ function refreshOpenCueEditors() {
 }
 
 async function saveState() {
-  if (currentEpRow === 0) return; // no row assigned yet for this episode
+  if (currentEpRow === 0) {          // nothing claimed yet — say so instead of failing silently
+    if (showData.epNum || (showData.cues || []).length) setSaveBadge("● NOT SAVED — NO EPISODE ROW", "var(--orange)");
+    return;
+  }
+  if (saveWouldOverwrite(currentRowEpNum, showData.epNum)) {
+    console.error('[saveState] refused: row', currentEpRow, 'belongs to E' + currentRowEpNum, 'but data is E' + showData.epNum);
+    setSaveBadge("● NOT SAVED — EPISODE MISMATCH", "var(--orange)");
+    return;
+  }
+  if (!currentRowEpNum && showData.epNum) currentRowEpNum = String(showData.epNum).trim();
   setSaveBadge("● SAVING…", "var(--gold)");
   try {
     const dataToSave = { ...showData };
@@ -981,7 +1032,9 @@ async function loadState(rowId) {
       if (memRes.data?.data?.booMemory?.length > 0) {
         showData.booMemory = memRes.data.data.booMemory;
       }
+      if (showData.epDate) showData.epDate = normalizeEpDate(showData.epDate);
       currentEpRow = targetRow;
+      currentRowEpNum = String(epRes.data.data.epNum || '').trim();
       localStorage.setItem('beb_current_ep_row', targetRow);
       updateAllDisplays();
       setSaveBadge("● LOADED", "var(--green)");
@@ -992,6 +1045,14 @@ async function loadState(rowId) {
     }
   } catch(e) {}
   return false;
+}
+
+// EVERY row in the episode id range, unfiltered (other tools' rows included), or throws.
+// Used to decide where a new episode may live — a failed lookup must never be read as "free".
+async function listAllRows() {
+  const { data, error } = await sb.from('builder_state').select('id, data').gt('id', 0).lt('id', GLOBAL_MEM_ROW);
+  if (error || !Array.isArray(data)) throw (error || new Error('row lookup failed'));
+  return data;
 }
 
 async function listEpisodes() {
@@ -1043,7 +1104,7 @@ async function handleSwitchEpisode(rowId) {
   await saveState();
   const savedMemory = [...(showData.booMemory || [])];
   const savedQM = showData.quickMessages;
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'', quickMessages: savedQM };
+  showData = blankShowData(savedMemory, savedQM);
   conversationHistory = [];
   const loaded = await loadState(rowId);
   if (loaded) {
@@ -1060,8 +1121,9 @@ function handleNewEpisode() {
   saveState();
   const savedMemory = [...(showData.booMemory || [])];
   const savedQM2 = showData.quickMessages;
-  showData = { epNum:"", epTitle:"", epSubtitle:"", epDate:"", epTime:"19:00", epLen:CLIENT_CONFIG.defaultEpLen, pin:CLIENT_CONFIG.defaultPin, prelivePerformer:"", preliveMsg:"", epThemeDesc:"", watchURL:"https://littlebigvoices.com", guests:[], crew:[], cues:[], booMemory: savedMemory, crewReminderMsg:'', quickMessages: savedQM2 };
+  showData = blankShowData(savedMemory, savedQM2);
   currentEpRow = 0;
+  currentRowEpNum = '';
   localStorage.setItem('beb_current_ep_row', '0');
   updateAllDisplays();
   updateEpSwitchBtn();
@@ -1461,6 +1523,12 @@ Collect separately: song name + duration. This is its own song, distinct from th
 === SONG RULES ===
 Each song is its own separate scene with its own name and duration. NEVER combine multiple songs into one scene or assume two songs are one. When Mark mentions songs, confirm each one individually: "Got it — Song 1 is X at Y minutes. And the second song?"
 
+=== WHICH EPISODE YOU ARE EDITING ===
+You are editing ONE episode: E${showData.epNum || '(new, unnumbered)'}. If Mark asks to start, plan, or build a DIFFERENT episode (for example "start E12" while E11 is loaded), put the new number in updates.epNum and build it fresh. The builder opens that number as its own separate episode and leaves this one untouched. Never rebuild, retitle, or renumber the loaded episode to become a different one. Say in your reply that you started E-new as its own episode.
+
+=== NEVER CLAIM A CHANGE YOU DID NOT SEND ===
+Only say done, updated, added, moved, changed, or similar when the updates object in THIS reply contains that change. If a change needs the cues array, send the complete cues array. If you are not making a change, do not use those words.
+
 === STARTING A NEW / EMPTY EPISODE — LEAD, DO NOT WAIT ===
 When showData.cues is empty (a fresh episode), you OPEN the collaboration — you are the seasoned floor director who already knows this show, not an order-taker. On your first substantive turn of a blank episode (e.g. right after the episode number is set), do NOT reply with "what do you want to build?". Instead, follow the Boo dialogue pattern:
 1. In TWO sentences, state the shape you'd lay down for THIS episode, drawn from THE SHOW BLUEPRINT — confident and specific (the fixed anchors plus a sensible middle), no hedging.
@@ -1747,7 +1815,8 @@ If showData.cues is empty, skip this rule.`;
     /#\d+/.test(msg) ||                       // any scene number reference (#2, #33)
     /\b\d+\s*min(ute)?s?\b/.test(msg) ||     // duration changes ("3 minutes", "20 min")
     (showData.cues.length === 0 && msg.length > 15);
-  const maxTokens = needsFullOutput ? 16000 : 512;
+  // Full rewrites of an 18-scene show + roster can run past 16k tokens; a cut-off reply is unusable.
+  const maxTokens = needsFullOutput ? 32000 : 512;
   // Sonnet for cue builds (reliable JSON at scale); Haiku for fast-path simple queries
   const model = needsFullOutput ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20251001';
 
@@ -1790,6 +1859,7 @@ If showData.cues is empty, skip this rule.`;
   }
 
   let fullText;
+  let stopReason = '';
 
   if (useStream) {
     const reader = res.body.getReader();
@@ -1845,6 +1915,7 @@ If showData.cues is empty, skip this rule.`;
               console.error('[Boo stream error]', evt.error);
               return { speech: "Stream error — give it a moment and try again.", display: "<em>Stream error. Give it a moment and try again.</em>", updates: {} };
             }
+            if (evt.type === 'message_delta' && evt.delta?.stop_reason) stopReason = evt.delta.stop_reason;
             if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
               accumulated += evt.delta.text;
               const narEl = getNarrationEl();
@@ -1877,26 +1948,128 @@ If showData.cues is empty, skip this rule.`;
       return { speech: "Didn't get a clean response — give it a moment and try again.", display: `<em>Didn't get a clean response. (${errMsg}) Give it a moment and try again.</em>`, updates: {} };
     }
     fullText = data.content?.filter(b => b.type === 'text').pop()?.text;
+    stopReason = data.stop_reason || '';
     if (!fullText) {
       console.error('[Boo] No text block in response', JSON.stringify(data).slice(0, 400));
       return { speech: "Nothing came back — give it a moment and try again.", display: "<em>Nothing came back. Give it a moment and try again.</em>", updates: {} };
     }
   }
 
-  // Strip markdown code fences (```json ... ```) before parsing
-  let rawForParse = fullText.trim();
-  if (rawForParse.startsWith('`')) {
-    rawForParse = rawForParse.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-  }
+  const reply = parseBooReplyText(fullText, stopReason);
+  if (reply._failed) console.error('[Boo] reply not usable:', reply._failed, reply._raw);
+  return reply;
+}
 
-  let parsed;
-  try { parsed = JSON.parse(rawForParse); }
+// Boo's reply text → {speech, display, updates}. Pure. A reply that doesn't parse is NEVER passed
+// off as a normal reply: it comes back with _failed ('truncated' | 'unparseable' | 'empty') and
+// empty updates, so the caller retries and, failing that, tells Mark plainly that nothing changed.
+function parseBooReplyText(fullText, stopReason) {
+  let raw = String(fullText || '').trim();
+  if (raw.startsWith('`')) raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  let parsed = null;
+  try { parsed = JSON.parse(raw); }
   catch(e) {
-    const match = rawForParse.match(/\{[\s\S]*\}/);
+    const match = raw.match(/\{[\s\S]*\}/);
     try { parsed = match ? JSON.parse(match[0]) : null; } catch(e2) { parsed = null; }
-    if (!parsed) { console.error('[Boo] JSON parse failed', rawForParse.slice(0, 400)); parsed = { speech: rawForParse, display: rawForParse, updates: {} }; }
   }
+  const failed = r => ({ speech: '', display: '', updates: {}, _failed: r, _raw: raw.slice(0, 400) });
+  if (stopReason === 'max_tokens') return failed('truncated');
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    // Plain conversational text (no JSON attempted) is a legitimate reply with no changes.
+    if (raw && !/^[\[{]/.test(raw) && !/"updates"\s*:/.test(raw)) return { speech: raw, display: raw, updates: {} };
+    return failed(raw ? 'unparseable' : 'empty');
+  }
+  if (!parsed.updates || typeof parsed.updates !== 'object') parsed.updates = {};
   return parsed;
+}
+
+// ─── APPLY BOO UPDATES — the ONE place Boo's changes touch showData ───
+// Returns notes for Mark (episode opened / refused). Async because a new episode number may
+// need to open or claim its own row first.
+async function applyBooUpdates(u) {
+  const notes = [];
+  if (!u) return notes;
+  if (u.epNum !== undefined) {
+    const decision = episodeNumberChange(currentEpRow, currentRowEpNum, u.epNum);
+    if (decision === 'fork') {
+      const note = await openEpisodeNumber(u.epNum);
+      if (note) notes.push(note);
+    } else if (decision === 'assign') {
+      let rows = null;
+      try { rows = await listAllRows(); } catch(_) {}
+      const where = rowForEpisode(rows, u.epNum);
+      if (where.action === 'claim') {
+        currentEpRow = where.row; currentRowEpNum = String(u.epNum).trim();
+        localStorage.setItem('beb_current_ep_row', where.row);
+      } else if (where.action === 'switch') {
+        notes.push(`E${u.epNum} already exists — this draft is NOT saved. Open E${u.epNum} from the EP menu, or give this one a different number.`);
+      } else {
+        notes.push(`Couldn't confirm a free slot for E${u.epNum} — this draft is NOT saved yet. Try again in a moment.`);
+      }
+    }
+    showData.epNum = u.epNum;
+  }
+  if (u.epTitle !== undefined) showData.epTitle = u.epTitle;
+  if (u.epSubtitle !== undefined) showData.epSubtitle = u.epSubtitle;
+  if (u.epDate !== undefined) showData.epDate = normalizeEpDate(u.epDate);
+  if (u.epTime !== undefined) showData.epTime = u.epTime;
+  if (u.epLen !== undefined) showData.epLen = u.epLen;
+  if (u.pin !== undefined) showData.pin = u.pin;
+  if (u.prelivePerformer !== undefined) showData.prelivePerformer = u.prelivePerformer;
+  if (u.preliveMsg !== undefined) showData.preliveMsg = u.preliveMsg;
+  if (u.epThemeDesc !== undefined) showData.epThemeDesc = u.epThemeDesc;
+  if (u.watchURL !== undefined) showData.watchURL = u.watchURL;
+  if (u.guests?.length > 0) showData.guests = u.guests.map(normalizeGuest);
+  if (u.crew?.length > 0) showData.crew = u.crew;
+  if (u.cues?.length > 0) setCues(u.cues);
+  return notes;
+}
+
+// Boo was told to work on a DIFFERENT episode than the one loaded ("start E12" while E11 is open).
+// Same outcome as + NEW EPISODE / switching from the EP menu: the loaded episode is saved as-is
+// and left alone; the new number gets its own row. Returns a note for Mark.
+async function openEpisodeNumber(newEpNum) {
+  const fromEp = currentRowEpNum;
+  await saveState();                              // persist the loaded episode untouched
+  let rows = null;
+  try { rows = await listAllRows(); } catch(_) {}
+  const where = rowForEpisode(rows, newEpNum);
+  const savedMemory = [...(showData.booMemory || [])];
+  const savedQM = showData.quickMessages;
+  const history = conversationHistory;            // keep the thread so Boo has context
+  if (where.action === 'switch') {
+    showData = blankShowData(savedMemory, savedQM);   // clean slate — nothing of the old episode leaks in
+    await loadState(where.row);
+    conversationHistory = history;
+    return `Opened the existing E${newEpNum}. E${fromEp} is untouched.`;
+  }
+  showData = blankShowData(savedMemory, savedQM);
+  if (where.action === 'claim') {
+    currentEpRow = where.row; currentRowEpNum = String(newEpNum).trim();
+    localStorage.setItem('beb_current_ep_row', where.row);
+    updateEpSwitchBtn();
+    return `Started E${newEpNum} as its own episode. E${fromEp} is untouched — import crew or tech cues from it any time.`;
+  }
+  currentEpRow = 0; currentRowEpNum = '';
+  localStorage.setItem('beb_current_ep_row', '0');
+  return `Started E${newEpNum} as a new draft, but couldn't find a free slot — it is NOT saved yet. E${fromEp} is untouched.`;
+}
+
+// Does Boo's own wording claim it changed the show? Used to catch a "Done" with no data behind it.
+function claimsChange(text) {
+  return /\b(done|updated|changed|added|removed|deleted|moved|swapped|replaced|renamed|restructured|rebuilt|inserted|set (?:the|it|to)|now (?:reads|shows|runs|opens|closes))\b/i.test(String(text || ''));
+}
+
+// Which parts of the show a Boo updates object actually changes. Pure.
+function updatedKinds(u) {
+  u = u || {};
+  const k = [];
+  if (u.cues?.length > 0) k.push('cues');
+  if (u.guests?.length > 0) k.push('guests');
+  if (u.crew?.length > 0) k.push('crew');
+  const EP = ['epNum','epTitle','epSubtitle','epDate','epTime','epLen','pin','prelivePerformer','preliveMsg','epThemeDesc','watchURL'];
+  if (EP.some(f => u[f] !== undefined && u[f] !== null && u[f] !== '')) k.push('episode info');
+  return k;
 }
 
 // ─── PROCESS INPUT ───
@@ -1925,7 +2098,15 @@ async function processUserInput(text) {
       return '';
     })();
     const answeringClarification = lastBooPI.includes('?');
-    const response = await callClaude(text, { webSearch: wantsWebSearch });
+    let response = await callClaude(text, { webSearch: wantsWebSearch });
+    // A reply that didn't come through (cut off / not valid JSON) gets ONE automatic retry.
+    if (response._failed) {
+      const why = response._failed === 'truncated'
+        ? 'Your last reply was cut off before the JSON finished.'
+        : 'Your last reply was not one valid JSON object.';
+      response = await callClaude(text + `\n\n[${why} Reply again with ONE complete, valid JSON object. Keep speech to one sentence. In updates, send only what changed — but send any array you change (cues, guests, crew) complete.]`, { webSearch: wantsWebSearch });
+    }
+    const replyFailed = !!response._failed;
     hideThinking();
 document.getElementById('mic-btn').classList.remove('thinking');
 
@@ -1945,49 +2126,30 @@ document.getElementById('mic-btn').classList.remove('thinking');
     response.speech = speechRaw.replace(/\[\[REMEMBER:[^\]]*\]\]/g, '').trim();
     if (response.display) response.display = response.display.replace(/\[\[REMEMBER:[^\]]*\]\]/g, '').trim();
 
-    if (response.updates) {
-      const u = response.updates;
-      if (u.epNum !== undefined) {
-        showData.epNum = u.epNum;
-        if (currentEpRow === 0 && u.epNum) {
-          const newRow = parseInt(u.epNum);
-          if (newRow > 0) { currentEpRow = newRow; localStorage.setItem('beb_current_ep_row', newRow); }
-        }
-      }
-      if (u.epTitle !== undefined) showData.epTitle = u.epTitle;
-      if (u.epSubtitle !== undefined) showData.epSubtitle = u.epSubtitle;
-      if (u.epDate !== undefined) showData.epDate = u.epDate;
-      if (u.epTime !== undefined) showData.epTime = u.epTime;
-      if (u.epLen !== undefined) showData.epLen = u.epLen;
-      if (u.pin !== undefined) showData.pin = u.pin;
-      if (u.prelivePerformer !== undefined) showData.prelivePerformer = u.prelivePerformer;
-      if (u.preliveMsg !== undefined) showData.preliveMsg = u.preliveMsg;
-      if (u.epThemeDesc !== undefined) showData.epThemeDesc = u.epThemeDesc;
-      if (u.watchURL !== undefined) showData.watchURL = u.watchURL;
-      if (u.guests?.length > 0) showData.guests = u.guests.map(normalizeGuest);
-      if (u.crew?.length > 0) showData.crew = u.crew;
-      if (u.cues?.length > 0) setCues(u.cues);
-    }
+    const notes = [];
+    if (response.updates) notes.push(...await applyBooUpdates(response.updates));
 
     conversationHistory.push(buildHistoryEntry(response));
     if (conversationHistory.length > 10) conversationHistory = conversationHistory.slice(-10);
 
+    const NOTHING_CHANGED = "That didn't come through clean, so nothing changed. Say it again and I'll take another run at it.";
     const rawDisplay = response.display || response.speech || '';
     const rawSpeech = response.speech || response.display || '';
-    const looksLikeJSON = rawDisplay.trimStart().startsWith('{') || rawDisplay.trimStart().startsWith('`');
-    const safeDisplay = looksLikeJSON ? "Done — I've updated the show data. Check the panel!" : rawDisplay;
-    const safeSpeech = looksLikeJSON ? "Done! I've updated the show data — check the panel." : rawSpeech;
+    // Never report success for a reply we couldn't read. (There used to be a hardcoded "Done".)
+    const looksLikeJSON = /^\s*[{`\[]/.test(rawDisplay);
+    let safeDisplay = (replyFailed || looksLikeJSON) ? NOTHING_CHANGED : rawDisplay;
+    let safeSpeech = (replyFailed || looksLikeJSON) ? NOTHING_CHANGED : rawSpeech;
 
     // Auto-correct: if speech implies a cue change but no cues came through, ask Boo silently
     const speechLower = (rawSpeech + ' ' + rawDisplay).toLowerCase();
     const impliesCueChange = /\b(scene|cue|segment|reorder|renamed|closing|opening|inserted|dropped|trimm|shorten|credits|new scene)\b/.test(speechLower);
     const cuesMissing = !(response.updates?.cues?.length > 0);
-    if (impliesCueChange && cuesMissing) {
+    if (!replyFailed && impliesCueChange && cuesMissing) {
       conversationHistory.push({ role: 'user', content: "Your last response didn't include updates.cues. Send the complete updated cues array now. No speech needed — just the JSON." });
       try {
         const fix = await callClaude("Your last response didn't include updates.cues. Send the complete updated cues array now. No speech needed — just the JSON.");
         if (fix?.updates?.cues?.length > 0) {
-          setCues(fix.updates.cues);
+          await applyBooUpdates({ cues: fix.updates.cues });
           conversationHistory.push(buildHistoryEntry(fix));
           response.updates = response.updates || {};
           response.updates.cues = fix.updates.cues;
@@ -1998,12 +2160,12 @@ document.getElementById('mic-btn').classList.remove('thinking');
     // Auto-correct: if the request implied a guest change but no guests came through, retry
     const impliesGuestChange = /\b(guest|confirm|vip|pod|performance|music|kitchen|stageType|role|chef|co-?host)\b/i.test(text) || answeringClarification;
     const guestsMissing = !(response.updates?.guests?.length > 0);
-    if (impliesGuestChange && guestsMissing) {
+    if (!replyFailed && impliesGuestChange && guestsMissing) {
       conversationHistory.push({ role: 'user', content: "Your last response didn't include updates.guests. Send the complete updated guests array now. No speech needed — just the JSON." });
       try {
         const fix = await callClaude("Your last response didn't include updates.guests. Send the complete updated guests array now. No speech needed — just the JSON.");
         if (fix?.updates?.guests?.length > 0) {
-          showData.guests = fix.updates.guests.map(normalizeGuest);
+          await applyBooUpdates({ guests: fix.updates.guests });
           conversationHistory.push(buildHistoryEntry(fix));
           response.updates = response.updates || {};
           response.updates.guests = fix.updates.guests.map(normalizeGuest);
@@ -2012,15 +2174,29 @@ document.getElementById('mic-btn').classList.remove('thinking');
     }
 
     // Show what was actually updated so missed updates are visible
-    const u2 = response.updates || {};
-    const updated = [];
-    if (u2.cues?.length > 0) updated.push('cues');
-    if (u2.guests?.length > 0) updated.push('guests');
-    if (u2.crew?.length > 0) updated.push('crew');
-    if (u2.epNum || u2.epTitle || u2.epDate || u2.epLen) updated.push('episode info');
-    const updateNote = updated.length ? `<div style="font-size:12px;font-weight:600;color:var(--teal);letter-spacing:1px;margin-top:6px;padding:4px 8px;background:rgba(59,184,201,0.12);border-radius:4px;display:inline-block;">✓ Updated: ${updated.join(', ')}</div>` : '';
+    let updated = updatedKinds(response.updates) ;
+    if (newMems.length > 0) updated.push('memory');
 
-    addBooMessage(safeDisplay + updateNote);
+    // Boo SAID it changed something but sent nothing: ask once for the data behind the claim.
+    if (!replyFailed && updated.length === 0 && claimsChange(rawSpeech + ' ' + rawDisplay)) {
+      try {
+        const ask = "You said you made a change, but your reply had no updates. Send the updates for exactly that change now — JSON only, and send any array you change (cues, guests, crew) complete.";
+        const fix = await callClaude(ask);
+        if (!fix._failed && updatedKinds(fix.updates).length) {
+          notes.push(...await applyBooUpdates(fix.updates));
+          conversationHistory.push(buildHistoryEntry(fix));
+          response.updates = { ...(response.updates || {}), ...fix.updates };
+          updated = updatedKinds(response.updates);
+        }
+      } catch(e) { console.error('[claimed-change auto-correct]', e); }
+      if (updated.length === 0) { safeDisplay = NOTHING_CHANGED; safeSpeech = NOTHING_CHANGED; }
+    }
+
+    const noteStyle = 'font-size:12px;font-weight:600;letter-spacing:1px;margin-top:6px;padding:4px 8px;border-radius:4px;display:inline-block;';
+    const updateNote = updated.length ? `<div style="${noteStyle}color:var(--teal);background:rgba(59,184,201,0.12);">✓ Updated: ${updated.join(', ')}</div>` : '';
+    const episodeNote = notes.map(n => `<div style="${noteStyle}color:var(--gold);background:rgba(245,208,58,0.12);">${esc(n)}</div>`).join('');
+
+    addBooMessage(safeDisplay + updateNote + episodeNote);
     updateAllDisplays();
     saveState();
     await speakBoo(safeSpeech);
@@ -2100,6 +2276,17 @@ function epEdit(el, field) {
       v = parseTimeTo24h(v) || (raw || '19:00');
     } else if (field === 'epLen') {
       v = parseInt(v.replace(/[^\d]/g, '')) || raw || 90;
+    } else if (field === 'epDate') {
+      v = normalizeEpDate(v);
+    } else if (field === 'epNum' && episodeNumberChange(currentEpRow, currentRowEpNum, v) !== 'keep') {
+      // Changing the number of a saved episode would rename it into another episode's identity.
+      // Route through Boo's same rule: a new number is a new episode; this one stays as it is.
+      updateAllDisplays();
+      applyBooUpdates({ epNum: v }).then(notes => {
+        updateAllDisplays(); updateEpSwitchBtn(); saveState();
+        notes.forEach(n => addBooMessage(esc(n)));
+      });
+      return;
     }
     showData[field] = v;
     updateAllDisplays();
@@ -2203,7 +2390,7 @@ function updateAllDisplays() {
     const epNum = showData.epNum || '';
     const epTitle = showData.epTitle || '';
     const epDate = showData.epDate || '';
-    const showLine = `Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}`;
+    const showLine = `Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + formatDateLong(epDate) : ''}`;
     const bsmUrl = epNum ? `https://redsuncreative.github.io/beb/bsm-e${epNum}.html` : '';
     const rosUrl = epNum ? `https://redsuncreative.github.io/beb/ros-e${epNum}.html` : '';
     const bsmBody = encodeURIComponent(`${showLine}\nLive show script: ${bsmUrl}`);
@@ -2387,7 +2574,7 @@ function crewDefaultMsg() {
   const epNum = showData.epNum || '';
   const epTitle = showData.epTitle || '';
   const epDate = showData.epDate || '';
-  return `Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + epDate : ''}. See you on set.`;
+  return `Episode ${epNum}${epTitle ? ' — ' + epTitle : ''}${epDate ? ' — ' + formatDateLong(epDate) : ''}. See you on set.`;
 }
 
 function renderCrewList() {
@@ -2689,6 +2876,7 @@ function preflightEpisode(sd, nowISO) {
 
   // ── Episode header
   if (!(sd.epDate || '').trim()) add('stop', 'no-date', 'No air date set.', 'Set the episode date.');
+  else if (!parseEpDate(sd.epDate)) add('stop', 'bad-date', `Can't read the air date "${sd.epDate}".`, 'Use a date like 11/15/2026.');
   if (!(sd.epTime || '').trim()) add('warn', 'no-time', 'No air time set.', 'Set the episode time.');
   if (!(sd.epTitle || '').trim()) add('warn', 'no-title', 'No episode title.', 'Title shows on the script, outline and BSM header.');
 
@@ -3752,7 +3940,7 @@ body{background:#fff;color:#000;font-family:'Syne',sans-serif;font-size:13pt;-we
       <div class="hdr-show">${cfg.showName}</div>
       <div class="hdr-epnum">E${epNum}</div>
       ${showData.epTitle ? `<div class="hdr-title">${esc(showData.epTitle)}</div>` : ''}
-      <div class="hdr-sub">${[showData.epDate, showRuntime + ' MIN', cues.length + ' SCENES'].filter(Boolean).join(' · ')}</div>
+      <div class="hdr-sub">${[showData.epDate ? formatDateLong(showData.epDate) : '', showRuntime + ' MIN', cues.length + ' SCENES'].filter(Boolean).join(' · ')}</div>
     </div>
     <div class="hdr-right">
       <div class="qr-box" id="qr-ros"></div>
@@ -3859,7 +4047,7 @@ function showScriptsSharePanel(label, url, hasLink) {
   const epNum = showData.epNum || 'X';
   const epTitle = showData.epTitle || 'Little Big Voices';
   const epDate = showData.epDate || '';
-  const msg = `${epTitle} — Episode ${epNum}${epDate ? ', ' + epDate : ''}. ${url}`;
+  const msg = `${epTitle} — Episode ${epNum}${epDate ? ', ' + formatDateLong(epDate) : ''}. ${url}`;
   const tvs = getFireTVs();
   const tvBtn = hasLink ? `<button onclick="pushToFireTVs('${url}',this)" style="background:#1a3a5a;color:var(--teal);border:1px solid var(--teal);padding:6px 12px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px;cursor:pointer;">📺 PUSH TO FIRE TVs${tvs.length ? ' ('+tvs.length+')' : ''}</button>` : '';
   const linkButtons = hasLink ? `
@@ -3928,7 +4116,7 @@ function buildSceneListHtml() {
 </style>
 </head><body>
 <h1>${esc(epTitle)} — Episode ${esc(String(epNum))}</h1>
-<h2>${epDate ? epDate + ' &nbsp;·&nbsp; ' : ''}${total} min runtime &nbsp;·&nbsp; ${cues.length} scenes</h2>
+<h2>${epDate ? esc(formatDateLong(epDate)) + ' &nbsp;·&nbsp; ' : ''}${total} min runtime &nbsp;·&nbsp; ${cues.length} scenes</h2>
 <table>
   <thead><tr><th>#</th><th>Scene</th><th>Who</th><th>Duration</th></tr></thead>
   <tbody>${rows}</tbody>
@@ -3980,12 +4168,32 @@ function shiftTime(timeHHMM, deltaMins) {
   return `${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;
 }
 
+// ─── EPISODE DATE — one reader, one stored format ───
+// Mark types dates every way (2026-11-15, 11/15/2026, 11-15-2026, 11/15/26). Stored as ISO
+// (YYYY-MM-DD) at every entry point; every display reads through parseEpDate. An unreadable
+// date is never guessed at — it's shown as typed and Pre-Flight flags it.
+function parseEpDate(s) {
+  const t = String(s == null ? '' : s).trim();
+  let y, m, d, mm;
+  if ((mm = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) { y = +mm[1]; m = +mm[2]; d = +mm[3]; }
+  else if ((mm = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/))) { m = +mm[1]; d = +mm[2]; y = +mm[3]; if (y < 100) y += 2000; }
+  else return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return { y, m, d };
+}
+function normalizeEpDate(s) {
+  const p = parseEpDate(s);
+  if (!p) return String(s == null ? '' : s).trim();
+  return `${p.y}-${String(p.m).padStart(2,'0')}-${String(p.d).padStart(2,'0')}`;
+}
 function formatDateLong(dateStr) {
   if (!dateStr) return '—';
-  const [y, mo, d] = dateStr.split('-').map(Number);
+  const p = parseEpDate(dateStr);
+  if (!p) return String(dateStr);
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const sfx = [1,21,31].includes(d) ? 'st' : [2,22].includes(d) ? 'nd' : [3,23].includes(d) ? 'rd' : 'th';
-  return `${months[mo-1]} ${d}${sfx}, ${y}`;
+  const sfx = [1,21,31].includes(p.d) ? 'st' : [2,22].includes(p.d) ? 'nd' : [3,23].includes(p.d) ? 'rd' : 'th';
+  return `${months[p.m-1]} ${p.d}${sfx}, ${p.y}`;
 }
 
 // ─── KIT / CHECKLIST SHARE URL + CLICK HANDLERS ──────────────────────────────
