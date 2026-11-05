@@ -228,6 +228,8 @@ const E12_CUES = [{ scene: 'COUNTDOWN — Pre-Show', dur: 20, prelive: true }, {
     try { out = vm.runInNewContext(fm[0] + ';[fmtDate("11-15-2026"),fmtDate("8/16/2026")].join("|")'); } catch (e) { out = 'ERR ' + e.message; }
     ok(out === 'November 15th, 2026|August 16th, 2026', `structural: ${f} reads typed dates ("${out}")`);
   }
+  ok(/THE LBV ENDING — every episode/.test(src) && /FINAL SONG[\s\S]{0,400}SHOW CLOSE[\s\S]{0,400}CLOSING CREDITS/.test(src) && !/CLOSING SONG \(always last\)/.test(src) && /Final Song → Show Close → Closing Credits/.test(src),
+    'structural: Boo knows the LBV ending — final song, show close with "LIVE!", credits with dancing last');
   ok(/const maxTokens = needsFullOutput \? (\d+)/.test(src) && +src.match(/const maxTokens = needsFullOutput \? (\d+)/)[1] >= 32000, 'structural: full-output replies get room for a whole show (>= 32k tokens)');
   ok(!/_UNUSED_BASE_CUES_REMOVED/.test(fs.readFileSync(path.join(path.dirname(BEB), 'bsm-template.html'), 'utf8')), 'structural: dead E6 demo cues gone from bsm-template');
 
