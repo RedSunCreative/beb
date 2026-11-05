@@ -46,6 +46,8 @@ ok(/@bottom-left\{content:"LBV LIVE! Welcome Kit/.test(html), 'print: kit name i
 
 ok(html.includes("You're here because you are a YES! Mark invited you") && html.includes('hold space for you to share it.'), 'E12: "Why You\'re Here" as Mark wrote it');
 
+ok(html.includes("curious about another's stories or experiences. Thank you for sharing yours!"), 'E12: "Please Remember" as Mark wrote it');
+
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';
 const hostile = { ...e12, epNum: evil, epTitle: evil, wonderingQuestion: evil, greenRoomHost: evil, greenRoomHostPronoun: evil,

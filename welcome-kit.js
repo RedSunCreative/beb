@@ -217,7 +217,7 @@ ${k.cameraNote ? `<section>
 </section>
 
 <section>
-<p><span class="label">Please Remember:</span> This show is about cultivating community by creating space for sincere human connection. We’re not here to convince anyone of anything but rather are curious about other's stories and experiences. Thank you for sharing yours!</p>
+<p><span class="label">Please Remember:</span> This show is about cultivating community by creating space for sincere human connection. We’re not here to convince anyone of anything but rather are curious about another's stories or experiences. Thank you for sharing yours!</p>
 </section>
 
 <hr>
