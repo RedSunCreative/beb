@@ -22,7 +22,7 @@ function extract(name) {
   }
   throw new Error('MISSING function ' + name);
 }
-const FNS = ['listAllRows', 'blankShowData', 'episodeNumberChange', 'saveWouldOverwrite', 'rowForEpisode', 'saveState',
+const FNS = ['isBooCrew', 'listAllRows', 'blankShowData', 'episodeNumberChange', 'saveWouldOverwrite', 'rowForEpisode', 'saveState',
   'loadState', 'listEpisodes', 'applyBooUpdates', 'openEpisodeNumber', 'claimsChange', 'updatedKinds',
   'parseBooReplyText', 'processUserInput', 'parseEpDate', 'normalizeEpDate', 'formatDateLong', 'handleNewEpisode'];
 let code;
@@ -73,7 +73,7 @@ function world({ db, loaded, row, replies }) {
   };
   ctx.setCues = (c) => { ctx.showData.cues = c; };
   vm.createContext(ctx);
-  vm.runInContext(code + '\nthis.__fns = { saveState, applyBooUpdates, processUserInput, parseBooReplyText, claimsChange, episodeNumberChange, saveWouldOverwrite, rowForEpisode, parseEpDate, normalizeEpDate, formatDateLong };', ctx);
+  vm.runInContext(code + '\nthis.__fns = { isBooCrew, saveState, applyBooUpdates, processUserInput, parseBooReplyText, claimsChange, episodeNumberChange, saveWouldOverwrite, rowForEpisode, parseEpDate, normalizeEpDate, formatDateLong };', ctx);
   W.ctx = ctx; W.fn = ctx.__fns;
   W.settle = () => new Promise(r => setImmediate(r));
   return W;
@@ -207,6 +207,14 @@ const E12_CUES = [{ scene: 'COUNTDOWN — Pre-Show', dur: 20, prelive: true }, {
     ok(W2.ctx.showData.epDate === '2026-11-15', 'dates: a date Boo sets is stored normalized');
   }
 
+  // 10b. Boo on the crew list is the system, not a person to text.
+  {
+    const W = world({ db: BASE_DB, loaded: E11, row: 11, replies: [] });
+    const B = W.fn.isBooCrew;
+    ok(B({ name: 'Boo Richards' }) && B({ name: 'Boo Richaards' }) && B({ name: 'Boo' }) && !B({ name: 'Booker Ellis' }) && !B({ name: 'Melba Martinez' }),
+      'Boo crew: "Boo Richards"/"Boo" recognized as Boo; real people (even "Booker") are not');
+    ok(/if \(isBooCrew\(m\)\) return;/.test(extract('preflightEpisode')), 'Boo crew: Pre-Flight skips the no-mobile check for Boo');
+  }
   // 11. Structural — the old failure points are gone, the new rules are wired everywhere.
   ok(!/Done — I've updated the show data/.test(src) && !/Done! I've updated the show data/.test(src), 'structural: the hardcoded "Done — I\'ve updated the show data" is gone');
   ok(/=== WHICH EPISODE YOU ARE EDITING ===/.test(src) && /=== NEVER CLAIM A CHANGE YOU DID NOT SEND ===/.test(src), 'structural: Boo\'s prompt carries both rules');

@@ -2865,6 +2865,12 @@ function addCrewMember() {
 // Every check below exists because something actually went wrong, or would have.
 // Pure — no DOM, no network — so the suite drives it directly.
 //   Returns [{level:'stop'|'warn'|'note', code, msg, fix}]
+// Boo is on the crew list as the floor manager ("Boo Richards" on E12). Boo is the system, not a
+// person: no phone, no call-time text, no checklist.
+function isBooCrew(m) {
+  return /^boo(\s|$)/i.test(String((m && m.name) || '').trim());
+}
+
 function preflightEpisode(sd, nowISO) {
   sd = sd || {};
   const out = [];
@@ -2932,6 +2938,7 @@ function preflightEpisode(sd, nowISO) {
   });
   crew.forEach(m => {
     if (!(m.name || '').trim()) { add('stop', 'blank-crew', 'There is a crew row with no name.', 'Name it or remove it.'); return; }
+    if (isBooCrew(m)) return;   // Boo runs the floor from BSM — nobody to text
     if (!(m.mobile || '').trim()) add('warn', 'crew-unreachable', `${m.name} has no mobile.`, 'Cannot be texted a call time or checklist.');
   });
 

@@ -1769,7 +1769,7 @@ for c in ('parseDur','CUE_STAGES','STAGE_LABEL','CLIENT_CONFIG','HOST_STAGES','A
 for fn in ('sceneKind','_sceneTokens','resolveNameToRoster','splitNowEntry','resolveNowDisplay',
            'autoResolveNowPerson','resolveNowPeople','nowIdentities','nowIdentity','nowLabel',
            'displayNowPeople','sceneSong','nowLiveLabel','deriveStandby','deriveWarnings',
-           'recomputeStructuralFields','parseEpDate','preflightEpisode'):
+           'recomputeStructuralFields','parseEpDate','isBooCrew','preflightEpisode'):
     print(extract(fn))
 print(r'''
 function assert(c,m){ if(!c){ console.log('FAIL: '+m); process.exit(0); } }
