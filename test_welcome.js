@@ -23,7 +23,7 @@ for (const s of ['Musical Guests Call Time and Sound Check:</b> 3:30 pm', 'Pod G
   ok(html.includes(s), 'E12 times: "' + s + '" on the page');
 ok(html.includes('What am I grateful for now, that at the time, I did not see as a gift?'), 'E12: wondering question on the page');
 ok(html.includes('Melba Martinez') && html.includes('512-293-3593'), 'E12: green room host + guest services phone on the page');
-ok(html.includes('window.print()') && /@media print\{[\s\S]*\.print-btn\{display:none\}/.test(html), 'printable: print button present and hidden in print');
+ok(html.includes('window.print()') && /@media print\{[\s\S]*\.print-btn(,[.\w-]+)*\{display:none\}/.test(html), 'printable: print button present and hidden in print');
 
 // 2b. One spacing system: no blank-line spacers, no one-off inline styles in the body.
 const body = html.slice(html.indexOf('<body>'));
