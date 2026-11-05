@@ -40,6 +40,9 @@ ok(/\.signature\{font-family:'Allison'/.test(html) && /family=Allison/.test(html
 
 ok(html.includes('GO LIVE Time and Date: 5:00 pm CT, Sunday, November 15, 2026'), 'E12: GO LIVE time and date line as Mark wrote it');
 
+ok(html.includes('You might or might not share your response'), 'E12: "might or might not" as Mark wrote it');
+ok(/@page\{[^}]*@bottom-right\{content:counter\(page\)/.test(html), 'print: page number bottom right');
+
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';
 const hostile = { ...e12, epNum: evil, epTitle: evil, wonderingQuestion: evil, greenRoomHost: evil, greenRoomHostPronoun: evil,
