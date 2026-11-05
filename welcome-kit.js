@@ -88,7 +88,7 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Allison&display=swap" rel="stylesheet">
 <title>Little Big Voices LIVE Guest Welcome Kit — Episode ${esc(k.epNum)}</title>
 <meta property="og:title" content="You're invited — Little Big Voices LIVE! Episode ${esc(k.epNum)}: ${esc(k.epTitle)}">
 <meta property="og:description" content="${esc(dateLong)}${goLive ? ' · Go live ' + esc(goLive) + ' CT' : ''}. Your Guest Welcome Kit.">
@@ -116,7 +116,7 @@
   .em{font-style:italic}
   hr{border:0;border-top:1px solid #999;margin-top:var(--gap)}
   .sig .lines{line-height:1.4}
-  .signature{font-family:'Great Vibes',cursive;font-size:2.6em;line-height:1;color:#b0357a;margin:.05em 0 .1em}
+  .signature{font-family:'Allison',cursive;font-size:3.4em;line-height:1;color:#23314f;-webkit-text-stroke:.4px #fff;margin:.1em 0 .15em}
   .card{display:block;width:210px;border:1px solid #222}
   a{color:#1155cc}
   .foot{margin-top:var(--gap);font-size:.75em;color:#888;font-weight:700}
@@ -224,7 +224,7 @@ ${k.cameraNote ? `<section>
 <div>
 <p>Peace,</p>
 <div class="signature">${esc(gsFirst)}</div>
-<p class="lines">—--<br><b>${esc(gs.name || '')}</b><br>Guest Services, LBV LIVE!${gs.phone ? `<br><a href="tel:${esc(String(gs.phone).replace(/[^\d+]/g, ''))}">${esc(gs.phone)}</a>` : ''}</p>
+<p class="lines"><b>${esc(gs.name || '')}</b><br>Guest Services, LBV LIVE!${gs.phone ? `<br><a href="tel:${esc(String(gs.phone).replace(/[^\d+]/g, ''))}">${esc(gs.phone)}</a>` : ''}</p>
 </div>
 <img class="card" src="${assetBase}lbv-mark-card.png" alt="Mark Caddell, producer/host — 512.762.8511 — mark@littlebigvoices.com">
 </section>

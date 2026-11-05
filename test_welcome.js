@@ -36,6 +36,8 @@ ok(split.includes('Musical Guests Call Time:</b> 3:15 pm, Sound Check at 3:30 pm
 for (const a of new Set(html.match(/assets\/[\w.-]+/g) || []))
   ok(fs.existsSync(path.join(__dirname, a)), 'asset exists: ' + a);
 
+ok(/\.signature\{font-family:'Allison'/.test(html) && /family=Allison/.test(html) && !html.includes('\u2014--'), 'signature: Allison script loaded and used, no dash line');
+
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';
 const hostile = { ...e12, epNum: evil, epTitle: evil, wonderingQuestion: evil, greenRoomHost: evil, greenRoomHostPronoun: evil,
