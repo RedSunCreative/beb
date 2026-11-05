@@ -48,6 +48,9 @@ ok(html.includes("You're here because you are a YES! Mark invited you") && html.
 
 ok(html.includes("curious about another's stories or experiences. Thank you for sharing yours!"), 'E12: "Please Remember" as Mark wrote it');
 
+ok(/<div class="sig-row">[\s\S]*?class="signature"[\s\S]*?<img class="card"[\s\S]*?<\/div>\s*<\/section>/.test(html) && /@media print\{[\s\S]*\.sig-row\{flex-wrap:nowrap\}/.test(html),
+  'print: Mark\'s card sits beside the signature (phone prints never spill it onto a blank page)');
+
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';
 const hostile = { ...e12, epNum: evil, epTitle: evil, wonderingQuestion: evil, greenRoomHost: evil, greenRoomHostPronoun: evil,

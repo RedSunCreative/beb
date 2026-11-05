@@ -116,6 +116,8 @@
   .em{font-style:italic}
   hr{border:0;border-top:1px solid #999;margin-top:var(--gap)}
   .sig .lines{line-height:1.4}
+  /* Card sits beside the signature (not under it) so the last page never spills onto a blank one */
+  .sig-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--space) 48px}
   .signature{font-family:'Allison',cursive;font-size:3.4em;line-height:1;color:#23314f;-webkit-text-stroke:.4px #fff;margin:.1em 0 .15em}
   .card{display:block;width:210px;border:1px solid #222}
   a{color:#1155cc}
@@ -130,7 +132,8 @@
     .page{margin:0;padding:0;box-shadow:none;max-width:none}
     .print-btn,.foot{display:none}
     .cover{width:2.6in}
-    .card{width:1.7in}
+    .card{width:1.6in}
+    .sig-row{flex-wrap:nowrap}
     section.sig{break-inside:auto;page-break-inside:auto}
     .card{break-inside:avoid}
     h2{break-after:avoid;page-break-after:avoid}
@@ -223,12 +226,14 @@ ${k.cameraNote ? `<section>
 <hr>
 <section class="sig">
 <p>Mark and I are here for you anytime you have questions or need anything at all.</p>
+<div class="sig-row">
 <div>
 <p>Peace,</p>
 <div class="signature">${esc(gsFirst)}</div>
 <p class="lines"><b>${esc(gs.name || '')}</b><br>Guest Services, LBV LIVE!${gs.phone ? `<br><a href="tel:${esc(String(gs.phone).replace(/[^\d+]/g, ''))}">${esc(gs.phone)}</a>` : ''}</p>
 </div>
 <img class="card" src="${assetBase}lbv-mark-card.png" alt="Mark Caddell, producer/host — 512.762.8511 — mark@littlebigvoices.com">
+</div>
 </section>
 <div class="foot">LBV LIVE! Welcome Kit · Episode ${esc(k.epNum)}</div>
 </div></body></html>`;
