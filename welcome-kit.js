@@ -210,7 +210,7 @@ ${k.cameraNote ? `<section>
 <p><span class="label">Share the Love!</span> You'll receive social media promotions to share if you'd like. In the meantime, invite people to watch live:</p>
 <ul>
   <li><b>To Watch:</b> <a href="${esc(watchURL)}">${esc(watchLabel)}</a></li>
-  ${goLive && dateLong ? `<li><b>Time and Date: ${esc(goLive)} CT, ${esc(dateLong)}</b></li>` : ''}
+  ${goLive && dateLong ? `<li><b>GO LIVE Time and Date: ${esc(goLive)} CT, ${esc(dateLong)}</b></li>` : ''}
 </ul>
 </section>
 

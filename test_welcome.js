@@ -38,6 +38,8 @@ for (const a of new Set(html.match(/assets\/[\w.-]+/g) || []))
 
 ok(/\.signature\{font-family:'Allison'/.test(html) && /family=Allison/.test(html) && !html.includes('\u2014--'), 'signature: Allison script loaded and used, no dash line');
 
+ok(html.includes('GO LIVE Time and Date: 5:00 pm CT, Sunday, November 15, 2026'), 'E12: GO LIVE time and date line as Mark wrote it');
+
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';
 const hostile = { ...e12, epNum: evil, epTitle: evil, wonderingQuestion: evil, greenRoomHost: evil, greenRoomHostPronoun: evil,
