@@ -179,7 +179,7 @@
   ${li('Go Live on YouTube', goLive + (showEnd ? ' - ' + showEnd : ''))}
   ${li('Show Dinner', fmtTime(t.dinner), ' (we convert the studio into a sit down candlelight dinner - it’s pretty magical and we hope you’ll stay!)')}
 </ul>
-<p><span class="label em">Early Arrival Hospitality:</span> Need to do makeup, get dressed, or shower after you arrive? Just let us know ahead of time and plan to come early — we'll make it happen! We have make up and hair products here for you if you forget anything.</p>
+<p><span class="label em">Early Arrival Hospitality:</span> Need to do makeup, get dressed, or shower after you arrive? Just let me know ahead of time and plan to come early — we'll make it happen! We have make up and hair products here for you if you forget anything.</p>
 </section>
 
 <section>

@@ -53,6 +53,8 @@ ok(/<div class="sig-row">[\s\S]*?class="signature"[\s\S]*?<img class="card"[\s\S
 
 ok(html.includes('Please just let me know ahead of time') && !/let Melissa know/.test(html), 'E12: guest list asks guests to "let me know" (the kit is from Melissa)');
 
+ok(html.includes('Just let me know ahead of time and plan to come early') && !/let us know/.test(html), 'E12: Early Arrival asks guests to "let me know" (the kit is from Melissa)');
+
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';
 const hostile = { ...e12, epNum: evil, epTitle: evil, wonderingQuestion: evil, greenRoomHost: evil, greenRoomHostPronoun: evil,
