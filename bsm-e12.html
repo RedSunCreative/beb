@@ -257,6 +257,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <div class="welcome-instruction-text" style="font-size:16px;">1. Please complete your pre-show checks.<br>2. Stand by at your stations.<br>3. Show Circle is in progress — Mark will start the show shortly. Thank you! ❤️</div>
     </div>
     <div class="standby-pulse"><div class="standby-pulse-dot"></div><div class="standby-pulse-text">STAND BY FOR SHOW CIRCLE</div></div>
+    <div class="live-ptr" style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;font-size:11px;letter-spacing:1px;font-weight:700;"><span class="live-ptr-status">PERMANENT SCREENS: CHECKING…</span><button class="live-ptr-btn" onclick="setAsLive()" style="background:#3BB8C9;color:#000;border:none;border-radius:4px;padding:5px 12px;font-weight:900;font-size:11px;letter-spacing:1px;cursor:pointer;">SET AS LIVE</button></div>
   </div>
 
   <!-- PIN -->
@@ -402,6 +403,7 @@ body.tv-mode .main{flex:1;min-height:0;overflow-y:auto;}
       <div class="tech-next"><div class="tech-next-label" id="tech-next-label">UP NEXT</div><div class="tech-next-lines" id="tech-next-lines"></div></div>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="tech-progress" style="width:0%"></div></div>
+    <div style="padding:0 16px 10px;"><div class="live-ptr" style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;font-size:11px;letter-spacing:1px;font-weight:700;"><span class="live-ptr-status">PERMANENT SCREENS: CHECKING…</span><button class="live-ptr-btn" onclick="setAsLive()" style="background:#3BB8C9;color:#000;border:none;border-radius:4px;padding:5px 12px;font-weight:900;font-size:11px;letter-spacing:1px;cursor:pointer;">SET AS LIVE</button></div></div>
   </div>
 
   <!-- HOST LIVE VIEW -->
@@ -546,17 +548,25 @@ const{createClient}=supabase;
 const sbClient=createClient(SB_URL,SB_KEY);
 
 async function sbGet(){try{const{data,error}=await sbClient.from('show_state').select('*').eq('id',ROW_ID).single();if(error)throw error;return data;}catch(e){return null;}}
-async function sbSet(patch){try{const{error}=await sbClient.from('show_state').update({...patch,updated_at:new Date().toISOString()}).eq('id',ROW_ID);if(error)throw error;}catch(e){console.error('sbSet:',e);}}
+let lastLocalWriteAt=0;
+async function sbSet(patch){try{const ts=new Date();lastLocalWriteAt=ts.getTime();const{error}=await sbClient.from('show_state').update({...patch,updated_at:ts.toISOString()}).eq('id',ROW_ID);if(error)throw error;}catch(e){console.error('sbSet:',e);}}
 
 let _poll=null;
+let _everSubscribed=false;
 function startRealtime(){
   sbClient.channel('boo_e'+(EPISODE.num||'x'))
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'show_state'},payload=>{
       if(view!=='host'&&view!=='host-welcome') applyRemoteState(payload.new);
     })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'bsm_settings'},()=>{ readLivePointer(); })
     .subscribe(status=>{
-      if(status==='SUBSCRIBED') setSyncBadge('● LIVE SYNC ACTIVE','#4ade80');
-      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){setSyncBadge('● SYNC ERROR','#E8431A');startFallbackPoll();}
+      if(status==='SUBSCRIBED'){
+        setSyncBadge('● LIVE SYNC ACTIVE','#4ade80');
+        if(_poll){clearInterval(_poll);_poll=null;}
+        if(_everSubscribed) resyncAll();   // came back from a drop — we may have missed updates
+        _everSubscribed=true;
+      }
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){setSyncBadge('● SYNC ERROR','#E8431A');startFallbackPoll();}
       else setSyncBadge('○ CONNECTING...','#F5D03A');
     });
 }
@@ -569,6 +579,67 @@ function startFallbackPoll(){
   },1000);
 }
 function setSyncBadge(t,c){const el=document.getElementById('sync-badge');if(el){el.textContent=t;el.style.color=c;}}
+
+// Re-read everything from Supabase. Runs when the page becomes visible again (phones/tablets
+// waking up) and whenever Realtime reconnects, so no screen keeps showing what it saw before sleeping.
+// The Producer (host) drives the show, so it only adopts remote state that is NEWER than its own
+// last write — i.e. another Producer device moved the show while this one slept.
+async function resyncAll(){
+  const s=await sbGet();
+  if(s){
+    if(view==='host'||view==='host-welcome'){
+      if(Date.parse(s.updated_at||0)>lastLocalWriteAt) applyRemoteState(s,{force:true});
+    } else applyRemoteState(s);
+  }
+  readLivePointer();
+}
+
+// ─── LIVE SHOW POINTER ───────────────────────────────────────────────────────
+// bsm_settings.live_show_id says which episode the permanent screens (tv.html / crew.html /
+// host.html) show. "Set as live" (Crew view) points it at THIS episode's builder_state row.
+let livePtr={setup:null,row:null,myRow:undefined};
+async function myEpisodeRow(){
+  if(livePtr.myRow!==undefined) return livePtr.myRow;
+  if(!EPISODE.num) return (livePtr.myRow=null);
+  try{
+    const{data,error}=await sbClient.from('builder_state').select('id').eq('data->>epNum',String(EPISODE.num));
+    if(error) throw error;
+    livePtr.myRow=(data&&data.length===1)?data[0].id:null;   // ambiguous or missing → refuse
+  }catch(e){return null;}
+  return livePtr.myRow;
+}
+async function readLivePointer(){
+  try{
+    const{data,error}=await sbClient.from('bsm_settings').select('live_show_id').eq('id',1).maybeSingle();
+    if(error||!data) throw (error||new Error('no settings row'));
+    livePtr.setup=true;livePtr.row=data.live_show_id;
+  }catch(e){livePtr.setup=false;}
+  await myEpisodeRow();
+  renderLivePointer();
+}
+function renderLivePointer(){
+  const isMine=livePtr.setup&&livePtr.row!=null&&livePtr.row===livePtr.myRow;
+  document.querySelectorAll('.live-ptr-status').forEach(el=>{
+    el.textContent=livePtr.setup===false?'PERMANENT SCREENS: NOT SET UP YET'
+      :isMine?'● THIS SHOW IS LIVE ON THE PERMANENT SCREENS'
+      :livePtr.row==null?'PERMANENT SCREENS: HOLDING SCREEN':'PERMANENT SCREENS: ANOTHER EPISODE';
+    el.style.color=isMine?'#4ade80':'#C4B9A8';
+  });
+  document.querySelectorAll('.live-ptr-btn').forEach(b=>{
+    b.disabled=livePtr.setup===false||isMine||livePtr.myRow==null;
+    b.textContent=isMine?'LIVE ✓':'SET AS LIVE';
+  });
+}
+async function setAsLive(){
+  const row=await myEpisodeRow();
+  if(row==null){alert(`Couldn't find E${EPISODE.num} in Boo Episode Builder, so it can't be set as live.`);return;}
+  if(!confirm(`Put E${EPISODE.num} on the permanent TV, Crew and Producer screens?`)) return;
+  try{
+    const{error}=await sbClient.from('bsm_settings').update({live_show_id:row,updated_at:new Date().toISOString()}).eq('id',1);
+    if(error) throw error;
+  }catch(e){alert("Couldn't set it live — check the connection and try again.");console.error('setAsLive:',e);}
+  readLivePointer();
+}
 
 // ─── GENERATED BY BOO EPISODE BUILDER ────────────────────────────────────────
 const EPISODE = {
@@ -588,13 +659,13 @@ const BASE_CUES = [
     booName: "Jimmy George", booTpl: "Jimmy — please head to the Music Stage and get ready for the Cold Open.",
     w5: "5 minutes — Jimmy George, please head to the Music Stage for TBD Song 1.", w2: "2 minutes — Jimmy George, to the Music Stage now for TBD Song 1.",
     nextScene: "COLD OPEN — TBD Song 1",
-    audio: ["Please prep ambient + audience mics", "Confirm ALL RECORDS ON (L-20, L-8, ATEM). TY!", "Stand by on music mics"],
+    audio: ["Please prep ambient + audience mics", "Confirm ALL RECORDS ON (L-20, L-8, ATEM). TY!", "Mute Group 4 — ALL MUTE until ready", "Stand by: DCA 1 Music Stage"],
     video: ["GO stream start. TY!", "Stand by — LBV E12 Countdown Video"],
-    cameras: ["Please power up all cameras and frame", "CAM 1: Music Stage wide", "CAM 2: Music Stage close", "CAM 3: Pod Stage wide"],
+    cameras: ["Please power up all cameras and frame", "CAM 1: Pod Guest — standby", "CAM 2: Pod WS — standby", "CAM 3: Pod Host — standby", "CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS"],
     lighting: ["House lights up, please", "Stand by for show lighting"],
-    audioNext: ["Music mics up + reverb/delay", "Audience mics up on LIVE! yell. TY!"],
-    videoNext: ["CAM 1, 2, 3 live — Music Stage"],
-    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 3: Wide studio"],
+    audioNext: ["Mute Group 1 OFF (Music Stage live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 07 AUD — up on LIVE! yell", "DCA 1 Music Stage — GO"],
+    videoNext: ["CAM 5, 6, 4/2 live — Music Stage"],
+    camerasNext: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS", "CAM 7: Roving"],
     lightingNext: ["Music Stage performance lighting"],
     cueCard: null
   },
@@ -605,11 +676,11 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes remaining in this segment.", w2: "2 minutes remaining.",
     nextScene: "PRE-RECORDED INTRO — LBV Video Opener",
-    audio: ["Music mics up + reverb/delay", "Audience mics up on LIVE! yell. TY!"],
-    video: ["CAM 1, 2, 3 live — Music Stage"],
-    cameras: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 3: Wide studio"],
+    audio: ["Mute Group 1 OFF (Music Stage live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 07 AUD — up on LIVE! yell", "DCA 1 Music Stage — GO"],
+    video: ["CAM 5, 6, 4/2 live — Music Stage"],
+    cameras: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS", "CAM 7: Roving"],
     lighting: ["Music Stage performance lighting"],
-    audioNext: ["GO playback audio — LBV Video Opener. TY!"],
+    audioNext: ["GO playback audio — LBV Video Opener (GRFX Aux). TY!"],
     videoNext: ["GO LBV E12 Video Opener"],
     camerasNext: ["Video playback — stand by cams for pod"],
     lightingNext: [],
@@ -622,13 +693,13 @@ const BASE_CUES = [
     booName: "Melba Martinez", booTpl: "Melba — please head to the Pod Stage and get seated.",
     w5: "5 minutes — Mark, Melba Martinez, please head to the Pod Stage.", w2: "2 minutes — Mark, Melba Martinez, to the Pod Stage now.",
     nextScene: "SHOW OPENER — Mark and Melba Martinez",
-    audio: ["GO playback audio — LBV Video Opener. TY!"],
+    audio: ["GO playback audio — LBV Video Opener (GRFX Aux). TY!"],
     video: ["GO LBV E12 Video Opener"],
     cameras: ["Video playback — stand by cams for pod"],
     lighting: [],
-    audioNext: ["Host mics — Mark and Melba Martinez live", "Audience mics"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Melba Martinez", "CAM 5: Mark"],
+    audioNext: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Melba Martinez) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    videoNext: ["CAM 1, 2, 3 — Pod Stage"],
+    camerasNext: ["CAM 1: Pod Guest — Melba Martinez", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lightingNext: ["Pod Stage lighting"],
     cueCard: null
   },
@@ -639,13 +710,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes — Mark, Melba Martinez, please head to the Kitchen Disco.", w2: "2 minutes — Mark, Melba Martinez, to the Kitchen Disco now.",
     nextScene: "KITCHEN DISCO #1",
-    audio: ["Host mics — Mark and Melba Martinez live", "Audience mics"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Melba Martinez", "CAM 5: Mark"],
+    audio: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Melba Martinez) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    video: ["CAM 1, 2, 3 — Pod Stage"],
+    cameras: ["CAM 1: Pod Guest — Melba Martinez", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lighting: ["Pod Stage lighting"],
-    audioNext: ["Kitchen Disco mics live", "Audience mics"],
-    videoNext: ["CAM 6: Kitchen Disco Stage"],
-    camerasNext: ["CAM 6: Kitchen Disco wide and close"],
+    audioNext: ["Mute Group 3 OFF (Kitchen Disco live)", "Ch 15 KD 1, Ch 16 KD 2 — faders up", "Ch 07 AUD — up", "DCA 3 Kitchen Disco — GO"],
+    videoNext: ["CAM 4/3: Kitchen Disco"],
+    camerasNext: ["CAM 4/3: Kitchen Disco", "CAM 7: Roving"],
     lightingNext: ["Kitchen Disco Stage lighting"],
     cueCard: "• Welcome the audience — set the vibe\n• Thank the crew by name\n• Share what Little Big Voices is about\n• Introduce Melba Martinez"
   },
@@ -653,16 +724,16 @@ const BASE_CUES = [
     dur: 4, scene: "KITCHEN DISCO #1", liveLabel: "KITCHEN DISCO",
     prelive: false, stageType: "kitchen",
     now: "Mark, Melba Martinez",
-    booName: "Sam Wofford", booTpl: "Sam, Jason, Raj, Barbara — please head to the Pod Stage and get seated.",
+    booName: "Sam Wofford", booTpl: "Sam — please head to the Pod Stage and get seated.",
     w5: "5 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, please head to the Pod Stage.", w2: "2 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, to the Pod Stage now.",
     nextScene: "POD ROUND 1 — Getting to Know You",
-    audio: ["Kitchen Disco mics live", "Audience mics"],
-    video: ["CAM 6: Kitchen Disco Stage"],
-    cameras: ["CAM 6: Kitchen Disco wide and close"],
+    audio: ["Mute Group 3 OFF (Kitchen Disco live)", "Ch 15 KD 1, Ch 16 KD 2 — faders up", "Ch 07 AUD — up", "DCA 3 Kitchen Disco — GO"],
+    video: ["CAM 4/3: Kitchen Disco"],
+    cameras: ["CAM 4/3: Kitchen Disco", "CAM 7: Roving"],
     lighting: ["Kitchen Disco Stage lighting"],
-    audioNext: ["Host mics — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, and Barbara Cook live", "Audience mics"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Guests", "CAM 5: Mark"],
+    audioNext: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Sam Wofford), Ch 11 POD 3 (Jason Mejia), Ch 12 POD 4 (Raj Pulagula), Ch 13 POD 5 (Barbara Cook) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    videoNext: ["CAM 1, 2, 3 — Pod Stage"],
+    camerasNext: ["CAM 1: Pod Guest — Sam Wofford", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lightingNext: ["Pod Stage lighting"],
     cueCard: null
   },
@@ -673,13 +744,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes remaining in this segment.", w2: "2 minutes remaining.",
     nextScene: "VIDEO — Season 2 Pod Guest Retrospective",
-    audio: ["Host mics — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, and Barbara Cook live", "Audience mics"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Guests", "CAM 5: Mark"],
+    audio: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Sam Wofford), Ch 11 POD 3 (Jason Mejia), Ch 12 POD 4 (Raj Pulagula), Ch 13 POD 5 (Barbara Cook) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    video: ["CAM 1, 2, 3 — Pod Stage"],
+    cameras: ["CAM 1: Pod Guest — Sam Wofford", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lighting: ["Pod Stage lighting"],
-    audioNext: ["GO playback audio — Season 2 Pod Guest Retrospective. TY!"],
+    audioNext: ["GO playback audio — Season 2 Pod Guest Retrospective (GRFX Aux). TY!"],
     videoNext: ["GO Season 2 Pod Guest Retrospective video"],
-    camerasNext: ["Video playback — stand by cams for music stage"],
+    camerasNext: ["Video playback — stand by cams for music stage", "CAM 5: Music Stage Slider — standby", "CAM 6: Music Stage Side — standby"],
     lightingNext: ["Hold current lighting"],
     cueCard: "• Round 1 — Getting to Know You\n• INTRO: Sam Wofford — camera and lighting, crew member turned guest\n• INTRO: Jason Mejia\n• INTRO: Raj Pulagula\n• INTRO: Barbara Cook — The Church of Conscious Harmony\n• [RESEARCH NEEDED: Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook]"
   },
@@ -690,13 +761,13 @@ const BASE_CUES = [
     booName: "Jimmy George", booTpl: "Jimmy — please head to the Music Stage for TBD Song 2.",
     w5: "5 minutes — Jimmy George, please head to the Music Stage for TBD Song 2.", w2: "2 minutes — Jimmy George, to the Music Stage now for TBD Song 2.",
     nextScene: "PERFORMANCE — TBD Song 2",
-    audio: ["GO playback audio — Season 2 Pod Guest Retrospective. TY!"],
+    audio: ["GO playback audio — Season 2 Pod Guest Retrospective (GRFX Aux). TY!"],
     video: ["GO Season 2 Pod Guest Retrospective video"],
-    cameras: ["Video playback — stand by cams for music stage"],
+    cameras: ["Video playback — stand by cams for music stage", "CAM 5: Music Stage Slider — standby", "CAM 6: Music Stage Side — standby"],
     lighting: ["Hold current lighting"],
-    audioNext: ["Music mics + reverb/delay", "Audience mics"],
-    videoNext: ["CAM 1, 2, 3 — Music Stage"],
-    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 3: Wide studio"],
+    audioNext: ["Mute Group 1 OFF (Music Stage live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 07 AUD — up", "DCA 1 Music Stage — GO"],
+    videoNext: ["CAM 5, 6, 4/2 — Music Stage"],
+    camerasNext: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS", "CAM 7: Roving"],
     lightingNext: ["Music Stage performance lighting"],
     cueCard: null
   },
@@ -707,13 +778,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, please head to the Pod Stage.", w2: "2 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, to the Pod Stage now.",
     nextScene: "POD ROUND 2 — The Wondering Question",
-    audio: ["Music mics + reverb/delay", "Audience mics"],
-    video: ["CAM 1, 2, 3 — Music Stage"],
-    cameras: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 3: Wide studio"],
+    audio: ["Mute Group 1 OFF (Music Stage live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 07 AUD — up", "DCA 1 Music Stage — GO"],
+    video: ["CAM 5, 6, 4/2 — Music Stage"],
+    cameras: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS", "CAM 7: Roving"],
     lighting: ["Music Stage performance lighting"],
-    audioNext: ["Host mics — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, and Barbara Cook live", "Audience mics"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Guests", "CAM 5: Mark"],
+    audioNext: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Sam Wofford), Ch 11 POD 3 (Jason Mejia), Ch 12 POD 4 (Raj Pulagula), Ch 13 POD 5 (Barbara Cook) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    videoNext: ["CAM 1, 2, 3 — Pod Stage"],
+    camerasNext: ["CAM 1: Pod Guest — Sam Wofford", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lightingNext: ["Pod Stage lighting"],
     cueCard: "• Jimmy George performs TBD Song 2"
   },
@@ -724,13 +795,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes remaining in this segment.", w2: "2 minutes remaining.",
     nextScene: "VIDEO — Musical Guest Retrospective",
-    audio: ["Host mics — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, and Barbara Cook live", "Audience mics"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Guests", "CAM 5: Mark"],
+    audio: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Sam Wofford), Ch 11 POD 3 (Jason Mejia), Ch 12 POD 4 (Raj Pulagula), Ch 13 POD 5 (Barbara Cook) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    video: ["CAM 1, 2, 3 — Pod Stage"],
+    cameras: ["CAM 1: Pod Guest — Sam Wofford", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lighting: ["Pod Stage lighting"],
-    audioNext: ["GO playback audio — Musical Guest Retrospective. TY!"],
+    audioNext: ["GO playback audio — Musical Guest Retrospective (GRFX Aux). TY!"],
     videoNext: ["GO Musical Guest Retrospective video"],
-    camerasNext: ["Video playback — stand by cams for music stage"],
+    camerasNext: ["Video playback — stand by cams for music stage", "CAM 5: Music Stage Slider — standby", "CAM 6: Music Stage Side — standby"],
     lightingNext: ["Hold current lighting"],
     cueCard: "• Round 2 — The Wondering Question\n• One open wondering question for the whole table\n• Let it breathe — no rush to fill silence"
   },
@@ -741,13 +812,13 @@ const BASE_CUES = [
     booName: "Jimmy George", booTpl: "Jimmy — please head to the Music Stage for TBD Song 3.",
     w5: "5 minutes — Jimmy George, please head to the Music Stage for TBD Song 3.", w2: "2 minutes — Jimmy George, to the Music Stage now for TBD Song 3.",
     nextScene: "PERFORMANCE — TBD Song 3",
-    audio: ["GO playback audio — Musical Guest Retrospective. TY!"],
+    audio: ["GO playback audio — Musical Guest Retrospective (GRFX Aux). TY!"],
     video: ["GO Musical Guest Retrospective video"],
-    cameras: ["Video playback — stand by cams for music stage"],
+    cameras: ["Video playback — stand by cams for music stage", "CAM 5: Music Stage Slider — standby", "CAM 6: Music Stage Side — standby"],
     lighting: ["Hold current lighting"],
-    audioNext: ["Music mics + reverb/delay", "Audience mics"],
-    videoNext: ["CAM 1, 2, 3 — Music Stage"],
-    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 3: Wide studio"],
+    audioNext: ["Mute Group 1 OFF (Music Stage live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 07 AUD — up", "DCA 1 Music Stage — GO"],
+    videoNext: ["CAM 5, 6, 4/2 — Music Stage"],
+    camerasNext: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS", "CAM 7: Roving"],
     lightingNext: ["Music Stage performance lighting"],
     cueCard: null
   },
@@ -758,13 +829,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, please head to the Pod Stage.", w2: "2 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, to the Pod Stage now.",
     nextScene: "POD ROUND 3 — The Deepening Question",
-    audio: ["Music mics + reverb/delay", "Audience mics"],
-    video: ["CAM 1, 2, 3 — Music Stage"],
-    cameras: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 3: Wide studio"],
+    audio: ["Mute Group 1 OFF (Music Stage live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 07 AUD — up", "DCA 1 Music Stage — GO"],
+    video: ["CAM 5, 6, 4/2 — Music Stage"],
+    cameras: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS", "CAM 7: Roving"],
     lighting: ["Music Stage performance lighting"],
-    audioNext: ["Host mics — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, and Barbara Cook live", "Audience mics"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Guests", "CAM 5: Mark"],
+    audioNext: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Sam Wofford), Ch 11 POD 3 (Jason Mejia), Ch 12 POD 4 (Raj Pulagula), Ch 13 POD 5 (Barbara Cook) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    videoNext: ["CAM 1, 2, 3 — Pod Stage"],
+    camerasNext: ["CAM 1: Pod Guest — Sam Wofford", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lightingNext: ["Pod Stage lighting"],
     cueCard: "• Jimmy George performs TBD Song 3"
   },
@@ -775,13 +846,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes remaining in this segment.", w2: "2 minutes remaining.",
     nextScene: "VIDEO — Corey's Fundraising Video",
-    audio: ["Host mics — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, and Barbara Cook live", "Audience mics"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Guests", "CAM 5: Mark"],
+    audio: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Sam Wofford), Ch 11 POD 3 (Jason Mejia), Ch 12 POD 4 (Raj Pulagula), Ch 13 POD 5 (Barbara Cook) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    video: ["CAM 1, 2, 3 — Pod Stage"],
+    cameras: ["CAM 1: Pod Guest — Sam Wofford", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lighting: ["Pod Stage lighting"],
-    audioNext: ["GO playback audio — Corey's Fundraising Video. TY!"],
+    audioNext: ["GO playback audio — Corey's Fundraising Video (GRFX Aux). TY!"],
     videoNext: ["GO Corey's Fundraising Video"],
-    camerasNext: ["Video playback — stand by cams for music stage"],
+    camerasNext: ["Video playback — stand by cams for music stage", "CAM 5: Music Stage Slider — standby", "CAM 6: Music Stage Side — standby"],
     lightingNext: ["Hold current lighting"],
     cueCard: "• Round 3 — The Deepening Question\n• One deeper follow-up question drawn from Round 2\n• Let guests respond to each other, not just to Mark"
   },
@@ -792,13 +863,13 @@ const BASE_CUES = [
     booName: "Jimmy George", booTpl: "Jimmy — please head to the Music Stage for TBD Song 4.",
     w5: "5 minutes — Jimmy George, please head to the Music Stage for TBD Song 4.", w2: "2 minutes — Jimmy George, to the Music Stage now for TBD Song 4.",
     nextScene: "PERFORMANCE — TBD Song 4",
-    audio: ["GO playback audio — Corey's Fundraising Video. TY!"],
+    audio: ["GO playback audio — Corey's Fundraising Video (GRFX Aux). TY!"],
     video: ["GO Corey's Fundraising Video"],
-    cameras: ["Video playback — stand by cams for music stage"],
+    cameras: ["Video playback — stand by cams for music stage", "CAM 5: Music Stage Slider — standby", "CAM 6: Music Stage Side — standby"],
     lighting: ["Hold current lighting"],
-    audioNext: ["Music mics + reverb/delay", "Audience mics"],
-    videoNext: ["CAM 1, 2, 3 — Music Stage"],
-    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 3: Wide studio"],
+    audioNext: ["Mute Group 1 OFF (Music Stage live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 07 AUD — up", "DCA 1 Music Stage — GO"],
+    videoNext: ["CAM 5, 6, 4/2 — Music Stage"],
+    camerasNext: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS", "CAM 7: Roving"],
     lightingNext: ["Music Stage performance lighting"],
     cueCard: null
   },
@@ -809,13 +880,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, please head to the Pod Stage.", w2: "2 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, to the Pod Stage now.",
     nextScene: "POD ROUND 4 — The Blessing",
-    audio: ["Music mics + reverb/delay", "Audience mics"],
-    video: ["CAM 1, 2, 3 — Music Stage"],
-    cameras: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 3: Wide studio"],
+    audio: ["Mute Group 1 OFF (Music Stage live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 07 AUD — up", "DCA 1 Music Stage — GO"],
+    video: ["CAM 5, 6, 4/2 — Music Stage"],
+    cameras: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/2: Studio WS", "CAM 7: Roving"],
     lighting: ["Music Stage performance lighting"],
-    audioNext: ["Host mics — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, and Barbara Cook live", "Audience mics"],
-    videoNext: ["CAM 3, 4, 5 — Pod Stage"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Guests", "CAM 5: Mark"],
+    audioNext: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Sam Wofford), Ch 11 POD 3 (Jason Mejia), Ch 12 POD 4 (Raj Pulagula), Ch 13 POD 5 (Barbara Cook) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    videoNext: ["CAM 1, 2, 3 — Pod Stage"],
+    camerasNext: ["CAM 1: Pod Guest — Sam Wofford", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lightingNext: ["Pod Stage lighting"],
     cueCard: "• Jimmy George performs TBD Song 4"
   },
@@ -826,13 +897,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, please head to the Kitchen Disco.", w2: "2 minutes — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, to the Kitchen Disco now.",
     nextScene: "KITCHEN DISCO #2",
-    audio: ["Host mics — Mark, Sam Wofford, Jason Mejia, Raj Pulagula, and Barbara Cook live", "Audience mics"],
-    video: ["CAM 3, 4, 5 — Pod Stage"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Guests", "CAM 5: Mark"],
+    audio: ["Mute Group 2 OFF (Pod Stage live)", "Ch 09 POD 1 (Mark), Ch 10 POD 2 (Sam Wofford), Ch 11 POD 3 (Jason Mejia), Ch 12 POD 4 (Raj Pulagula), Ch 13 POD 5 (Barbara Cook) — faders up", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    video: ["CAM 1, 2, 3 — Pod Stage"],
+    cameras: ["CAM 1: Pod Guest — Sam Wofford", "CAM 2: Pod WS", "CAM 3: Pod Host — Mark"],
     lighting: ["Pod Stage lighting"],
-    audioNext: ["Kitchen Disco mics live", "Audience mics"],
-    videoNext: ["CAM 6: Kitchen Disco Stage"],
-    camerasNext: ["CAM 6: Kitchen Disco wide and close"],
+    audioNext: ["Mute Group 3 OFF (Kitchen Disco live)", "Ch 15 KD 1, Ch 16 KD 2 — faders up", "Ch 07 AUD — up", "DCA 3 Kitchen Disco — GO"],
+    videoNext: ["CAM 4/3: Kitchen Disco"],
+    camerasNext: ["CAM 4/3: Kitchen Disco", "CAM 7: Roving"],
     lightingNext: ["Kitchen Disco Stage lighting — GO disco"],
     cueCard: "• Round 4 — The Blessing\n• Each guest offers a word, a blessing, or a wish for someone in their life\n• Mark closes the round"
   },
@@ -843,13 +914,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes — Mark, please head to the Pod Stage.", w2: "2 minutes — Mark, to the Pod Stage now.",
     nextScene: "SHOW CLOSE",
-    audio: ["Kitchen Disco mics live", "Audience mics"],
-    video: ["CAM 6: Kitchen Disco Stage"],
-    cameras: ["CAM 6: Kitchen Disco wide and close"],
+    audio: ["Mute Group 3 OFF (Kitchen Disco live)", "Ch 15 KD 1, Ch 16 KD 2 — faders up", "Ch 07 AUD — up", "DCA 3 Kitchen Disco — GO"],
+    video: ["CAM 4/3: Kitchen Disco"],
+    cameras: ["CAM 4/3: Kitchen Disco", "CAM 7: Roving"],
     lighting: ["Kitchen Disco Stage lighting — GO disco"],
-    audioNext: ["GO host mic — Mark. TY!"],
-    videoNext: ["CAM 3, 4 — Pod Stage", "Cut to CAM 6: Kitchen Disco on cue"],
-    camerasNext: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 6: Kitchen Disco stand by"],
+    audioNext: ["Mute Group 2 OFF — Ch 09 POD 1 (Mark) only", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    videoNext: ["CAM 3: Pod Host — Mark", "CAM 4/3: Kitchen Disco — cut on cue"],
+    camerasNext: ["CAM 3: Pod Host — Mark", "CAM 4/3: Kitchen Disco — stand by for food tasting cut", "CAM 7: Roving"],
     lightingNext: ["Pod Stage lighting"],
     cueCard: null
   },
@@ -860,13 +931,13 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes — Jimmy George, Melba Martinez, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, Mark, please head to the Music Stage.", w2: "2 minutes — Jimmy George, Melba Martinez, Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook, Mark, to the Music Stage now.",
     nextScene: "CLOSING CREDITS — All Cast Dancing",
-    audio: ["GO host mic — Mark. TY!"],
-    video: ["CAM 3, 4 — Pod Stage", "Cut to CAM 6: Kitchen Disco on cue"],
-    cameras: ["CAM 3: Pod wide", "CAM 4: Mark", "CAM 6: Kitchen Disco stand by"],
+    audio: ["Mute Group 2 OFF — Ch 09 POD 1 (Mark) only", "Ch 07 AUD — up", "DCA 2 Pod Stage — GO"],
+    video: ["CAM 3: Pod Host — Mark", "CAM 4/3: Kitchen Disco — cut on cue"],
+    cameras: ["CAM 3: Pod Host — Mark", "CAM 4/3: Kitchen Disco — stand by for food tasting cut", "CAM 7: Roving"],
     lighting: ["Pod Stage lighting"],
-    audioNext: ["Music mics + reverb/delay", "Audience mics", "GO closing credits audio"],
-    videoNext: ["CAM 1, 2 — Music Stage", "CAM 6: Kitchen Disco", "Roll closing credits"],
-    camerasNext: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 6: Kitchen Disco dancing"],
+    audioNext: ["Mute Group 1 OFF (Music Stage live)", "Mute Group 3 OFF (Kitchen Disco live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 15 KD 1, Ch 16 KD 2 — faders up", "Ch 07 AUD — up", "DCA 1 Music Stage — GO", "DCA 3 Kitchen Disco — GO", "GO closing credits audio"],
+    videoNext: ["CAM 5, 6 — Music Stage", "CAM 4/3: Kitchen Disco", "Roll closing credits overlay"],
+    camerasNext: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/3: Kitchen Disco dancing", "CAM 7: Roving", "CAM 4/2: Studio WS"],
     lightingNext: ["Music Stage performance lighting — GO disco", "Kitchen Disco — GO disco"],
     cueCard: "• Mark solo at pod table — close the show\n• Cut to Kitchen Disco — guests and crew testing food\n• Back to Mark: 'We'll see you next time, on Little Big Voices... LIVE!'\n• Thank guests: Sam Wofford, Jason Mejia, Raj Pulagula, Barbara Cook\n• Thank crew by name\n• Subscribe / follow CTA"
   },
@@ -877,9 +948,9 @@ const BASE_CUES = [
     booName: null, booTpl: null,
     w5: "5 minutes — finishing the show!", w2: "2 minutes left — almost done!",
     nextScene: null,
-    audio: ["Music mics + reverb/delay", "Audience mics", "GO closing credits audio"],
-    video: ["CAM 1, 2 — Music Stage", "CAM 6: Kitchen Disco", "Roll closing credits"],
-    cameras: ["CAM 1: Music Stage wide", "CAM 2: Jimmy George close", "CAM 6: Kitchen Disco dancing"],
+    audio: ["Mute Group 1 OFF (Music Stage live)", "Mute Group 3 OFF (Kitchen Disco live)", "Ch 01 VOC 1, Ch 02 VOC 2 — faders up", "Ch 05 INST 1, Ch 06 INST 2 — faders up", "Ch 15 KD 1, Ch 16 KD 2 — faders up", "Ch 07 AUD — up", "DCA 1 Music Stage — GO", "DCA 3 Kitchen Disco — GO", "GO closing credits audio"],
+    video: ["CAM 5, 6 — Music Stage", "CAM 4/3: Kitchen Disco", "Roll closing credits overlay"],
+    cameras: ["CAM 5: Music Stage Slider", "CAM 6: Music Stage Side", "CAM 4/3: Kitchen Disco dancing", "CAM 7: Roving", "CAM 4/2: Studio WS"],
     lighting: ["Music Stage performance lighting — GO disco", "Kitchen Disco — GO disco"],
     audioNext: [],
     videoNext: [],
@@ -960,8 +1031,10 @@ window.addEventListener('load',async()=>{
     if(el) new QRCode(el,{text:window.location.href,width:100,height:100,colorDark:"#3a3f4a",colorLight:"#ffffff"});
   });
   renderQuickBtns();
-  setView('tv');
+  const _qv=new URLSearchParams(location.search).get('view');   // set by tv.html / crew.html / host.html
+  if(_qv==='host') tryHost(); else setView(_qv==='tech'?'tech':'tv');
   startRealtime();
+  readLivePointer();
   const state=await sbGet();
   if(state){
     // If stuck on applause or end state, clear it automatically on load
@@ -973,7 +1046,7 @@ window.addEventListener('load',async()=>{
       showLive=!!state.is_live;
       showTimerStarted=cueIdx>0;
       showLiveUI();
-      running=true;timerInt=setInterval(tick,1000);
+      running=true;startTicking();
       applyRemoteState(state);
     }
   }
@@ -1143,8 +1216,8 @@ function showLiveUI(){
   const bw=document.getElementById("bcast-wrap");if(bw) bw.style.display="block";
 }
 
-function applyRemoteState(state){
-  if(view==="host"||view==="host-welcome") return;
+function applyRemoteState(state,opts){
+  if((view==="host"||view==="host-welcome")&&!(opts&&opts.force)) return;
   const newIdx=parseInt(state.cue_idx)||0;
   const wasLive=showLive;
   showLive=!!state.is_live;
@@ -1161,10 +1234,10 @@ function applyRemoteState(state){
   }
   if(showLive&&!wasLive){
     cueIdx=newIdx;segSecs=CUES[newIdx]?.dur*60||0;
-    showLiveUI();running=true;timerInt=setInterval(tick,1000);
+    showLiveUI();running=true;startTicking();
   } else if(showLive&&newIdx!==cueIdx){
     cueIdx=newIdx;segSecs=CUES[newIdx]?.dur*60||0;
-    warning=null;setFlashRate(700);clearInterval(timerInt);running=true;timerInt=setInterval(tick,1000);
+    warning=null;setFlashRate(700);clearInterval(timerInt);running=true;startTicking();
     fireFlash();
   }
   const newStandby=!!state.standby_active;
@@ -1294,7 +1367,12 @@ function render(){
   }
 }
 
-function tick(){
+// Timers follow the wall clock, not the number of interval callbacks: a phone/tablet that sleeps
+// (intervals paused) catches up on wake instead of showing a frozen countdown. Every second is still
+// stepped through tickOnce(), so 5-/2-minute warnings that fell inside the gap still fire.
+let _lastTickAt=0;
+function startTicking(){clearInterval(timerInt);_lastTickAt=Date.now();timerInt=setInterval(tick,1000);}
+function tickOnce(){
   segSecs--;
   if(showTimerStarted) showSecs=Math.max(showSecs-1,0);
   const c=CUES[cueIdx];
@@ -1302,12 +1380,20 @@ function tick(){
   if(segSecs===300&&c?.w5) warning="5";
   else if(segSecs===120&&c?.w2){warning="2";stopBooFlash();setFlashRate(300);}
   else if(segSecs<=0){warning="over";setFlashRate(300);}
+}
+function tick(){
+  const now=Date.now();
+  if(!_lastTickAt) _lastTickAt=now-1000;
+  const steps=Math.min(Math.floor((now-_lastTickAt)/1000),6*3600);
+  if(steps<1) return;
+  _lastTickAt+=steps*1000;
+  for(let i=0;i<steps;i++) tickOnce();
   render();
 }
 
 function startShowCircle(){
   showLive=true;cueIdx=0;segSecs=CUES[0]?.dur*60||0;showSecs=EPISODE.showMins*60;showTimerStarted=false;
-  showLiveUI();running=true;timerInt=setInterval(tick,1000);
+  showLiveUI();running=true;startTicking();
   sbSet({cue_idx:0,is_live:true,standby_active:false,prelive_active:false,ros_change_msg:""});
   render();
 }
@@ -1331,7 +1417,7 @@ function goNext(){
   if(cueIdx===1&&!showTimerStarted){showTimerStarted=true;showSecs=90*60;}
   if(CUES[cueIdx].scene==="APPLAUSE") fireApplause();
   currentInsertStandby=null;
-  running=true;timerInt=setInterval(tick,1000);
+  running=true;startTicking();
   sbSet({cue_idx:cueIdx,is_live:true,standby_active:false,prelive_active:false});
   render();
 }
@@ -1340,7 +1426,7 @@ function goPrev(){
   if(cueIdx<=0) return;
   clearInterval(timerInt);warning=null;setFlashRate(700);stopBooFlash();scheduleOffset=0;clearBanners();
   cueIdx--;segSecs=CUES[cueIdx].dur*60;
-  running=true;timerInt=setInterval(tick,1000);
+  running=true;startTicking();
   sbSet({cue_idx:cueIdx,is_live:true,standby_active:false,prelive_active:false});
   render();
 }
@@ -1547,10 +1633,9 @@ function setView(v){
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       if (!lock) requestWakeLock();
-      // Re-sync cue state immediately in case we missed updates while hidden
-      if (typeof sbGet === 'function' && typeof applyRemoteState === 'function') {
-        sbGet().then(s => { if (s) applyRemoteState(s); });
-      }
+      // Re-sync everything immediately in case we missed updates while hidden (all views)
+      if (typeof resyncAll === 'function') resyncAll();
+      if (typeof tick === 'function' && running) tick();   // catch the timers up right away
     }
   });
 
