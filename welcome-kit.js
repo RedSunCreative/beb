@@ -49,7 +49,7 @@
 
   const DEFAULT_THEME_INTRO = 'We’ll be exploring what happens when some real people from different backgrounds, cultures, and beliefs get together to deeply listen to each other and contemplate our wondering question for this episode:';
   const DEFAULT_THEME_OUTRO = 'You might or might not share your response on the show - that’s up to you - but just wondering it will be your best preparation!';
-  const DEFAULT_GUEST_LIST = 'As the studio is “intimate”, and with the number of guests this episode, we are intentional about who else joins beyond the guests and crew - that said, we’ll make room for those you feel would benefit from being here - or that you feel important to support you. Please just let {gs} know ahead of time and we’ll plan accordingly!';
+  const DEFAULT_GUEST_LIST = 'As the studio is “intimate”, and with the number of guests this episode, we are intentional about who else joins beyond the guests and crew - that said, we’ll make room for those you feel would benefit from being here - or that you feel important to support you. Please just let me know ahead of time and we’ll plan accordingly!';
 
   // Fields the kit can't be sent without. Returned as human-readable gaps.
   function welcomeKitGaps(k) {

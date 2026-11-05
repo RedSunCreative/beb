@@ -51,6 +51,8 @@ ok(html.includes("curious about another's stories or experiences. Thank you for 
 ok(/<div class="sig-row">[\s\S]*?class="signature"[\s\S]*?<img class="card"[\s\S]*?<\/div>\s*<\/section>/.test(html) && /@media print\{[\s\S]*\.sig-row\{flex-wrap:nowrap\}/.test(html),
   'print: Mark\'s card sits beside the signature (phone prints never spill it onto a blank page)');
 
+ok(html.includes('Please just let me know ahead of time') && !/let Melissa know/.test(html), 'E12: guest list asks guests to "let me know" (the kit is from Melissa)');
+
 // 3. Show data is escaped at every interpolation.
 const evil = '<img src=x onerror=alert(1)>';
 const hostile = { ...e12, epNum: evil, epTitle: evil, wonderingQuestion: evil, greenRoomHost: evil, greenRoomHostPronoun: evil,
